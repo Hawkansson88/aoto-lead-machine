@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* =========================================================
    KONFIG  — klistra in dina Supabase-uppgifter här.
@@ -33,7 +34,7 @@ body{
 .num{font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums; font-feature-settings:"tnum"}
 
 /* ---------- Layout shell ---------- */
-.app{display:grid; grid-template-columns:288px 1fr; height:100vh}
+.app{display:none; grid-template-columns:288px 1fr; height:100vh}
 
 /* ---------- Sidebar ---------- */
 .sidebar{
@@ -231,10 +232,45 @@ textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 @media(max-width:860px){.app{grid-template-columns:1fr}.sidebar{display:none}}
+
+/* ---------- Auth gate ---------- */
+#authGate{position:fixed;inset:0;z-index:200;display:none;place-items:center;
+  background:linear-gradient(160deg,var(--navy-800),var(--navy-900))}
+#authGate.show{display:grid}
+.auth-card{width:362px;max-width:90vw;background:var(--surface);border-radius:18px;padding:34px 32px;
+  box-shadow:0 30px 80px -20px rgba(0,0,0,.6);animation:fade .3s}
+.auth-card .brand{justify-content:center;margin-bottom:10px}
+.auth-card h2{font-family:'Archivo';font-weight:700;text-align:center;margin:4px 0 4px;font-size:20px;color:var(--ink)}
+.auth-card p.lead{text-align:center;color:var(--muted);font-size:13px;margin:0 0 22px}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;letter-spacing:.3px}
+.field input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:14px;background:var(--surface-2)}
+.field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:#fff}
+.auth-err{color:var(--sc-low);font-size:12.5px;min-height:16px;margin:2px 0 10px}
+.user-foot{margin-top:26px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;gap:10px}
+.user-foot .av{width:30px;height:30px;border-radius:50%;background:rgba(0,179,136,.18);display:grid;place-items:center;
+  font-size:12px;font-weight:600;color:var(--accent-2);flex:none;text-transform:uppercase}
+.user-foot .em{font-size:11.5px;color:#9fb0cc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.user-foot .lo{font-size:11.5px;color:#c4cee0;cursor:pointer;background:none;border:1px solid rgba(255,255,255,.12);
+  padding:5px 9px;border-radius:7px;font-family:inherit}
+.user-foot .lo:hover{background:rgba(255,255,255,.08)}
 </style>
 </head>
 <body>
-<div class="app">
+<div id="authGate">
+  <div class="auth-card">
+    <div class="brand"><div class="mark">A</div></div>
+    <h2>Lead Machine</h2>
+    <p class="lead">Logga in för att fortsätta</p>
+    <div class="field"><label>E-post</label><input id="authEmail" type="email" autocomplete="username"></div>
+    <div class="field"><label>Lösenord</label><input id="authPw" type="password" autocomplete="current-password"></div>
+    <div class="auth-err" id="authErr"></div>
+    <button class="btn btn-acc" id="authBtn">Logga in</button>
+  </div>
+</div>
+
+<div class="app" id="app">
   <!-- ============ SIDEBAR ============ -->
   <aside class="sidebar">
     <div class="brand">
@@ -258,6 +294,12 @@ textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(
     <p class="section-label">Märke</p>
     <div class="chips" id="brandChips"></div>
     <p class="legend"><span class="lk">🔒</span> = märke med captive-finansiering (lägre prioritet). Övriga märken = högre potential för lagerfinansiering.</p>
+
+    <div class="user-foot">
+      <div class="av" id="userAv">–</div>
+      <div class="em" id="userEmail">–</div>
+      <button class="lo" id="logoutBtn">Logga ut</button>
+    </div>
   </aside>
 
   <!-- ============ MAIN ============ -->
@@ -378,6 +420,8 @@ function scoreBreakdown(l){
    ============================================================ */
 let LEADS = [];
 let sel = null;
+let sb = null;          // supabase-klient (skapas i boot om LIVE)
+let appReady = false;   // hindrar dubbel-laddning vid auth-events
 const state = { status:"alla", minScore:0, brand:"alla", q:"", sortKey:"score", sortDir:-1 };
 
 const STATUS = {
@@ -392,30 +436,23 @@ const scoreColor = sc => sc>=80?"var(--sc-high)":sc>=50?"var(--sc-mid)":"var(--s
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),2200);}
 
 /* ============================================================
-   4. DATA — Supabase REST eller demo
+   4. DATA — Supabase (supabase-js) eller demo
    ============================================================ */
 async function loadLeads(){
   if(!LIVE){
     LEADS = DEMO.map(d=>({...d, score:scoreBreakdown(d).total}));
     return;
   }
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*`,{
-    headers:{ apikey:SUPABASE_ANON, Authorization:`Bearer ${SUPABASE_ANON}` }
-  });
-  if(!r.ok) throw new Error("Supabase "+r.status);
-  const rows = await r.json();
-  LEADS = rows.map(d=>({...d, score:scoreBreakdown(d).total})); // räkna om score lokalt så breakdown matchar
+  const { data, error } = await sb.from("leads").select("*");
+  if(error) throw error;
+  LEADS = data.map(d=>({...d, score:scoreBreakdown(d).total})); // räkna om score lokalt så breakdown matchar
 }
 
 async function patchLead(org_nr, fields){
   if(!LIVE) return true; // demo: bara lokalt
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?org_nr=eq.${encodeURIComponent(org_nr)}`,{
-    method:"PATCH",
-    headers:{ apikey:SUPABASE_ANON, Authorization:`Bearer ${SUPABASE_ANON}`,
-              "Content-Type":"application/json", Prefer:"return=minimal" },
-    body: JSON.stringify(fields)
-  });
-  return r.ok;
+  const { error } = await sb.from("leads").update(fields).eq("org_nr", org_nr);
+  if(error) console.error(error);
+  return !error;
 }
 
 /* ============================================================
@@ -624,18 +661,63 @@ document.querySelectorAll("thead th[data-sort]").forEach(th=>th.onclick=()=>{
 });
 
 /* ============================================================
-   9. INIT
+   9. AUTH + INIT
    ============================================================ */
-(async function init(){
-  if(LIVE){$("#connPill").className="conn-pill live";$("#connText").textContent="Live · Supabase";}
-  try{ await loadLeads(); }
-  catch(err){
-    console.error(err);
-    $("#connPill").className="conn-pill demo";$("#connText").textContent="Anslutning misslyckades – demo";
+const appEl = $("#app");
+function showApp(){ appEl.style.display="grid"; $("#authGate").classList.remove("show"); }
+function showGate(){ appEl.style.display="none"; $("#authGate").classList.add("show"); appReady=false; LEADS=[]; closePanel(); }
+
+async function enterApp(session){
+  showApp();
+  const email = session?.user?.email || "";
+  $("#userEmail").textContent = email;
+  $("#userAv").textContent = (email[0]||"–");
+  if(appReady) return;            // redan inne – ladda inte om
+  appReady = true;
+  try{ await loadLeads(); renderAll(); }
+  catch(err){ console.error(err); toast("Kunde inte hämta leads – kontrollera RLS-policy"); }
+}
+
+async function doLogin(){
+  const email = $("#authEmail").value.trim();
+  const pw = $("#authPw").value;
+  const btn = $("#authBtn"); const err = $("#authErr");
+  err.textContent="";
+  if(!email||!pw){ err.textContent="Fyll i e-post och lösenord."; return; }
+  btn.disabled=true; btn.textContent="Loggar in…";
+  const { error } = await sb.auth.signInWithPassword({ email, password:pw });
+  btn.disabled=false; btn.textContent="Logga in";
+  if(error){ err.textContent = "Fel e-post eller lösenord."; }
+  // lyckad inloggning hanteras av onAuthStateChange
+}
+
+(async function boot(){
+  // Demo-läge: ingen backend, ingen inloggning – visa direkt för UI-test
+  if(!LIVE){
+    $("#userEmail").textContent="Demo-läge"; $("#userAv").textContent="D";
+    $("#logoutBtn").style.display="none";
+    showApp();
     LEADS = DEMO.map(d=>({...d, score:scoreBreakdown(d).total}));
-    toast("Kunde inte nå Supabase – visar demo-data");
+    renderAll();
+    return;
   }
-  renderAll();
+
+  // Live-läge: kräver inloggning
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  $("#connPill").className="conn-pill live"; $("#connText").textContent="Live · Supabase";
+
+  $("#authBtn").onclick = doLogin;
+  $("#authPw").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
+  $("#authEmail").addEventListener("keydown", e=>{ if(e.key==="Enter") $("#authPw").focus(); });
+  $("#logoutBtn").onclick = ()=> sb.auth.signOut();
+
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session) enterApp(session); else showGate();
+
+  sb.auth.onAuthStateChange((event, s)=>{
+    if(event==="SIGNED_IN" && s) enterApp(s);
+    if(event==="SIGNED_OUT") showGate();
+  });
 })();
 </script>
 </body>
