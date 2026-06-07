@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AOTO Lead Machine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   KONFIG  — klistra in dina Supabase-uppgifter här.
+   Lämna tomt för att köra på demo-data (skrivning avstängd).
+   Project URL + anon public key: Supabase → Project Settings → API
+   ========================================================= */
+:root{
+  --navy-900:#0d1424; --navy-800:#131e35; --navy-700:#1b2945; --navy-600:#243557;
+  --canvas:#f3f5f8; --surface:#ffffff; --surface-2:#fafbfc;
+  --ink:#14202e; --muted:#69748a; --faint:#9aa6b8; --line:#e6eaf0;
+  --accent:#00b388; --accent-2:#06caa0; --accent-soft:rgba(0,179,136,.12);
+  --hot:#ff7a45; --hot-soft:rgba(255,122,69,.14);
+  --st-ny:#5b6b85; --st-kontaktad:#cf8a12; --st-mote:#0f9d6f; --st-ej:#9aa6b8;
+  --sc-low:#e0556b; --sc-mid:#e0a23a; --sc-high:#11a37a;
+  --shadow:0 18px 50px -20px rgba(13,20,36,.45);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:'IBM Plex Sans',system-ui,sans-serif;
+  background:var(--canvas); color:var(--ink);
+  -webkit-font-smoothing:antialiased; overflow:hidden;
+}
+.num{font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums; font-feature-settings:"tnum"}
+
+/* ---------- Layout shell ---------- */
+.app{display:grid; grid-template-columns:288px 1fr; height:100vh}
+
+/* ---------- Sidebar ---------- */
+.sidebar{
+  background:linear-gradient(178deg,var(--navy-800),var(--navy-900) 70%);
+  color:#dce4f1; padding:22px 20px; overflow-y:auto; position:relative;
+  border-right:1px solid rgba(255,255,255,.04);
+}
+.sidebar::-webkit-scrollbar{width:8px}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:8px}
+.brand{display:flex; align-items:center; gap:11px; margin-bottom:26px}
+.brand .mark{
+  width:38px;height:38px;border-radius:10px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  font-family:'Archivo';font-weight:800;color:#06241c;font-size:19px;
+  box-shadow:0 6px 18px -6px var(--accent);
+}
+.brand .wm{font-family:'Archivo';font-weight:800;font-size:18px;letter-spacing:-.4px;line-height:1;color:#fff}
+.brand .wm small{display:block;font-family:'IBM Plex Sans';font-weight:500;font-size:10.5px;letter-spacing:1.4px;color:var(--accent-2);margin-top:3px;text-transform:uppercase}
+
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:24px}
+.stat{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);
+  border-radius:12px;padding:12px 13px;position:relative;overflow:hidden;
+}
+.stat.wide{grid-column:1/-1}
+.stat .v{font-family:'Archivo';font-weight:800;font-size:25px;line-height:1;letter-spacing:-.5px}
+.stat .l{font-size:10.5px;color:#9fb0cc;margin-top:6px;letter-spacing:.3px}
+.stat.mote .v{color:var(--st-mote)} .stat.hot .v{color:var(--hot)} .stat.untouched .v{color:var(--accent-2)}
+.stat .spark{position:absolute;right:-6px;top:-6px;font-size:34px;opacity:.10}
+
+.section-label{font-size:10.5px;font-weight:600;letter-spacing:1.3px;text-transform:uppercase;color:#7f8eaa;margin:0 0 11px 2px}
+
+.status-list{display:flex;flex-direction:column;gap:4px;margin-bottom:24px}
+.status-item{
+  display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:9px;
+  cursor:pointer;font-size:13.5px;color:#c4cee0;transition:.14s;border:1px solid transparent;
+}
+.status-item:hover{background:rgba(255,255,255,.05)}
+.status-item.active{background:rgba(0,179,136,.13);border-color:rgba(0,179,136,.32);color:#fff}
+.status-item .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.status-item .cnt{margin-left:auto;font-size:11.5px;color:#8595b3;font-family:'IBM Plex Mono'}
+
+.slider-wrap{margin-bottom:24px}
+.slider-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.slider-head b{font-family:'Archivo';font-size:16px;color:var(--accent-2)}
+input[type=range]{width:100%;-webkit-appearance:none;height:5px;border-radius:5px;
+  background:linear-gradient(90deg,var(--accent) var(--p,0%),rgba(255,255,255,.12) var(--p,0%));outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;
+  background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{
+  font-size:12px;padding:6px 11px;border-radius:20px;cursor:pointer;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#c4cee0;
+  display:inline-flex;align-items:center;gap:6px;transition:.14s;
+}
+.chip:hover{background:rgba(255,255,255,.09)}
+.chip.active{background:#fff;color:var(--navy-900);border-color:#fff;font-weight:600}
+.chip.captive{opacity:.62}
+.chip .lock{font-size:10px;opacity:.8}
+.chip.active.captive{opacity:.85}
+.legend{font-size:10.5px;color:#7f8eaa;margin-top:10px;line-height:1.5}
+.legend .lk{color:#9fb0cc}
+
+/* ---------- Main ---------- */
+.main{display:flex;flex-direction:column;overflow:hidden}
+.topbar{
+  display:flex;align-items:center;gap:16px;padding:18px 28px;background:var(--surface);
+  border-bottom:1px solid var(--line);flex:none;
+}
+.topbar h1{font-family:'Archivo';font-weight:700;font-size:20px;margin:0;letter-spacing:-.4px}
+.topbar .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+.search{margin-left:auto;position:relative}
+.search input{
+  width:280px;padding:9px 14px 9px 36px;border:1px solid var(--line);border-radius:10px;
+  font-family:inherit;font-size:13.5px;background:var(--surface-2);transition:.15s;
+}
+.search input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:#fff}
+.search .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:14px}
+.conn-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+  padding:5px 10px;border-radius:20px;letter-spacing:.2px}
+.conn-pill.live{background:var(--accent-soft);color:#0a7a5c}
+.conn-pill.demo{background:#fff2e6;color:#b85a1e}
+.conn-pill .d{width:7px;height:7px;border-radius:50%;background:currentColor}
+
+.table-scroll{overflow-y:auto;flex:1;padding:8px 28px 40px}
+.table-scroll::-webkit-scrollbar{width:10px}
+.table-scroll::-webkit-scrollbar-thumb{background:#d3d9e2;border-radius:8px;border:3px solid var(--canvas)}
+table{width:100%;border-collapse:separate;border-spacing:0 7px}
+thead th{
+  position:sticky;top:0;background:var(--canvas);z-index:2;text-align:left;
+  font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);
+  padding:6px 14px;cursor:pointer;user-select:none;white-space:nowrap;
+}
+thead th:hover{color:var(--ink)}
+thead th .ar{font-size:9px;color:var(--accent);margin-left:4px}
+thead th.right{text-align:right}
+tbody tr{background:var(--surface);cursor:pointer;transition:.12s;box-shadow:0 1px 2px rgba(13,20,36,.04)}
+tbody tr:hover{transform:translateY(-1px);box-shadow:0 6px 18px -8px rgba(13,20,36,.22)}
+tbody tr.sel{box-shadow:0 0 0 2px var(--accent),0 6px 18px -8px rgba(0,179,136,.4)}
+tbody td{padding:13px 14px;font-size:13.5px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+tbody td:first-child{border-left:1px solid var(--line);border-radius:11px 0 0 11px}
+tbody td:last-child{border-right:1px solid var(--line);border-radius:0 11px 11px 0}
+td.right{text-align:right}
+.co-name{font-weight:600}
+.co-org{font-size:11px;color:var(--faint);margin-top:2px}
+
+.score-cell{display:flex;align-items:center;gap:10px;min-width:118px}
+.score-num{font-family:'Archivo';font-weight:800;font-size:16px;width:26px;flex:none}
+.score-bar{flex:1;height:7px;border-radius:7px;background:#eef1f5;overflow:hidden}
+.score-fill{height:100%;border-radius:7px}
+
+.brand-tag{display:inline-flex;align-items:center;gap:6px;font-size:12.5px}
+.brand-tag .lk{font-size:10px;color:var(--faint)}
+.brand-tag.cap{color:var(--muted)}
+
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;
+  padding:5px 10px;border-radius:7px}
+.badge .dot{width:7px;height:7px;border-radius:50%}
+.b-ny{background:#eef1f6;color:var(--st-ny)} .b-ny .dot{background:var(--st-ny)}
+.b-kontaktad{background:#fbf1dd;color:var(--st-kontaktad)} .b-kontaktad .dot{background:var(--st-kontaktad)}
+.b-mote{background:#e3f6ee;color:var(--st-mote)} .b-mote .dot{background:var(--st-mote)}
+.b-ejaktuell{background:#f1f3f6;color:var(--st-ej)} .b-ejaktuell .dot{background:var(--st-ej)}
+
+.empty{text-align:center;color:var(--muted);padding:60px 0;font-size:14px}
+
+/* ---------- Detail panel ---------- */
+.scrim{position:fixed;inset:0;background:rgba(13,20,36,.34);opacity:0;pointer-events:none;transition:.22s;z-index:40}
+.scrim.open{opacity:1;pointer-events:auto}
+.panel{
+  position:fixed;top:0;right:0;height:100vh;width:440px;max-width:92vw;background:var(--surface);
+  box-shadow:var(--shadow);transform:translateX(100%);transition:transform .26s cubic-bezier(.4,.0,.2,1);
+  z-index:50;display:flex;flex-direction:column;
+}
+.panel.open{transform:translateX(0)}
+.p-head{padding:24px 26px 20px;border-bottom:1px solid var(--line);position:relative;background:linear-gradient(180deg,var(--surface-2),var(--surface))}
+.p-close{position:absolute;top:18px;right:18px;width:30px;height:30px;border-radius:8px;border:1px solid var(--line);
+  background:#fff;cursor:pointer;color:var(--muted);font-size:16px;line-height:1}
+.p-close:hover{background:var(--canvas);color:var(--ink)}
+.p-score{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.p-score .ring{width:58px;height:58px;flex:none;border-radius:50%;display:grid;place-items:center;
+  font-family:'Archivo';font-weight:800;font-size:21px;color:#fff}
+.p-name{font-family:'Archivo';font-weight:700;font-size:21px;line-height:1.15;letter-spacing:-.4px}
+.p-meta{font-size:12.5px;color:var(--muted);margin-top:5px}
+.p-body{overflow-y:auto;flex:1;padding:22px 26px 36px}
+.p-body::-webkit-scrollbar{width:8px}.p-body::-webkit-scrollbar-thumb{background:#d3d9e2;border-radius:8px}
+.p-sec{margin-bottom:26px}
+.p-sec h4{font-size:11px;font-weight:600;letter-spacing:.9px;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:12px 14px}
+.kpi .v{font-family:'Archivo';font-weight:700;font-size:18px}
+.kpi .l{font-size:11px;color:var(--muted);margin-top:3px}
+
+.bd-row{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.bd-row .lab{width:108px;flex:none;font-size:12.5px;color:var(--ink)}
+.bd-row .track{flex:1;height:8px;background:#eef1f5;border-radius:8px;overflow:hidden}
+.bd-row .fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:8px}
+.bd-row .pts{width:48px;flex:none;text-align:right;font-family:'IBM Plex Mono';font-size:12px;color:var(--muted)}
+
+.contact{display:flex;flex-direction:column;gap:8px}
+.contact a,.contact span{font-size:13.5px;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:9px}
+.contact .ic{width:16px;color:var(--accent);font-size:13px}
+.contact .none{color:var(--faint);font-style:italic}
+
+.status-switch{display:flex;flex-wrap:wrap;gap:7px}
+.ss-btn{font-size:12px;font-weight:600;padding:8px 12px;border-radius:9px;border:1px solid var(--line);
+  background:#fff;cursor:pointer;color:var(--muted);transition:.13s;display:flex;align-items:center;gap:7px}
+.ss-btn:hover{border-color:var(--faint)}
+.ss-btn.on{color:#fff;border-color:transparent}
+.ss-btn.on[data-s=ny]{background:var(--st-ny)} .ss-btn.on[data-s=kontaktad]{background:var(--st-kontaktad)}
+.ss-btn.on[data-s=mote]{background:var(--st-mote)} .ss-btn.on[data-s=ejaktuell]{background:var(--st-ej)}
+.ss-btn .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+
+textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:11px;padding:11px 13px;
+  font-family:inherit;font-size:13px;resize:vertical;background:var(--surface-2);transition:.15s}
+textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:#fff}
+.notes-foot{display:flex;align-items:center;gap:10px;margin-top:8px}
+.btn{font-family:inherit;font-size:13px;font-weight:600;padding:9px 15px;border-radius:9px;cursor:pointer;border:none;transition:.14s}
+.btn-prim{background:var(--ink);color:#fff} .btn-prim:hover{background:#000}
+.btn-acc{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#062a20;width:100%;justify-content:center;
+  display:flex;align-items:center;gap:8px;padding:12px} .btn-acc:hover{filter:brightness(1.05)}
+.btn-ghost{background:#fff;border:1px solid var(--line);color:var(--muted)} .btn-ghost:hover{border-color:var(--faint);color:var(--ink)}
+.saved{font-size:12px;color:var(--accent);opacity:0;transition:.2s}.saved.show{opacity:1}
+
+.outreach{margin-top:13px;background:var(--surface-2);border:1px dashed var(--line);border-radius:12px;padding:15px;
+  font-size:13px;line-height:1.55;white-space:pre-wrap;display:none}
+.outreach.show{display:block;animation:fade .25s}
+.outreach .tag{font-size:10px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--hot);
+  display:inline-flex;align-items:center;gap:6px;margin-bottom:9px}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;
+  padding:11px 18px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:90}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media(max-width:860px){.app{grid-template-columns:1fr}.sidebar{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">A</div>
+      <div class="wm">Lead Machine<small>AOTO · Lagerfinansiering</small></div>
+    </div>
+
+    <div class="stat-grid" id="stats"></div>
+
+    <p class="section-label">Status</p>
+    <div class="status-list" id="statusList"></div>
+
+    <div class="slider-wrap">
+      <div class="slider-head">
+        <p class="section-label" style="margin:0">Min. score</p>
+        <b class="num" id="scoreVal">0</b>
+      </div>
+      <input type="range" id="scoreSlider" min="0" max="100" value="0" step="5">
+    </div>
+
+    <p class="section-label">Märke</p>
+    <div class="chips" id="brandChips"></div>
+    <p class="legend"><span class="lk">🔒</span> = märke med captive-finansiering (lägre prioritet). Övriga märken = högre potential för lagerfinansiering.</p>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1>Bilhandlare</h1>
+        <div class="sub"><span id="resultCount">0</span> leads · sorterade efter potential</div>
+      </div>
+      <div class="search">
+        <span class="ic">⌕</span>
+        <input id="search" placeholder="Sök företag, stad, org.nr…" autocomplete="off">
+      </div>
+      <span class="conn-pill demo" id="connPill"><span class="d"></span><span id="connText">Demo-läge</span></span>
+    </header>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="score" class="right">Score</th>
+            <th data-sort="company_name">Företag</th>
+            <th data-sort="city">Stad</th>
+            <th data-sort="revenue" class="right">Omsättning</th>
+            <th data-sort="employees" class="right">Anställda</th>
+            <th data-sort="brand">Märke</th>
+            <th data-sort="status">Status</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="empty" style="display:none">Inga leads matchar filtren.</div>
+    </div>
+  </main>
+</div>
+
+<!-- ============ DETAIL PANEL ============ -->
+<div class="scrim" id="scrim"></div>
+<aside class="panel" id="panel">
+  <div class="p-head">
+    <button class="p-close" id="pClose">✕</button>
+    <div class="p-score">
+      <div class="ring" id="pRing">0</div>
+      <div>
+        <div class="p-name" id="pName">—</div>
+        <div class="p-meta num" id="pMeta">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="p-body" id="pBody"></div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   1. KONFIG
+   ============================================================ */
+const SUPABASE_URL  = "";   // ← din Project URL,  t.ex. https://xxxx.supabase.co
+const SUPABASE_ANON = "";   // ← din anon public key
+const LIVE = SUPABASE_URL && SUPABASE_ANON;
+
+/* Märken med stark captive-finansiering → lägre prioritet (AOTO:s affärslogik) */
+const CAPTIVE = new Set(["Volvo","BMW","Mercedes","Mercedes-Benz","Audi","Volkswagen","VW","Toyota","Lexus"]);
+const isCaptive = b => CAPTIVE.has((b||"").trim());
+
+/* Demo-data (speglar leads-tabellen) – används när LIVE = false */
+const DEMO = [
+ {org_nr:"556701-1122",company_name:"Bilcenter Mälardalen AB",city:"Västerås",sni_code:"45111",brand:"MG",revenue:84000000,employees:14,solidity:18,status:"ny",contact_name:"Johan Ek",contact_phone:"021-123 45",contact_email:"johan@bilcentermalardalen.se",notes:""},
+ {org_nr:"556812-3344",company_name:"Syd Motor Trading AB",city:"Malmö",sni_code:"45112",brand:"BYD",revenue:142000000,employees:31,solidity:12,status:"kontaktad",contact_name:"Sara Nilsson",contact_phone:"040-998 11",contact_email:"sara@sydmotor.se",notes:"Ringde 12/5, vill ha återkoppling efter sommaren."},
+ {org_nr:"556944-5566",company_name:"Norrlands Bil & Handel AB",city:"Umeå",sni_code:"45111",brand:"Hyundai",revenue:56000000,employees:9,solidity:24,status:"ny",contact_name:"",contact_phone:"",contact_email:"info@norrlandsbil.se",notes:""},
+ {org_nr:"556633-7788",company_name:"Premium Cars Stockholm AB",city:"Stockholm",sni_code:"45111",brand:"BMW",revenue:198000000,employees:42,solidity:46,status:"ejaktuell",contact_name:"Markus Holm",contact_phone:"08-551 20",contact_email:"markus@premiumcars.se",notes:"Egen captive via BMW Financial – ej aktuell."},
+ {org_nr:"556477-9900",company_name:"Göteborg Fordon AB",city:"Göteborg",sni_code:"45191",brand:"Kia",revenue:73000000,employees:17,solidity:21,status:"mote",contact_name:"Petra Lind",contact_phone:"031-204 55",contact_email:"petra@gbgfordon.se",notes:"Möte bokat 18/6 kl 10. Intresserad av flexibel lagerkredit."},
+ {org_nr:"556355-2211",company_name:"Dalarnas Begagnatcenter AB",city:"Borlänge",sni_code:"45112",brand:"Blandat",revenue:39000000,employees:7,solidity:15,status:"ny",contact_name:"",contact_phone:"0243-66 77",contact_email:"kontakt@dalbeg.se",notes:""}
+];
+
+/* ============================================================
+   2. SCORING  (klientsidan tills vidare – flyttas till
+      Supabase Edge Function i steg 4 av roadmappen)
+   ============================================================ */
+function scoreBreakdown(l){
+  // Omsättning: sweet spot 10–200 MSEK (max 30 p)
+  const mskr = (l.revenue||0)/1e6;
+  let oms = 0;
+  if (mskr>=10 && mskr<=200) oms = mskr<=120 ? 30 : 30 - ((mskr-120)/80)*10; // toppar runt 10–120, faller mot 200
+  else if (mskr>0 && mskr<10) oms = (mskr/10)*15;
+  oms = Math.max(0,Math.round(oms));
+
+  // Anställda: 5–50 (max 20 p)
+  const e = l.employees||0;
+  let ans = 0;
+  if (e>=5 && e<=50) ans = 20; else if (e>0 && e<5) ans = (e/5)*12; else if (e>50) ans = Math.max(6,20-(e-50)/10);
+  ans = Math.round(ans);
+
+  // Soliditet: låg soliditet = större finansieringsbehov (max 20 p)
+  const s = l.solidity==null?40:l.solidity;
+  let sol = s<=15 ? 20 : s<=30 ? 15 : s<=45 ? 9 : 3;
+
+  // Märke utan captive (max 20 p)
+  const mar = isCaptive(l.brand) ? 2 : 20;
+
+  // Bilhandel rätt SNI (max 10 p)
+  const sni = ["45111","45112","45191","45192"].includes((l.sni_code||"").trim()) ? 10 : 4;
+
+  const parts = [
+    {lab:"Omsättning", pts:oms, max:30},
+    {lab:"Anställda",  pts:ans, max:20},
+    {lab:"Soliditet",  pts:sol, max:20},
+    {lab:"Märke",      pts:mar, max:20},
+    {lab:"SNI / bransch", pts:sni, max:10},
+  ];
+  const total = parts.reduce((a,p)=>a+p.pts,0);
+  return {total:Math.min(100,total), parts};
+}
+
+/* ============================================================
+   3. STATE + HJÄLPARE
+   ============================================================ */
+let LEADS = [];
+let sel = null;
+const state = { status:"alla", minScore:0, brand:"alla", q:"", sortKey:"score", sortDir:-1 };
+
+const STATUS = {
+  ny:        {label:"Ej kontaktad", cls:"b-ny",        col:getComputedStyle(document.documentElement).getPropertyValue('--st-ny')},
+  kontaktad: {label:"Kontaktad",    cls:"b-kontaktad", col:"var(--st-kontaktad)"},
+  mote:      {label:"Möte bokat",   cls:"b-mote",      col:"var(--st-mote)"},
+  ejaktuell: {label:"Ej intressant",cls:"b-ejaktuell", col:"var(--st-ej)"},
+};
+const $ = s => document.querySelector(s);
+const fmtMSEK = v => v==null ? "–" : (v/1e6).toLocaleString("sv-SE",{maximumFractionDigits:1})+" MSEK";
+const scoreColor = sc => sc>=80?"var(--sc-high)":sc>=50?"var(--sc-mid)":"var(--sc-low)";
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),2200);}
+
+/* ============================================================
+   4. DATA — Supabase REST eller demo
+   ============================================================ */
+async function loadLeads(){
+  if(!LIVE){
+    LEADS = DEMO.map(d=>({...d, score:scoreBreakdown(d).total}));
+    return;
+  }
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?select=*`,{
+    headers:{ apikey:SUPABASE_ANON, Authorization:`Bearer ${SUPABASE_ANON}` }
+  });
+  if(!r.ok) throw new Error("Supabase "+r.status);
+  const rows = await r.json();
+  LEADS = rows.map(d=>({...d, score:scoreBreakdown(d).total})); // räkna om score lokalt så breakdown matchar
+}
+
+async function patchLead(org_nr, fields){
+  if(!LIVE) return true; // demo: bara lokalt
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/leads?org_nr=eq.${encodeURIComponent(org_nr)}`,{
+    method:"PATCH",
+    headers:{ apikey:SUPABASE_ANON, Authorization:`Bearer ${SUPABASE_ANON}`,
+              "Content-Type":"application/json", Prefer:"return=minimal" },
+    body: JSON.stringify(fields)
+  });
+  return r.ok;
+}
+
+/* ============================================================
+   5. FILTRERING + SORTERING
+   ============================================================ */
+function visible(){
+  let r = LEADS.filter(l=>{
+    if(state.status!=="alla" && l.status!==state.status) return false;
+    if((l.score||0) < state.minScore) return false;
+    if(state.brand!=="alla" && (l.brand||"")!==state.brand) return false;
+    if(state.q){
+      const q=state.q.toLowerCase();
+      if(!`${l.company_name} ${l.city} ${l.org_nr}`.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+  const k=state.sortKey, d=state.sortDir;
+  r.sort((a,b)=>{
+    let x=a[k],y=b[k];
+    if(typeof x==="string"){x=(x||"").toLowerCase();y=(y||"").toLowerCase();return x<y?-d:x>y?d:0;}
+    return ((x||0)-(y||0))*d;
+  });
+  return r;
+}
+
+/* ============================================================
+   6. RENDER
+   ============================================================ */
+function renderStats(){
+  const mote = LEADS.filter(l=>l.status==="mote").length;
+  const hot  = LEADS.filter(l=>l.score>=80 && l.status!=="ejaktuell").length;
+  const unt  = LEADS.filter(l=>l.status==="ny" && l.score>=80).length;
+  $("#stats").innerHTML = `
+    <div class="stat mote"><span class="spark">📅</span><div class="v num">${mote}</div><div class="l">Möten bokade</div></div>
+    <div class="stat hot"><span class="spark">🔥</span><div class="v num">${hot}</div><div class="l">Heta leads (80+)</div></div>
+    <div class="stat untouched wide"><span class="spark">✦</span><div class="v num">${unt}</div><div class="l">Orörda med score 80+ — ta dessa först</div></div>`;
+}
+
+function renderStatusFilter(){
+  const counts = {alla:LEADS.length};
+  Object.keys(STATUS).forEach(k=>counts[k]=LEADS.filter(l=>l.status===k).length);
+  const item=(key,label,col)=>`
+    <div class="status-item ${state.status===key?'active':''}" data-st="${key}">
+      <span class="dot" style="background:${col}"></span>${label}
+      <span class="cnt">${counts[key]||0}</span>
+    </div>`;
+  $("#statusList").innerHTML =
+    item("alla","Alla leads","#7f8eaa") +
+    Object.entries(STATUS).map(([k,v])=>item(k,v.label,v.col.includes("var")?`var(--st-${k})`:v.col)).join("");
+}
+
+function renderBrands(){
+  const brands=[...new Set(LEADS.map(l=>l.brand).filter(Boolean))].sort();
+  const chip=(b,active,cap)=>`<span class="chip ${active?'active':''} ${cap?'captive':''}" data-b="${b}">${cap?'<span class="lock">🔒</span>':''}${b}</span>`;
+  $("#brandChips").innerHTML =
+    `<span class="chip ${state.brand==='alla'?'active':''}" data-b="alla">Alla märken</span>` +
+    brands.map(b=>chip(b, state.brand===b, isCaptive(b))).join("");
+}
+
+function renderTable(){
+  const rows=visible();
+  $("#resultCount").textContent=rows.length;
+  const tb=$("#rows");
+  $("#empty").style.display = rows.length?"none":"block";
+  tb.innerHTML = rows.map(l=>{
+    const st=STATUS[l.status]||STATUS.ny, cap=isCaptive(l.brand);
+    return `<tr data-org="${l.org_nr}" class="${sel&&sel.org_nr===l.org_nr?'sel':''}">
+      <td class="right"><div class="score-cell">
+        <span class="score-num" style="color:${scoreColor(l.score)}">${l.score}</span>
+        <span class="score-bar"><span class="score-fill" style="width:${l.score}%;background:${scoreColor(l.score)}"></span></span>
+      </div></td>
+      <td><div class="co-name">${l.company_name}</div><div class="co-org num">${l.org_nr}</div></td>
+      <td>${l.city||"–"}</td>
+      <td class="right num">${fmtMSEK(l.revenue)}</td>
+      <td class="right num">${l.employees??"–"}</td>
+      <td><span class="brand-tag ${cap?'cap':''}">${cap?'<span class="lk">🔒</span>':''}${l.brand||"–"}</span></td>
+      <td><span class="badge ${st.cls}"><span class="dot"></span>${st.label}</span></td>
+    </tr>`;
+  }).join("");
+  tb.querySelectorAll("tr").forEach(tr=>tr.onclick=()=>openPanel(tr.dataset.org));
+}
+
+function renderAll(){renderStats();renderStatusFilter();renderBrands();renderTable();}
+
+/* ============================================================
+   7. DETALJPANEL
+   ============================================================ */
+function openPanel(org){
+  sel = LEADS.find(l=>l.org_nr===org); if(!sel) return;
+  const bd = scoreBreakdown(sel), st = STATUS[sel.status]||STATUS.ny, cap=isCaptive(sel.brand);
+  $("#pRing").textContent=sel.score;
+  $("#pRing").style.background=`conic-gradient(${scoreColor(sel.score)} ${sel.score*3.6}deg, #eef1f5 0deg)`;
+  $("#pRing").style.boxShadow=`inset 0 0 0 6px #fff`;
+  $("#pName").textContent=sel.company_name;
+  $("#pMeta").textContent=`${sel.org_nr} · ${sel.city||""} · SNI ${sel.sni_code||"–"}`;
+
+  $("#pBody").innerHTML = `
+    <div class="p-sec">
+      <h4>Varför den här poängen</h4>
+      ${bd.parts.map(p=>`<div class="bd-row">
+        <span class="lab">${p.lab}</span>
+        <span class="track"><span class="fill" style="width:${(p.pts/p.max)*100}%"></span></span>
+        <span class="pts">${p.pts}/${p.max}</span>
+      </div>`).join("")}
+    </div>
+
+    <div class="p-sec">
+      <h4>Nyckeltal</h4>
+      <div class="kpis">
+        <div class="kpi"><div class="v num">${fmtMSEK(sel.revenue)}</div><div class="l">Omsättning</div></div>
+        <div class="kpi"><div class="v num">${sel.employees??"–"}</div><div class="l">Anställda</div></div>
+        <div class="kpi"><div class="v num">${sel.solidity!=null?sel.solidity+" %":"–"}</div><div class="l">Soliditet</div></div>
+        <div class="kpi"><div class="v">${cap?"🔒 Captive":"⭐ Fritt"}</div><div class="l">${sel.brand||"–"}</div></div>
+      </div>
+    </div>
+
+    <div class="p-sec">
+      <h4>Kontakt</h4>
+      <div class="contact">
+        ${sel.contact_name?`<span><span class="ic">👤</span>${sel.contact_name}</span>`:`<span class="none"><span class="ic">👤</span>Ingen kontaktperson</span>`}
+        ${sel.contact_phone?`<a href="tel:${sel.contact_phone}"><span class="ic">📞</span>${sel.contact_phone}</a>`:""}
+        ${sel.contact_email?`<a href="mailto:${sel.contact_email}"><span class="ic">✉</span>${sel.contact_email}</a>`:""}
+      </div>
+    </div>
+
+    <div class="p-sec">
+      <h4>Status</h4>
+      <div class="status-switch" id="ssw">
+        ${Object.entries(STATUS).map(([k,v])=>`<button class="ss-btn ${sel.status===k?'on':''}" data-s="${k}"><span class="dot"></span>${v.label}</button>`).join("")}
+      </div>
+    </div>
+
+    <div class="p-sec">
+      <h4>Anteckningar</h4>
+      <textarea id="notes" placeholder="Skriv anteckningar om leaden…">${sel.notes||""}</textarea>
+      <div class="notes-foot">
+        <button class="btn btn-prim" id="saveNotes">Spara</button>
+        <span class="saved" id="savedMsg">✓ Sparat</span>
+      </div>
+    </div>
+
+    <div class="p-sec" style="margin-bottom:0">
+      <h4>Första kontakt</h4>
+      <button class="btn btn-acc" id="genBtn">✨ Generera kontaktmeddelande</button>
+      <div class="outreach" id="outreach"></div>
+    </div>`;
+
+  // status-switch
+  $("#ssw").querySelectorAll(".ss-btn").forEach(b=>b.onclick=async()=>{
+    const ns=b.dataset.s; if(ns===sel.status) return;
+    const ok=await patchLead(sel.org_nr,{status:ns,updated_at:new Date().toISOString()});
+    if(ok){sel.status=ns;openPanel(sel.org_nr);renderAll();toast(LIVE?"Status uppdaterad":"Status uppdaterad (demo, ej sparat)");}
+    else toast("Kunde inte uppdatera status");
+  });
+
+  // notes
+  $("#saveNotes").onclick=async()=>{
+    const v=$("#notes").value;
+    const ok=await patchLead(sel.org_nr,{notes:v,updated_at:new Date().toISOString()});
+    if(ok){sel.notes=v;const m=$("#savedMsg");m.classList.add("show");setTimeout(()=>m.classList.remove("show"),1600);
+      if(!LIVE)toast("Demo-läge: sparas inte till databas");}
+    else toast("Kunde inte spara anteckning");
+  };
+
+  // outreach-stub  (riktig version anropar Claude API via Edge Function – roadmap steg 5)
+  $("#genBtn").onclick=()=>{
+    const o=$("#outreach");
+    const hook = cap
+      ? `Jag vet att ni kör ${sel.brand} och kanske redan har en finansieringslösning – men`
+      : `Eftersom ni säljer ${sel.brand||"flera märken"} utan bunden captive-finansiering`;
+    o.textContent =
+`Hej${sel.contact_name?` ${sel.contact_name.split(" ")[0]}`:""}!
+
+Jag heter [Ditt namn] och jobbar på AOTO. ${hook} ser jag att ${sel.company_name} i ${sel.city||"er region"} skulle kunna frigöra rörelsekapital genom lagerfinansiering – ni betalar bara för det lager ni faktiskt har ute.
+
+Har du 15 minuter nästa vecka för ett kort samtal om hur det skulle se ut för er?
+
+Vänliga hälsningar,
+[Ditt namn], AOTO`;
+    o.innerHTML = `<span class="tag">⚡ Utkast · placeholder</span>`+o.textContent.replace(/\n/g,"<br>");
+    o.classList.add("show");
+    o.scrollIntoView({behavior:"smooth",block:"nearest"});
+  };
+
+  $("#panel").classList.add("open");$("#scrim").classList.add("open");
+  renderTable();
+}
+function closePanel(){$("#panel").classList.remove("open");$("#scrim").classList.remove("open");sel=null;renderTable();}
+
+/* ============================================================
+   8. EVENTS
+   ============================================================ */
+$("#statusList").onclick=e=>{const it=e.target.closest(".status-item");if(!it)return;state.status=it.dataset.st;renderStatusFilter();renderTable();};
+$("#brandChips").onclick=e=>{const c=e.target.closest(".chip");if(!c)return;state.brand=c.dataset.b;renderBrands();renderTable();};
+$("#scoreSlider").oninput=e=>{state.minScore=+e.target.value;$("#scoreVal").textContent=e.target.value;
+  e.target.style.setProperty("--p",e.target.value+"%");renderTable();};
+$("#search").oninput=e=>{state.q=e.target.value.trim();renderTable();};
+$("#pClose").onclick=closePanel;$("#scrim").onclick=closePanel;
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closePanel();});
+document.querySelectorAll("thead th[data-sort]").forEach(th=>th.onclick=()=>{
+  const k=th.dataset.sort;
+  if(state.sortKey===k)state.sortDir*=-1;else{state.sortKey=k;state.sortDir=(k==="company_name"||k==="city"||k==="brand"||k==="status")?1:-1;}
+  document.querySelectorAll("thead th .ar").forEach(a=>a.remove());
+  const ar=document.createElement("span");ar.className="ar";ar.textContent=state.sortDir>0?"▲":"▼";th.appendChild(ar);
+  renderTable();
+});
+
+/* ============================================================
+   9. INIT
+   ============================================================ */
+(async function init(){
+  if(LIVE){$("#connPill").className="conn-pill live";$("#connText").textContent="Live · Supabase";}
+  try{ await loadLeads(); }
+  catch(err){
+    console.error(err);
+    $("#connPill").className="conn-pill demo";$("#connText").textContent="Anslutning misslyckades – demo";
+    LEADS = DEMO.map(d=>({...d, score:scoreBreakdown(d).total}));
+    toast("Kunde inte nå Supabase – visar demo-data");
+  }
+  renderAll();
+})();
+</script>
+</body>
+</html>
