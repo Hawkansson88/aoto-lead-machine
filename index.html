@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="sv">
 <head>
@@ -313,6 +314,7 @@ textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(
         <span class="ic">⌕</span>
         <input id="search" placeholder="Sök företag, stad, org.nr…" autocomplete="off">
       </div>
+      <button class="btn btn-ghost" id="importBtn" style="display:none;font-size:12px;padding:7px 13px">⬇ Importera från Roaring</button>
       <span class="conn-pill demo" id="connPill"><span class="d"></span><span id="connText">Demo-läge</span></span>
     </header>
 
@@ -710,6 +712,24 @@ async function doLogin(){
   $("#authPw").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
   $("#authEmail").addEventListener("keydown", e=>{ if(e.key==="Enter") $("#authPw").focus(); });
   $("#logoutBtn").onclick = ()=> sb.auth.signOut();
+
+  // Importera-knapp (anropar Netlify Function)
+  const importBtn = $("#importBtn"); importBtn.style.display="";
+  importBtn.onclick = async ()=>{
+    importBtn.disabled=true; importBtn.textContent="Importerar…";
+    try{
+      const {data:{session:s}} = await sb.auth.getSession();
+      if(!s) { toast("Du måste vara inloggad"); return; }
+      const res = await fetch("/.netlify/functions/roaring-import",{
+        method:"POST",
+        headers:{ Authorization:"Bearer "+s.access_token }
+      });
+      const body = await res.json();
+      if(body.success){ toast(body.message); await loadLeads(); renderAll(); }
+      else { toast("Import misslyckades: "+(body.error||res.status)); }
+    }catch(err){ console.error(err); toast("Import-fel: "+err.message); }
+    finally{ importBtn.disabled=false; importBtn.textContent="⬇ Importera från Roaring"; }
+  };
 
   const { data:{ session } } = await sb.auth.getSession();
   if(session) enterApp(session); else showGate();
