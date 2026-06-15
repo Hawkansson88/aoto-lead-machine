@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="sv">
 <head>
@@ -10,11 +9,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-/* =========================================================
-   KONFIG  — klistra in dina Supabase-uppgifter här.
-   Lämna tomt för att köra på demo-data (skrivning avstängd).
-   Project URL + anon public key: Supabase → Project Settings → API
-   ========================================================= */
 :root{
   --navy-900:#0d1424; --navy-800:#131e35; --navy-700:#1b2945; --navy-600:#243557;
   --canvas:#f3f5f8; --surface:#ffffff; --surface-2:#fafbfc;
@@ -60,10 +54,9 @@ body{
   background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);
   border-radius:12px;padding:12px 13px;position:relative;overflow:hidden;
 }
-.stat.wide{grid-column:1/-1}
 .stat .v{font-family:'Archivo';font-weight:800;font-size:25px;line-height:1;letter-spacing:-.5px}
 .stat .l{font-size:10.5px;color:#9fb0cc;margin-top:6px;letter-spacing:.3px}
-.stat.mote .v{color:var(--st-mote)} .stat.hot .v{color:var(--hot)} .stat.untouched .v{color:var(--accent-2)}
+.stat.mote .v{color:var(--st-mote)} .stat.hot .v{color:var(--hot)} .stat.followup .v{color:var(--accent-2)} .stat.untouched .v{color:#c4cee0}
 .stat .spark{position:absolute;right:-6px;top:-6px;font-size:34px;opacity:.10}
 
 .section-label{font-size:10.5px;font-weight:600;letter-spacing:1.3px;text-transform:uppercase;color:#7f8eaa;margin:0 0 11px 2px}
@@ -86,20 +79,6 @@ input[type=range]{width:100%;-webkit-appearance:none;height:5px;border-radius:5p
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;
   background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.4)}
 
-.chips{display:flex;flex-wrap:wrap;gap:7px}
-.chip{
-  font-size:12px;padding:6px 11px;border-radius:20px;cursor:pointer;
-  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#c4cee0;
-  display:inline-flex;align-items:center;gap:6px;transition:.14s;
-}
-.chip:hover{background:rgba(255,255,255,.09)}
-.chip.active{background:#fff;color:var(--navy-900);border-color:#fff;font-weight:600}
-.chip.captive{opacity:.62}
-.chip .lock{font-size:10px;opacity:.8}
-.chip.active.captive{opacity:.85}
-.legend{font-size:10.5px;color:#7f8eaa;margin-top:10px;line-height:1.5}
-.legend .lk{color:#9fb0cc}
-
 /* ---------- Main ---------- */
 .main{display:flex;flex-direction:column;overflow:hidden}
 .topbar{
@@ -118,7 +97,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;heigh
 .conn-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
   padding:5px 10px;border-radius:20px;letter-spacing:.2px}
 .conn-pill.live{background:var(--accent-soft);color:#0a7a5c}
-.conn-pill.demo{background:#fff2e6;color:#b85a1e}
 .conn-pill .d{width:7px;height:7px;border-radius:50%;background:currentColor}
 
 .table-scroll{overflow-y:auto;flex:1;padding:8px 28px 40px}
@@ -148,10 +126,6 @@ td.right{text-align:right}
 .score-bar{flex:1;height:7px;border-radius:7px;background:#eef1f5;overflow:hidden}
 .score-fill{height:100%;border-radius:7px}
 
-.brand-tag{display:inline-flex;align-items:center;gap:6px;font-size:12.5px}
-.brand-tag .lk{font-size:10px;color:var(--faint)}
-.brand-tag.cap{color:var(--muted)}
-
 .badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;
   padding:5px 10px;border-radius:7px}
 .badge .dot{width:7px;height:7px;border-radius:50%}
@@ -159,6 +133,11 @@ td.right{text-align:right}
 .b-kontaktad{background:#fbf1dd;color:var(--st-kontaktad)} .b-kontaktad .dot{background:var(--st-kontaktad)}
 .b-mote{background:#e3f6ee;color:var(--st-mote)} .b-mote .dot{background:var(--st-mote)}
 .b-ejaktuell{background:#f1f3f6;color:var(--st-ej)} .b-ejaktuell .dot{background:var(--st-ej)}
+
+.fu-late{color:var(--sc-low);font-weight:600}
+.fu-today{color:var(--hot);font-weight:600}
+.fu-future{color:var(--muted)}
+.fu-none{color:var(--faint)}
 
 .empty{text-align:center;color:var(--muted);padding:60px 0;font-size:14px}
 
@@ -195,6 +174,8 @@ td.right{text-align:right}
 .bd-row .track{flex:1;height:8px;background:#eef1f5;border-radius:8px;overflow:hidden}
 .bd-row .fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:8px}
 .bd-row .pts{width:48px;flex:none;text-align:right;font-family:'IBM Plex Mono';font-size:12px;color:var(--muted)}
+.notenriched{font-size:13px;color:var(--muted);line-height:1.5;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:11px;padding:14px}
 
 .contact{display:flex;flex-direction:column;gap:8px}
 .contact a,.contact span{font-size:13.5px;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:9px}
@@ -210,10 +191,14 @@ td.right{text-align:right}
 .ss-btn.on[data-s=mote]{background:var(--st-mote)} .ss-btn.on[data-s=ejaktuell]{background:var(--st-ej)}
 .ss-btn .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
 
-textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:11px;padding:11px 13px;
+textarea,.dateinput{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px 13px;
   font-family:inherit;font-size:13px;resize:vertical;background:var(--surface-2);transition:.15s}
-textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:#fff}
-.notes-foot{display:flex;align-items:center;gap:10px;margin-top:8px}
+textarea{min-height:74px}
+textarea:focus,.dateinput:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:#fff}
+.fu-label{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin:14px 0 6px;letter-spacing:.3px}
+.quickdates{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.qd-btn{font-size:11.5px;padding:6px 10px}
+.notes-foot{display:flex;align-items:center;gap:10px;margin-top:12px}
 .btn{font-family:inherit;font-size:13px;font-weight:600;padding:9px 15px;border-radius:9px;cursor:pointer;border:none;transition:.14s}
 .btn-prim{background:var(--ink);color:#fff} .btn-prim:hover{background:#000}
 .btn-acc{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#062a20;width:100%;justify-content:center;
@@ -221,11 +206,11 @@ textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(
 .btn-ghost{background:#fff;border:1px solid var(--line);color:var(--muted)} .btn-ghost:hover{border-color:var(--faint);color:var(--ink)}
 .saved{font-size:12px;color:var(--accent);opacity:0;transition:.2s}.saved.show{opacity:1}
 
-.outreach{margin-top:13px;background:var(--surface-2);border:1px dashed var(--line);border-radius:12px;padding:15px;
-  font-size:13px;line-height:1.55;white-space:pre-wrap;display:none}
+.outreach{margin-top:13px;display:none}
 .outreach.show{display:block;animation:fade .25s}
 .outreach .tag{font-size:10px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--hot);
   display:inline-flex;align-items:center;gap:6px;margin-bottom:9px}
+#outreachText{min-height:170px}
 @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
 
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;
@@ -292,10 +277,6 @@ textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(
       <input type="range" id="scoreSlider" min="0" max="100" value="0" step="5">
     </div>
 
-    <p class="section-label">Märke</p>
-    <div class="chips" id="brandChips"></div>
-    <p class="legend"><span class="lk">🔒</span> = märke med captive-finansiering (lägre prioritet). Övriga märken = högre potential för lagerfinansiering.</p>
-
     <div class="user-foot">
       <div class="av" id="userAv">–</div>
       <div class="em" id="userEmail">–</div>
@@ -316,7 +297,7 @@ textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(
       </div>
       <button class="btn btn-ghost" id="importBtn" style="display:none;font-size:12px;padding:7px 13px">⬇ Importera från Roaring</button>
       <button class="btn btn-ghost" id="enrichBtn" style="display:none;font-size:12px;padding:7px 13px">⚙ Anrik 20 leads</button>
-      <span class="conn-pill demo" id="connPill"><span class="d"></span><span id="connText">Demo-läge</span></span>
+      <span class="conn-pill live" id="connPill"><span class="d"></span><span id="connText">Live · Supabase</span></span>
     </header>
 
     <div class="table-scroll">
@@ -328,7 +309,7 @@ textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(
             <th data-sort="city">Stad</th>
             <th data-sort="revenue" class="right">Omsättning</th>
             <th data-sort="employees" class="right">Anställda</th>
-            <th data-sort="brand">Märke</th>
+            <th data-sort="follow_up_date">Uppföljning</th>
             <th data-sort="status">Status</th>
           </tr>
         </thead>
@@ -361,61 +342,44 @@ textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(
 /* ============================================================
    1. KONFIG
    ============================================================ */
-const SUPABASE_URL  = "https://plydduphthqhpmwasznr.supabase.co";   // ← din Project URL,  t.ex. https://xxxx.supabase.co
-const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBseWRkdXBodGhxaHBtd2Fzem5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MTcxNjksImV4cCI6MjA5NjA5MzE2OX0.fdxR8DXxFjsT0f7fL0LamsNTj6WdFx5R_rFdi67SNWo";   // ← din anon public key
-const LIVE = SUPABASE_URL && SUPABASE_ANON;
-
-/* Märken med stark captive-finansiering → lägre prioritet (AOTO:s affärslogik) */
-const CAPTIVE = new Set(["Volvo","BMW","Mercedes","Mercedes-Benz","Audi","Volkswagen","VW","Toyota","Lexus"]);
-const isCaptive = b => CAPTIVE.has((b||"").trim());
-
-/* Demo-data (speglar leads-tabellen) – används när LIVE = false */
-const DEMO = [
- {org_nr:"556701-1122",company_name:"Bilcenter Mälardalen AB",city:"Västerås",sni_code:"45111",brand:"MG",revenue:84000000,employees:14,solidity:18,status:"ny",contact_name:"Johan Ek",contact_phone:"021-123 45",contact_email:"johan@bilcentermalardalen.se",notes:""},
- {org_nr:"556812-3344",company_name:"Syd Motor Trading AB",city:"Malmö",sni_code:"45112",brand:"BYD",revenue:142000000,employees:31,solidity:12,status:"kontaktad",contact_name:"Sara Nilsson",contact_phone:"040-998 11",contact_email:"sara@sydmotor.se",notes:"Ringde 12/5, vill ha återkoppling efter sommaren."},
- {org_nr:"556944-5566",company_name:"Norrlands Bil & Handel AB",city:"Umeå",sni_code:"45111",brand:"Hyundai",revenue:56000000,employees:9,solidity:24,status:"ny",contact_name:"",contact_phone:"",contact_email:"info@norrlandsbil.se",notes:""},
- {org_nr:"556633-7788",company_name:"Premium Cars Stockholm AB",city:"Stockholm",sni_code:"45111",brand:"BMW",revenue:198000000,employees:42,solidity:46,status:"ejaktuell",contact_name:"Markus Holm",contact_phone:"08-551 20",contact_email:"markus@premiumcars.se",notes:"Egen captive via BMW Financial – ej aktuell."},
- {org_nr:"556477-9900",company_name:"Göteborg Fordon AB",city:"Göteborg",sni_code:"45191",brand:"Kia",revenue:73000000,employees:17,solidity:21,status:"mote",contact_name:"Petra Lind",contact_phone:"031-204 55",contact_email:"petra@gbgfordon.se",notes:"Möte bokat 18/6 kl 10. Intresserad av flexibel lagerkredit."},
- {org_nr:"556355-2211",company_name:"Dalarnas Begagnatcenter AB",city:"Borlänge",sni_code:"45112",brand:"Blandat",revenue:39000000,employees:7,solidity:15,status:"ny",contact_name:"",contact_phone:"0243-66 77",contact_email:"kontakt@dalbeg.se",notes:""}
-];
+const SUPABASE_URL  = "https://plydduphthqhpmwasznr.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBseWRkdXBodGhxaHBtd2Fzem5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MTcxNjksImV4cCI6MjA5NjA5MzE2OX0.fdxR8DXxFjsT0f7fL0LamsNTj6WdFx5R_rFdi67SNWo";
+let sb = null;
 
 /* ============================================================
-   2. SCORING  (klientsidan tills vidare – flyttas till
-      Supabase Edge Function i steg 4 av roadmappen)
+   2. SCORING
    ============================================================ */
 function scoreBreakdown(l){
-  // Omsättning: sweet spot 10–200 MSEK (max 30 p)
+  if (l.org_nr == null) return { total:null, parts:[], notEnriched:true };
+
+  // Omsättning: sweet spot 10–200 MSEK (max 35 p)
   const mskr = (l.revenue||0)/1e6;
   let oms = 0;
-  if (mskr>=10 && mskr<=200) oms = mskr<=120 ? 30 : 30 - ((mskr-120)/80)*10; // toppar runt 10–120, faller mot 200
-  else if (mskr>0 && mskr<10) oms = (mskr/10)*15;
+  if (mskr>=10 && mskr<=200) oms = mskr<=120 ? 35 : 35 - ((mskr-120)/80)*12;
+  else if (mskr>0 && mskr<10) oms = (mskr/10)*17;
   oms = Math.max(0,Math.round(oms));
 
-  // Anställda: 5–50 (max 20 p)
+  // Anställda: 5–50 (max 25 p)
   const e = l.employees||0;
   let ans = 0;
-  if (e>=5 && e<=50) ans = 20; else if (e>0 && e<5) ans = (e/5)*12; else if (e>50) ans = Math.max(6,20-(e-50)/10);
+  if (e>=5 && e<=50) ans = 25; else if (e>0 && e<5) ans = (e/5)*15; else if (e>50) ans = Math.max(8,25-(e-50)/8);
   ans = Math.round(ans);
 
-  // Soliditet: låg soliditet = större finansieringsbehov (max 20 p)
+  // Soliditet: låg soliditet = större finansieringsbehov (max 25 p)
   const s = l.solidity==null?40:l.solidity;
-  let sol = s<=15 ? 20 : s<=30 ? 15 : s<=45 ? 9 : 3;
+  let sol = s<=15 ? 25 : s<=30 ? 18 : s<=45 ? 11 : 4;
 
-  // Märke utan captive (max 20 p)
-  const mar = isCaptive(l.brand) ? 2 : 20;
-
-  // Bilhandel rätt SNI (max 10 p)
-  const sni = ["45111","45112","45191","45192"].includes((l.sni_code||"").trim()) ? 10 : 4;
+  // SNI bekräftad bilhandel, 47811 (max 15 p)
+  const sni = (l.sni_code||"").trim()==="47811" ? 15 : 6;
 
   const parts = [
-    {lab:"Omsättning", pts:oms, max:30},
-    {lab:"Anställda",  pts:ans, max:20},
-    {lab:"Soliditet",  pts:sol, max:20},
-    {lab:"Märke",      pts:mar, max:20},
-    {lab:"SNI / bransch", pts:sni, max:10},
+    {lab:"Omsättning", pts:oms, max:35},
+    {lab:"Anställda",  pts:ans, max:25},
+    {lab:"Soliditet",  pts:sol, max:25},
+    {lab:"SNI / bransch", pts:sni, max:15},
   ];
   const total = parts.reduce((a,p)=>a+p.pts,0);
-  return {total:Math.min(100,total), parts};
+  return {total:Math.min(100,total), parts, notEnriched:false};
 }
 
 /* ============================================================
@@ -423,12 +387,11 @@ function scoreBreakdown(l){
    ============================================================ */
 let LEADS = [];
 let sel = null;
-let sb = null;          // supabase-klient (skapas i boot om LIVE)
-let appReady = false;   // hindrar dubbel-laddning vid auth-events
-const state = { status:"alla", minScore:0, brand:"alla", q:"", sortKey:"score", sortDir:-1 };
+let appReady = false;
+const state = { status:"alla", minScore:0, q:"", sortKey:"score", sortDir:-1 };
 
 const STATUS = {
-  ny:        {label:"Ej kontaktad", cls:"b-ny",        col:getComputedStyle(document.documentElement).getPropertyValue('--st-ny')},
+  ny:        {label:"Ej kontaktad", cls:"b-ny",        col:"var(--st-ny)"},
   kontaktad: {label:"Kontaktad",    cls:"b-kontaktad", col:"var(--st-kontaktad)"},
   mote:      {label:"Möte bokat",   cls:"b-mote",      col:"var(--st-mote)"},
   ejaktuell: {label:"Ej intressant",cls:"b-ejaktuell", col:"var(--st-ej)"},
@@ -438,22 +401,26 @@ const fmtMSEK = v => v==null ? "–" : (v/1e6).toLocaleString("sv-SE",{maximumFr
 const scoreColor = sc => sc>=80?"var(--sc-high)":sc>=50?"var(--sc-mid)":"var(--sc-low)";
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),2200);}
 
-/* ============================================================
-   4. DATA — Supabase (supabase-js) eller demo
-   ============================================================ */
-async function loadLeads(){
-  if(!LIVE){
-    LEADS = DEMO.map(d=>({...d, score:scoreBreakdown(d).total}));
-    return;
-  }
-  const { data, error } = await sb.from("leads").select("*");
-  if(error) throw error;
-  LEADS = data.map(d=>({...d, score:scoreBreakdown(d).total})); // räkna om score lokalt så breakdown matchar
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function followupInfo(d){
+  if(!d) return {label:"–", cls:"fu-none"};
+  const fmt = new Date(d+"T00:00:00").toLocaleDateString("sv-SE",{day:"numeric",month:"short"});
+  if(d < todayStr())  return {label:`${fmt} · försenad`, cls:"fu-late"};
+  if(d === todayStr()) return {label:`${fmt} · idag`,     cls:"fu-today"};
+  return {label:fmt, cls:"fu-future"};
 }
 
-async function patchLead(org_nr, fields){
-  if(!LIVE) return true; // demo: bara lokalt
-  const { error } = await sb.from("leads").update(fields).eq("org_nr", org_nr);
+/* ============================================================
+   4. DATA — Supabase
+   ============================================================ */
+async function loadLeads(){
+  const { data, error } = await sb.from("leads").select("*");
+  if(error) throw error;
+  LEADS = data.map(d=>({...d, score:scoreBreakdown(d).total}));
+}
+
+async function patchLead(id, fields){
+  const { error } = await sb.from("leads").update(fields).eq("id", id);
   if(error) console.error(error);
   return !error;
 }
@@ -465,16 +432,21 @@ function visible(){
   let r = LEADS.filter(l=>{
     if(state.status!=="alla" && l.status!==state.status) return false;
     if((l.score||0) < state.minScore) return false;
-    if(state.brand!=="alla" && (l.brand||"")!==state.brand) return false;
     if(state.q){
       const q=state.q.toLowerCase();
-      if(!`${l.company_name} ${l.city} ${l.org_nr}`.toLowerCase().includes(q)) return false;
+      if(!`${l.company_name} ${l.city} ${l.org_nr||""}`.toLowerCase().includes(q)) return false;
     }
     return true;
   });
   const k=state.sortKey, d=state.sortDir;
   r.sort((a,b)=>{
     let x=a[k],y=b[k];
+    if(k==="follow_up_date"){
+      if(!x && !y) return 0;
+      if(!x) return 1;
+      if(!y) return -1;
+      return x<y?-d:x>y?d:0;
+    }
     if(typeof x==="string"){x=(x||"").toLowerCase();y=(y||"").toLowerCase();return x<y?-d:x>y?d:0;}
     return ((x||0)-(y||0))*d;
   });
@@ -487,11 +459,13 @@ function visible(){
 function renderStats(){
   const mote = LEADS.filter(l=>l.status==="mote").length;
   const hot  = LEADS.filter(l=>l.score>=80 && l.status!=="ejaktuell").length;
+  const fu   = LEADS.filter(l=>l.follow_up_date && l.follow_up_date<=todayStr() && l.status!=="ejaktuell").length;
   const unt  = LEADS.filter(l=>l.status==="ny" && l.score>=80).length;
   $("#stats").innerHTML = `
     <div class="stat mote"><span class="spark">📅</span><div class="v num">${mote}</div><div class="l">Möten bokade</div></div>
     <div class="stat hot"><span class="spark">🔥</span><div class="v num">${hot}</div><div class="l">Heta leads (80+)</div></div>
-    <div class="stat untouched wide"><span class="spark">✦</span><div class="v num">${unt}</div><div class="l">Orörda med score 80+ — ta dessa först</div></div>`;
+    <div class="stat followup"><span class="spark">⏰</span><div class="v num">${fu}</div><div class="l">Uppföljning idag/försenad</div></div>
+    <div class="stat untouched"><span class="spark">✦</span><div class="v num">${unt}</div><div class="l">Orörda · score 80+</div></div>`;
 }
 
 function renderStatusFilter(){
@@ -504,15 +478,7 @@ function renderStatusFilter(){
     </div>`;
   $("#statusList").innerHTML =
     item("alla","Alla leads","#7f8eaa") +
-    Object.entries(STATUS).map(([k,v])=>item(k,v.label,v.col.includes("var")?`var(--st-${k})`:v.col)).join("");
-}
-
-function renderBrands(){
-  const brands=[...new Set(LEADS.map(l=>l.brand).filter(Boolean))].sort();
-  const chip=(b,active,cap)=>`<span class="chip ${active?'active':''} ${cap?'captive':''}" data-b="${b}">${cap?'<span class="lock">🔒</span>':''}${b}</span>`;
-  $("#brandChips").innerHTML =
-    `<span class="chip ${state.brand==='alla'?'active':''}" data-b="alla">Alla märken</span>` +
-    brands.map(b=>chip(b, state.brand===b, isCaptive(b))).join("");
+    Object.entries(STATUS).map(([k,v])=>item(k,v.label,v.col)).join("");
 }
 
 function renderTable(){
@@ -521,45 +487,51 @@ function renderTable(){
   const tb=$("#rows");
   $("#empty").style.display = rows.length?"none":"block";
   tb.innerHTML = rows.map(l=>{
-    const st=STATUS[l.status]||STATUS.ny, cap=isCaptive(l.brand);
-    return `<tr data-org="${l.org_nr}" class="${sel&&sel.org_nr===l.org_nr?'sel':''}">
-      <td class="right"><div class="score-cell">
-        <span class="score-num" style="color:${scoreColor(l.score)}">${l.score}</span>
-        <span class="score-bar"><span class="score-fill" style="width:${l.score}%;background:${scoreColor(l.score)}"></span></span>
-      </div></td>
-      <td><div class="co-name">${l.company_name}</div><div class="co-org num">${l.org_nr}</div></td>
+    const st=STATUS[l.status]||STATUS.ny;
+    const fu=followupInfo(l.follow_up_date);
+    const scoreCell = l.score==null
+      ? `<div class="score-cell"><span class="score-num" style="color:var(--faint)">–</span><span class="score-bar"><span class="score-fill" style="width:0%"></span></span></div>`
+      : `<div class="score-cell"><span class="score-num" style="color:${scoreColor(l.score)}">${l.score}</span><span class="score-bar"><span class="score-fill" style="width:${l.score}%;background:${scoreColor(l.score)}"></span></span></div>`;
+    return `<tr data-id="${l.id}" class="${sel&&sel.id===l.id?'sel':''}">
+      <td class="right">${scoreCell}</td>
+      <td><div class="co-name">${l.company_name}</div><div class="co-org num">${l.org_nr||"org.nr ej hämtat"}</div></td>
       <td>${l.city||"–"}</td>
       <td class="right num">${fmtMSEK(l.revenue)}</td>
       <td class="right num">${l.employees??"–"}</td>
-      <td><span class="brand-tag ${cap?'cap':''}">${cap?'<span class="lk">🔒</span>':''}${l.brand||"–"}</span></td>
+      <td><span class="${fu.cls}">${fu.label}</span></td>
       <td><span class="badge ${st.cls}"><span class="dot"></span>${st.label}</span></td>
     </tr>`;
   }).join("");
-  tb.querySelectorAll("tr").forEach(tr=>tr.onclick=()=>openPanel(tr.dataset.org));
+  tb.querySelectorAll("tr").forEach(tr=>tr.onclick=()=>openPanel(+tr.dataset.id));
 }
 
-function renderAll(){renderStats();renderStatusFilter();renderBrands();renderTable();}
+function renderAll(){renderStats();renderStatusFilter();renderTable();}
 
 /* ============================================================
    7. DETALJPANEL
    ============================================================ */
-function openPanel(org){
-  sel = LEADS.find(l=>l.org_nr===org); if(!sel) return;
-  const bd = scoreBreakdown(sel), st = STATUS[sel.status]||STATUS.ny, cap=isCaptive(sel.brand);
-  $("#pRing").textContent=sel.score;
-  $("#pRing").style.background=`conic-gradient(${scoreColor(sel.score)} ${sel.score*3.6}deg, #eef1f5 0deg)`;
+function openPanel(id){
+  sel = LEADS.find(l=>l.id===id); if(!sel) return;
+  const bd = scoreBreakdown(sel), st = STATUS[sel.status]||STATUS.ny;
+
+  $("#pRing").textContent= sel.score==null ? "–" : sel.score;
+  $("#pRing").style.background= sel.score==null ? "#cfd6e2" : `conic-gradient(${scoreColor(sel.score)} ${sel.score*3.6}deg, #eef1f5 0deg)`;
   $("#pRing").style.boxShadow=`inset 0 0 0 6px #fff`;
   $("#pName").textContent=sel.company_name;
-  $("#pMeta").textContent=`${sel.org_nr} · ${sel.city||""} · SNI ${sel.sni_code||"–"}`;
+  $("#pMeta").textContent=`${sel.org_nr||"Org.nr ej hämtat"} · ${sel.city||"–"} · SNI ${sel.sni_code||"–"}`;
+
+  const breakdownHtml = bd.notEnriched
+    ? `<div class="notenriched">Det här bolaget är inte anrikat ännu. Klicka "⚙ Anrik 20 leads" i toppmenyn för att hämta org.nr, SNI-kod, antal anställda, omsättning och soliditet.</div>`
+    : bd.parts.map(p=>`<div class="bd-row">
+        <span class="lab">${p.lab}</span>
+        <span class="track"><span class="fill" style="width:${(p.pts/p.max)*100}%"></span></span>
+        <span class="pts">${p.pts}/${p.max}</span>
+      </div>`).join("");
 
   $("#pBody").innerHTML = `
     <div class="p-sec">
       <h4>Varför den här poängen</h4>
-      ${bd.parts.map(p=>`<div class="bd-row">
-        <span class="lab">${p.lab}</span>
-        <span class="track"><span class="fill" style="width:${(p.pts/p.max)*100}%"></span></span>
-        <span class="pts">${p.pts}/${p.max}</span>
-      </div>`).join("")}
+      ${breakdownHtml}
     </div>
 
     <div class="p-sec">
@@ -568,7 +540,7 @@ function openPanel(org){
         <div class="kpi"><div class="v num">${fmtMSEK(sel.revenue)}</div><div class="l">Omsättning</div></div>
         <div class="kpi"><div class="v num">${sel.employees??"–"}</div><div class="l">Anställda</div></div>
         <div class="kpi"><div class="v num">${sel.solidity!=null?sel.solidity+" %":"–"}</div><div class="l">Soliditet</div></div>
-        <div class="kpi"><div class="v">${cap?"🔒 Captive":"⭐ Fritt"}</div><div class="l">${sel.brand||"–"}</div></div>
+        <div class="kpi"><div class="v num">${sel.sni_code||"–"}</div><div class="l">SNI-kod</div></div>
       </div>
     </div>
 
@@ -589,8 +561,16 @@ function openPanel(org){
     </div>
 
     <div class="p-sec">
-      <h4>Anteckningar</h4>
+      <h4>Anteckningar & uppföljning</h4>
       <textarea id="notes" placeholder="Skriv anteckningar om leaden…">${sel.notes||""}</textarea>
+      <label class="fu-label">Nästa uppföljning</label>
+      <input type="date" id="followup" class="dateinput" value="${sel.follow_up_date||""}">
+      <div class="quickdates">
+        <button class="btn btn-ghost qd-btn" data-days="1">Imorgon</button>
+        <button class="btn btn-ghost qd-btn" data-days="7">+1 vecka</button>
+        <button class="btn btn-ghost qd-btn" data-days="30">+1 månad</button>
+        <button class="btn btn-ghost qd-btn" data-days="clear">Rensa</button>
+      </div>
       <div class="notes-foot">
         <button class="btn btn-prim" id="saveNotes">Spara</button>
         <span class="saved" id="savedMsg">✓ Sparat</span>
@@ -600,44 +580,63 @@ function openPanel(org){
     <div class="p-sec" style="margin-bottom:0">
       <h4>Första kontakt</h4>
       <button class="btn btn-acc" id="genBtn">✨ Generera kontaktmeddelande</button>
-      <div class="outreach" id="outreach"></div>
+      <div class="outreach" id="outreachWrap">
+        <span class="tag">⚡ Utkast · redigerbart</span>
+        <textarea id="outreachText"></textarea>
+        <div class="notes-foot">
+          <button class="btn btn-prim" id="sendBtn">✉ Öppna i Outlook</button>
+        </div>
+      </div>
     </div>`;
 
   // status-switch
   $("#ssw").querySelectorAll(".ss-btn").forEach(b=>b.onclick=async()=>{
     const ns=b.dataset.s; if(ns===sel.status) return;
-    const ok=await patchLead(sel.org_nr,{status:ns,updated_at:new Date().toISOString()});
-    if(ok){sel.status=ns;openPanel(sel.org_nr);renderAll();toast(LIVE?"Status uppdaterad":"Status uppdaterad (demo, ej sparat)");}
+    const ok=await patchLead(sel.id,{status:ns,updated_at:new Date().toISOString()});
+    if(ok){sel.status=ns;openPanel(sel.id);renderAll();toast("Status uppdaterad");}
     else toast("Kunde inte uppdatera status");
   });
 
-  // notes
+  // snabbval för uppföljningsdatum
+  $("#pBody").querySelectorAll("[data-days]").forEach(b=>b.onclick=()=>{
+    const v=b.dataset.days;
+    if(v==="clear"){ $("#followup").value=""; return; }
+    const d=new Date(); d.setDate(d.getDate()+(+v));
+    $("#followup").value = d.toISOString().slice(0,10);
+  });
+
+  // spara anteckning + uppföljning
   $("#saveNotes").onclick=async()=>{
     const v=$("#notes").value;
-    const ok=await patchLead(sel.org_nr,{notes:v,updated_at:new Date().toISOString()});
-    if(ok){sel.notes=v;const m=$("#savedMsg");m.classList.add("show");setTimeout(()=>m.classList.remove("show"),1600);
-      if(!LIVE)toast("Demo-läge: sparas inte till databas");}
-    else toast("Kunde inte spara anteckning");
+    const fu=$("#followup").value || null;
+    const ok=await patchLead(sel.id,{notes:v, follow_up_date:fu, updated_at:new Date().toISOString()});
+    if(ok){
+      sel.notes=v; sel.follow_up_date=fu;
+      const m=$("#savedMsg");m.classList.add("show");setTimeout(()=>m.classList.remove("show"),1600);
+      renderAll();
+    } else toast("Kunde inte spara");
   };
 
-  // outreach-stub  (riktig version anropar Claude API via Edge Function – roadmap steg 5)
+  // generera + skicka via Outlook
   $("#genBtn").onclick=()=>{
-    const o=$("#outreach");
-    const hook = cap
-      ? `Jag vet att ni kör ${sel.brand} och kanske redan har en finansieringslösning – men`
-      : `Eftersom ni säljer ${sel.brand||"flera märken"} utan bunden captive-finansiering`;
-    o.textContent =
+    const msg =
 `Hej${sel.contact_name?` ${sel.contact_name.split(" ")[0]}`:""}!
 
-Jag heter [Ditt namn] och jobbar på AOTO. ${hook} ser jag att ${sel.company_name} i ${sel.city||"er region"} skulle kunna frigöra rörelsekapital genom lagerfinansiering – ni betalar bara för det lager ni faktiskt har ute.
+Jag heter [Ditt namn] och jobbar på AOTO. Jag ser att ${sel.company_name} i ${sel.city||"er region"} skulle kunna frigöra rörelsekapital genom lagerfinansiering av begagnade bilar – ni betalar bara för det lager ni faktiskt har ute.
 
 Har du 15 minuter nästa vecka för ett kort samtal om hur det skulle se ut för er?
 
 Vänliga hälsningar,
 [Ditt namn], AOTO`;
-    o.innerHTML = `<span class="tag">⚡ Utkast · placeholder</span>`+o.textContent.replace(/\n/g,"<br>");
-    o.classList.add("show");
-    o.scrollIntoView({behavior:"smooth",block:"nearest"});
+    $("#outreachText").value = msg;
+    $("#outreachWrap").classList.add("show");
+    $("#outreachWrap").scrollIntoView({behavior:"smooth",block:"nearest"});
+  };
+  $("#sendBtn").onclick=()=>{
+    const subject = encodeURIComponent(`AOTO – lagerfinansiering för ${sel.company_name}`);
+    const body = encodeURIComponent($("#outreachText").value);
+    const to = sel.contact_email || "";
+    window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
   };
 
   $("#panel").classList.add("open");$("#scrim").classList.add("open");
@@ -649,7 +648,6 @@ function closePanel(){$("#panel").classList.remove("open");$("#scrim").classList
    8. EVENTS
    ============================================================ */
 $("#statusList").onclick=e=>{const it=e.target.closest(".status-item");if(!it)return;state.status=it.dataset.st;renderStatusFilter();renderTable();};
-$("#brandChips").onclick=e=>{const c=e.target.closest(".chip");if(!c)return;state.brand=c.dataset.b;renderBrands();renderTable();};
 $("#scoreSlider").oninput=e=>{state.minScore=+e.target.value;$("#scoreVal").textContent=e.target.value;
   e.target.style.setProperty("--p",e.target.value+"%");renderTable();};
 $("#search").oninput=e=>{state.q=e.target.value.trim();renderTable();};
@@ -657,7 +655,7 @@ $("#pClose").onclick=closePanel;$("#scrim").onclick=closePanel;
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closePanel();});
 document.querySelectorAll("thead th[data-sort]").forEach(th=>th.onclick=()=>{
   const k=th.dataset.sort;
-  if(state.sortKey===k)state.sortDir*=-1;else{state.sortKey=k;state.sortDir=(k==="company_name"||k==="city"||k==="brand"||k==="status")?1:-1;}
+  if(state.sortKey===k)state.sortDir*=-1;else{state.sortKey=k;state.sortDir=(k==="company_name"||k==="city"||k==="status"||k==="follow_up_date")?1:-1;}
   document.querySelectorAll("thead th .ar").forEach(a=>a.remove());
   const ar=document.createElement("span");ar.className="ar";ar.textContent=state.sortDir>0?"▲":"▼";th.appendChild(ar);
   renderTable();
@@ -675,7 +673,7 @@ async function enterApp(session){
   const email = session?.user?.email || "";
   $("#userEmail").textContent = email;
   $("#userAv").textContent = (email[0]||"–");
-  if(appReady) return;            // redan inne – ladda inte om
+  if(appReady) return;
   appReady = true;
   try{ await loadLeads(); renderAll(); }
   catch(err){ console.error(err); toast("Kunde inte hämta leads – kontrollera RLS-policy"); }
@@ -691,30 +689,16 @@ async function doLogin(){
   const { error } = await sb.auth.signInWithPassword({ email, password:pw });
   btn.disabled=false; btn.textContent="Logga in";
   if(error){ err.textContent = "Fel e-post eller lösenord."; }
-  // lyckad inloggning hanteras av onAuthStateChange
 }
 
 (async function boot(){
-  // Demo-läge: ingen backend, ingen inloggning – visa direkt för UI-test
-  if(!LIVE){
-    $("#userEmail").textContent="Demo-läge"; $("#userAv").textContent="D";
-    $("#logoutBtn").style.display="none";
-    showApp();
-    LEADS = DEMO.map(d=>({...d, score:scoreBreakdown(d).total}));
-    renderAll();
-    return;
-  }
-
-  // Live-läge: kräver inloggning
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-  $("#connPill").className="conn-pill live"; $("#connText").textContent="Live · Supabase";
 
   $("#authBtn").onclick = doLogin;
   $("#authPw").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
   $("#authEmail").addEventListener("keydown", e=>{ if(e.key==="Enter") $("#authPw").focus(); });
   $("#logoutBtn").onclick = ()=> sb.auth.signOut();
 
-  // Importera-knapp (anropar Netlify Function)
   const importBtn = $("#importBtn"); importBtn.style.display="";
   importBtn.onclick = async ()=>{
     importBtn.disabled=true; importBtn.textContent="Importerar…";
@@ -732,7 +716,6 @@ async function doLogin(){
     finally{ importBtn.disabled=false; importBtn.textContent="⬇ Importera från Roaring"; }
   };
 
-// Anrik-knapp (anropar Netlify Function)
   const enrichBtn = $("#enrichBtn"); enrichBtn.style.display="";
   enrichBtn.onclick = async ()=>{
     enrichBtn.disabled=true; enrichBtn.textContent="Anrikar…";

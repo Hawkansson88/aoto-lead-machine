@@ -13,7 +13,7 @@
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY
  */
 
-const SNI_CODES = ["45111", "45112", "45191", "45192"];
+const SNI_CODES = ["47811"];
 const PAGE_SIZE = 100;
 const ROARING_TOKEN_URL = "https://api.roaring.io/token";
 const ROARING_SEARCH_URL = "https://api.roaring.io/se/company/search/2.0/search";
@@ -69,15 +69,15 @@ async function getRoaringToken(clientId, clientSecret) {
 async function searchCompanies(token) {
   const allHits = [];
 
-  // TEMP: en sökning utan SNI-filter för att testa sandbox-pipelinen
-  // TODO: byt tillbaka till SNI-loop innan riktig data
-  {
+for (const sni of SNI_CODES) {
     let from = 0;
     let requestKey = null;
 
     while (true) {
       const params = new URLSearchParams();
-      // params.append("industryCode", sni);   // TEMP borttagen
+      // TEMP: SNI-filter avstängt för att testa nya GUI:t mot sandbox-data
+      // TODO: kommentera in igen när produktionscredentials är på plats
+      // params.append("industryCode", sni);
       params.append("statusCode", "100");      // Aktivt bolag
       params.append("legalGroupCode", "AB");    // Aktiebolag
       params.append("pageSize", String(PAGE_SIZE));
@@ -89,7 +89,7 @@ async function searchCompanies(token) {
       });
 
       if (!res.ok) {
-        console.error(`Roaring search error: ${res.status}`);
+        console.error(`Roaring search error (SNI ${sni}): ${res.status}`);
         break;
       }
 
@@ -98,7 +98,6 @@ async function searchCompanies(token) {
       allHits.push(...hits);
       requestKey = data.requestKey || null;
 
-      // Sluta om vi fått alla resultat eller nått rimligt tak
       if (hits.length < PAGE_SIZE || allHits.length >= 500) break;
       from += PAGE_SIZE;
     }
