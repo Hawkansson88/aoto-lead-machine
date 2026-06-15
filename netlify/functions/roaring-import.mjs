@@ -33,20 +33,42 @@ function parseEmployees(interval) {
 }
 
 /** Mappa ett Roaring SearchHit till vår leads-schema */
-function mapToLead(hit) {
+async function mapToLead(hit, token) {
+  const enrich = await enrichHit(hit, token);
   return {
-    org_nr:              null,           // riktigt org.nr saknas i Company Search — löses senare
+    org_nr:              enrich.org_nr ?? null,
     roaring_company_id:  hit.companyId,
     company_name:        hit.companyName || "Okänt",
     city:         hit.town || hit.visitTown || null,
-    sni_code:     hit.industryCode || null,
-    brand:        null,            // fylls i manuellt — Roaring vet inte bilmärke
-    revenue:      null,            // kräver Financial Information API (steg 2)
-    employees:    parseEmployees(hit.numberEmployeesInterval),
-    solidity:     null,            // kräver Financial Information API (steg 2)
-    score:        null,            // räknas av frontenden
+    sni_code:     enrich.sni_code ?? (hit.industryCode || null),
+    brand:        null,
+    revenue:      null,
+    employees:    enrich.employees ?? parseEmployees(hit.numberEmployeesInterval),
+    solidity:     null,
+    score:        null,
     status:       "ny",
   };
+}
+
+/** Hämta riktigt org.nr, SNI-kod och antal anställda via Overview-API */
+async function enrichHit(hit, token) {
+  try {
+    const res = await fetch(
+      `https://api.roaring.io/se/company/overview/2.0/${hit.companyId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!res.ok) return {};
+    const data = await res.json();
+    const record = data.records?.[0];
+    if (!record) return {};
+    return {
+      org_nr: fmtOrg(record.companyId),
+      sni_code: record.industryCode || null,
+      employees: parseEmployees(record.numberEmployeesInterval),
+    };
+  } catch {
+    return {};
+  }
 }
 
 /* ─── Auth ─── */
@@ -201,10 +223,9 @@ export async function handler(event) {
     const seen = new Set();
     const leads = [];
     for (const hit of hits) {
-      const org = fmtOrg(hit.companyId);
-      if (!org || seen.has(org)) continue;
-      seen.add(org);
-      leads.push(mapToLead(hit));
+      if (!hit.companyId || seen.has(hit.companyId)) continue;
+      seen.add(hit.companyId);
+      leads.push(await mapToLead(hit, roaringToken));
     }
 
     // 4. Skriv till Supabase
