@@ -187,6 +187,16 @@ export async function handler(event) {
     // 2. Sök bilhandlare
     const hits = await searchCompanies(roaringToken);
 
+    // TEMP: testa Overview-API för första bolaget
+    let overviewTest = null;
+    if (hits.length > 0) {
+      const testRes = await fetch(
+        `https://api.roaring.io/se/company/overview/2.0/${hits[0].companyId}`,
+        { headers: { Authorization: `Bearer ${roaringToken}` } }
+      );
+      overviewTest = { status: testRes.status, body: await testRes.text() };
+    }
+
     // 3. Mappa + deduplika (samma companyId kan dyka upp under flera SNI)
     const seen = new Set();
     const leads = [];
@@ -204,7 +214,7 @@ export async function handler(event) {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        success: true,
+        success: true, overviewTest,
         found: leads.length,
         ...result,
         message: `Hittade ${leads.length} bolag, importerade ${result.inserted} nya (${result.skipped} fanns redan).`,
