@@ -35,6 +35,7 @@ function parseEmployees(interval) {
 /** Mappa ett Roaring SearchHit till vår leads-schema */
 async function mapToLead(hit, token) {
   const enrich = await enrichHit(hit, token);
+  const financials = enrich.org_nr ? await enrichFinancials(enrich.org_nr, token) : {};
   return {
     org_nr:              enrich.org_nr ?? null,
     roaring_company_id:  hit.companyId,
