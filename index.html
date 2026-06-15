@@ -553,24 +553,34 @@ function renderAll(){renderStats();renderStatusFilter();renderTable();}
 /* ============================================================
    7. DETALJPANEL
    ============================================================ */
-async function openPanel(id){async function openPanel(id){
-  sel = LEADS.find(l=>l.id===id); if(!sel) return;
+async function openPanel(id){
+  sel = LEADS.find(l => l.id === id);
+  if (!sel) return;
+
   const bd = scoreBreakdown(sel);
 
-  $("#pRing").textContent= sel.score==null ? "–" : sel.score;
-  $("#pRing").style.background= sel.score==null ? "#cfd6e2" : `conic-gradient(${scoreColor(sel.score)} ${sel.score*3.6}deg, #eef1f5 0deg)`;
-  $("#pRing").style.boxShadow=`inset 0 0 0 6px #fff`;
-  $("#pName").textContent=sel.company_name;
-  $("#pMeta").textContent=`${sel.org_nr||"Org.nr ej hämtat"} · ${sel.city||"–"}`;
-  $("#followup").value = sel.follow_up_date||"";
+  $("#pRing").textContent = sel.score == null ? "–" : sel.score;
+  $("#pRing").style.background =
+    sel.score == null
+      ? "#cfd6e2"
+      : `conic-gradient(${scoreColor(sel.score)} ${sel.score * 3.6}deg, #eef1f5 0deg)`;
+
+  $("#pRing").style.boxShadow = `inset 0 0 0 6px #fff`;
+  $("#pName").textContent = sel.company_name;
+  $("#pMeta").textContent = `${sel.org_nr || "Org.nr ej hämtat"} · ${sel.city || "–"}`;
+  $("#followup").value = sel.follow_up_date || "";
 
   const breakdownHtml = bd.notEnriched
     ? `<div class="notenriched">Det här bolaget är inte anrikat ännu. Klicka "⚙ Anrik 20 leads" i toppmenyn för att hämta org.nr, antal anställda, omsättning och soliditet.</div>`
-    : bd.parts.map(p=>`<div class="bd-row">
-        <span class="lab">${p.lab}</span>
-        <span class="track"><span class="fill" style="width:${(p.pts/p.max)*100}%"></span></span>
-        <span class="pts">${p.pts}/${p.max}</span>
-      </div>`).join("");
+    : bd.parts.map(p => `
+        <div class="bd-row">
+          <span class="lab">${p.lab}</span>
+          <span class="track">
+            <span class="fill" style="width:${(p.pts / p.max) * 100}%"></span>
+          </span>
+          <span class="pts">${p.pts}/${p.max}</span>
+        </div>
+      `).join("");
 
   $("#pBody").innerHTML = `
     <div class="p-sec">
@@ -583,8 +593,8 @@ async function openPanel(id){async function openPanel(id){
       <div class="kpis">
         <div class="kpi"><div class="v num">${fmtMSEK(sel.revenue)}</div><div class="l">Omsättning</div></div>
         <div class="kpi"><div class="v num">${fmtMSEK(sel.result_after_fin)}</div><div class="l">Resultat e. fin</div></div>
-        <div class="kpi"><div class="v num">${sel.employees??"–"}</div><div class="l">Anställda</div></div>
-        <div class="kpi"><div class="v num">${sel.solidity!=null?sel.solidity+" %":"–"}</div><div class="l">Soliditet</div></div>
+        <div class="kpi"><div class="v num">${sel.employees ?? "–"}</div><div class="l">Anställda</div></div>
+        <div class="kpi"><div class="v num">${sel.solidity != null ? sel.solidity + " %" : "–"}</div><div class="l">Soliditet</div></div>
       </div>
     </div>
 
@@ -604,7 +614,11 @@ async function openPanel(id){async function openPanel(id){
     <div class="p-sec">
       <h4>Status</h4>
       <div class="status-switch" id="ssw">
-        ${Object.entries(STATUS).map(([k,v])=>`<button class="ss-btn ${sel.status===k?'on':''}" data-s="${k}"><span class="dot"></span>${v.label}</button>`).join("")}
+        ${Object.entries(STATUS).map(([k, v]) =>
+          `<button class="ss-btn ${sel.status === k ? 'on' : ''}" data-s="${k}">
+            <span class="dot"></span>${v.label}
+          </button>`
+        ).join("")}
       </div>
     </div>
 
@@ -619,57 +633,31 @@ async function openPanel(id){async function openPanel(id){
       <div class="notes-list" id="notesList">
         <div class="notes-empty">Laddar anteckningar…</div>
       </div>
-    </div>`;
+    </div>
+  `;
 
-  // status-switch
-  $("#ssw").querySelectorAll(".ss-btn").forEach(b=>b.onclick=async()=>{
-    const ns=b.dataset.s; if(ns===sel.status) return;
-    const ok=await patchLead(sel.id,{status:ns,updated_at:new Date().toISOString()});
-    if(ok){sel.status=ns;openPanel(sel.id);renderAll();toast("Status uppdaterad");}
-    else toast("Kunde inte uppdatera status");
-  });
-
-  // lägg till anteckning
-  $("#addNoteBtn").onclick=async()=>{
-    const text=$("#newNote").value.trim();
-    if(!text) return;
-    const { data, error } = await sb.from("lead_notes").insert({lead_id:sel.id, note:text}).select().single();
-    if(error){ console.error(error); toast("Kunde inte spara anteckning"); return; }
-    $("#newNote").value="";
-    const m=$("#noteSavedMsg");m.classList.add("show");setTimeout(()=>m.classList.remove("show"),1600);
-    prependNote(data);
-  };
-
-  // spara kontaktperson
-  $("#saveContact").onclick=async()=>{
-    const name=$("#contactName").value.trim()||null;
-    const phone=$("#contactPhone").value.trim()||null;
-    const email=$("#contactEmail").value.trim()||null;
-    const { error } = await sb.from("lead_contacts")
-      .upsert({lead_id:sel.id, name, phone, email, updated_at:new Date().toISOString()}, {onConflict:"lead_id"});
-    if(error){ console.error(error); toast("Kunde inte spara kontakt"); return; }
-    const m=$("#contactSavedMsg");m.classList.add("show");setTimeout(()=>m.classList.remove("show"),1600);
-  };
-
-  $("#panel").classList.add("open");$("#scrim").classList.add("open");
+  $("#panel").classList.add("open");
+  $("#scrim").classList.add("open");
   renderTable();
 
-  // hämta anteckningshistorik + kontaktperson parallellt
   const [notesRes, contactRes] = await Promise.all([
-    sb.from("lead_notes").select("*").eq("lead_id", id).order("created_at",{ascending:false}),
+    sb.from("lead_notes").select("*").eq("lead_id", id).order("created_at", { ascending: false }),
     sb.from("lead_contacts").select("*").eq("lead_id", id).maybeSingle()
   ]);
-  if(!sel || sel.id!==id) return; // panelen bytte lead under väntan
 
-  if(notesRes.error){ console.error(notesRes.error); $("#notesList").innerHTML=`<div class="notes-empty">Kunde inte hämta anteckningar.</div>`; }
-  else renderNotesList(notesRes.data||[]);
+  if (!sel || sel.id !== id) return;
 
-  if(!contactRes.error && contactRes.data){
-    $("#contactName").value = contactRes.data.name||"";
-    $("#contactPhone").value = contactRes.data.phone||"";
-    $("#contactEmail").value = contactRes.data.email||"";
+  if (notesRes.error) {
+    $("#notesList").innerHTML = `<div class="notes-empty">Kunde inte hämta anteckningar.</div>`;
+  } else {
+    renderNotesList(notesRes.data || []);
   }
-}
+
+  if (!contactRes.error && contactRes.data) {
+    $("#contactName").value = contactRes.data.name || "";
+    $("#contactPhone").value = contactRes.data.phone || "";
+    $("#contactEmail").value = contactRes.data.email || "";
+  }
 }
 function closePanel(){$("#panel").classList.remove("open");$("#scrim").classList.remove("open");sel=null;renderTable();}
 
