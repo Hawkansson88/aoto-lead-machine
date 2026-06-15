@@ -42,9 +42,9 @@ async function mapToLead(hit, token) {
     city:         hit.town || hit.visitTown || null,
     sni_code:     enrich.sni_code ?? (hit.industryCode || null),
     brand:        null,
-    revenue:      null,
+    revenue:      financials.revenue ?? null,
     employees:    enrich.employees ?? parseEmployees(hit.numberEmployeesInterval),
-    solidity:     null,
+    solidity:     financials.solidity ?? null,
     score:        null,
     status:       "ny",
   };
@@ -65,6 +65,28 @@ async function enrichHit(hit, token) {
       org_nr: fmtOrg(record.companyId),
       sni_code: record.industryCode || null,
       employees: parseEmployees(record.numberEmployeesInterval),
+    };
+  } catch {
+    return {};
+  }
+}
+
+/** Hämta omsättning och soliditet via Financial Information API */
+async function enrichFinancials(orgNr, token) {
+  try {
+    const id = (orgNr || "").replace(/\D/g, ""); // ta bort bindestreck
+    if (!id) return {};
+    const res = await fetch(
+      `https://api.roaring.io/se/company/economy-overview/2.1/extended/${id}?years=1`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!res.ok) return {};
+    const data = await res.json();
+    const record = data.records?.[0];
+    if (!record) return {};
+    return {
+      revenue:  record.plSales != null ? Math.round(record.plSales * 1000) : null,  // tkr → kr
+      solidity: record.kpiEquityRatioPercent != null ? Math.round(record.kpiEquityRatioPercent) : null,
     };
   } catch {
     return {};
