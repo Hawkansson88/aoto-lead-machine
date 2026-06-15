@@ -315,6 +315,7 @@ textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(
         <input id="search" placeholder="Sök företag, stad, org.nr…" autocomplete="off">
       </div>
       <button class="btn btn-ghost" id="importBtn" style="display:none;font-size:12px;padding:7px 13px">⬇ Importera från Roaring</button>
+      <button class="btn btn-ghost" id="enrichBtn" style="display:none;font-size:12px;padding:7px 13px">⚙ Anrik 20 leads</button>
       <span class="conn-pill demo" id="connPill"><span class="d"></span><span id="connText">Demo-läge</span></span>
     </header>
 
@@ -729,6 +730,24 @@ async function doLogin(){
       else { toast("Import misslyckades: "+(body.error||res.status)); }
     }catch(err){ console.error(err); toast("Import-fel: "+err.message); }
     finally{ importBtn.disabled=false; importBtn.textContent="⬇ Importera från Roaring"; }
+  };
+
+// Anrik-knapp (anropar Netlify Function)
+  const enrichBtn = $("#enrichBtn"); enrichBtn.style.display="";
+  enrichBtn.onclick = async ()=>{
+    enrichBtn.disabled=true; enrichBtn.textContent="Anrikar…";
+    try{
+      const {data:{session:s}} = await sb.auth.getSession();
+      if(!s) { toast("Du måste vara inloggad"); return; }
+      const res = await fetch("/.netlify/functions/roaring-enrich",{
+        method:"POST",
+        headers:{ Authorization:"Bearer "+s.access_token }
+      });
+      const body = await res.json();
+      if(body.success){ toast(body.message); await loadLeads(); renderAll(); }
+      else { toast("Anrikning misslyckades: "+(body.error||res.status)); }
+    }catch(err){ console.error(err); toast("Anrik-fel: "+err.message); }
+    finally{ enrichBtn.disabled=false; enrichBtn.textContent="⚙ Anrik 20 leads"; }
   };
 
   const { data:{ session } } = await sb.auth.getSession();
