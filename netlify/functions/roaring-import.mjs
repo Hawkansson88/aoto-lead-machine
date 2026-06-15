@@ -35,8 +35,9 @@ function parseEmployees(interval) {
 /** Mappa ett Roaring SearchHit till vår leads-schema */
 function mapToLead(hit) {
   return {
-    org_nr:       fmtOrg(hit.companyId),
-    company_name: hit.companyName || "Okänt",
+    org_nr:              null,           // riktigt org.nr saknas i Company Search — löses senare
+    roaring_company_id:  hit.companyId,
+    company_name:        hit.companyName || "Okänt",
     city:         hit.town || hit.visitTown || null,
     sni_code:     hit.industryCode || null,
     brand:        null,            // fylls i manuellt — Roaring vet inte bilmärke
@@ -123,12 +124,12 @@ async function searchCompanies(token) {
 async function upsertLeads(leads, sbUrl, serviceKey) {
   // Hämta existerande org_nr så vi inte skriver över status/notes
   const existRes = await fetch(
-    `${sbUrl}/rest/v1/leads?select=org_nr`,
+    `${sbUrl}/rest/v1/leads?select=roaring_company_id`,
     { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
   );
-  const existing = new Set((await existRes.json()).map((r) => r.org_nr));
+  const existing = new Set((await existRes.json()).map((r) => r.roaring_company_id));
 
-  const newLeads = leads.filter((l) => !existing.has(l.org_nr));
+  const newLeads = leads.filter((l) => !existing.has(l.roaring_company_id));
   if (newLeads.length === 0) return { inserted: 0, skipped: leads.length };
 
   // Batchinsert nya leads (POST med service_role)
@@ -148,7 +149,7 @@ async function upsertLeads(leads, sbUrl, serviceKey) {
     throw new Error(`Supabase insert error: ${res.status} — ${err}`);
   }
 
-  return { inserted: newLeads.length, skipped: existing.size };
+  return { inserted: newLeads.length, skipped: leads.length - newLeads.length };
 }
 
 /* ─── Handler ─── */
