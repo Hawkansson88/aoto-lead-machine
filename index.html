@@ -153,9 +153,15 @@ td.right{text-align:right}
 }
 .panel.open{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
 .p-head{padding:24px 26px 20px;border-bottom:1px solid var(--line);position:relative;background:linear-gradient(180deg,var(--surface-2),var(--surface))}
-.p-close{position:absolute;top:18px;right:18px;width:30px;height:30px;border-radius:8px;border:1px solid var(--line);
-  background:#fff;cursor:pointer;color:var(--muted);font-size:16px;line-height:1}
+.p-head-actions{position:absolute;top:18px;right:18px;display:flex;align-items:center;gap:8px}
+.p-close{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);
+  background:#fff;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;flex:none}
 .p-close:hover{background:var(--canvas);color:var(--ink)}
+.btn-icon{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:#fff;
+  cursor:pointer;color:var(--accent);font-size:15px;flex:none;display:grid;place-items:center;transition:.13s}
+.btn-icon:hover{background:var(--accent-soft);border-color:var(--accent)}
+.dateinput-sm{width:128px;padding:8px 10px;font-size:12.5px}
+.btn-sm{padding:8px 12px;font-size:12px;flex:none}
 .p-score{display:flex;align-items:center;gap:14px;margin-bottom:14px}
 .p-score .ring{width:58px;height:58px;flex:none;border-radius:50%;display:grid;place-items:center;
   font-family:'Archivo';font-weight:800;font-size:21px;color:#fff}
@@ -201,12 +207,16 @@ textarea:focus,.dateinput:focus{outline:none;border-color:var(--accent);box-shad
 .quickdates{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .qd-btn{font-size:11.5px;padding:6px 10px}
 .notes-foot{display:flex;align-items:center;gap:10px;margin-top:12px}
-.notes-list{margin-top:14px;max-height:240px;overflow-y:auto;display:flex;flex-direction:column}
-.note-item{padding:10px 0;border-bottom:1px solid var(--line)}
+.notes-meta{font-size:12px;color:var(--muted);margin-bottom:10px}
+.notes-section{margin-bottom:0}
+.notes-list{margin-top:16px;max-height:340px;overflow-y:auto;display:flex;flex-direction:column}
+.note-item{padding:12px 0 12px 18px;border-bottom:1px solid var(--line);position:relative}
+.note-item::before{content:"";position:absolute;left:0;top:17px;width:8px;height:8px;border-radius:50%;background:var(--accent-2)}
 .note-item:last-child{border-bottom:none}
-.note-item .txt{font-size:13.5px;line-height:1.5;white-space:pre-wrap;color:var(--ink)}
-.note-item .meta{font-size:11px;color:var(--faint);margin-top:4px}
+.note-item .meta{font-size:11.5px;font-weight:600;color:var(--ink);margin-bottom:4px}
+.note-item .txt{font-size:13.5px;line-height:1.55;white-space:pre-wrap;color:var(--ink)}
 .notes-empty{font-size:12.5px;color:var(--faint);font-style:italic;padding:6px 0}
+.contact-form{display:flex;flex-direction:column;gap:8px}
 .btn{font-family:inherit;font-size:13px;font-weight:600;padding:9px 15px;border-radius:9px;cursor:pointer;border:none;transition:.14s}
 .btn-prim{background:var(--ink);color:#fff} .btn-prim:hover{background:#000}
 .btn-acc{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#062a20;width:100%;justify-content:center;
@@ -331,8 +341,13 @@ textarea:focus,.dateinput:focus{outline:none;border-color:var(--accent);box-shad
 <!-- ============ DETAIL PANEL ============ -->
 <div class="scrim" id="scrim"></div>
 <aside class="panel" id="panel">
-  <div class="p-head">
-    <button class="p-close" id="pClose">✕</button>
+    <div class="p-head">
+    <div class="p-head-actions">
+      <button class="btn-icon" id="mailBtn" title="Skicka första kontaktmail">✉</button>
+      <input type="date" id="followup" class="dateinput dateinput-sm">
+      <button class="btn btn-prim btn-sm" id="saveFollowup">Spara</button>
+      <button class="p-close" id="pClose">✕</button>
+    </div>
     <div class="p-score">
       <div class="ring" id="pRing">0</div>
       <div>
@@ -423,16 +438,19 @@ function fmtDateTime(iso){
   return d.toLocaleDateString("sv-SE",{day:"numeric",month:"short",year:"numeric"})+" kl "+d.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
 }
 function noteHtml(n){
-  return `<div class="note-item"><div class="txt">${n.note.replace(/</g,"&lt;")}</div><div class="meta">${fmtDateTime(n.created_at)}</div></div>`;
+  return `<div class="note-item"><div class="meta">${fmtDateTime(n.created_at)}</div><div class="txt">${n.note.replace(/</g,"&lt;")}</div></div>`;
 }
 function renderNotesList(notes){
   const el=$("#notesList"); if(!el) return;
+  const lc=$("#lastContact");
+  if(lc) lc.textContent = notes.length ? `Senaste kontakt: ${fmtDateTime(notes[0].created_at)}` : "Senaste kontakt: –";
   el.innerHTML = notes.length ? notes.map(noteHtml).join("") : `<div class="notes-empty">Inga anteckningar ännu.</div>`;
 }
 function prependNote(n){
   const el=$("#notesList"); if(!el) return;
   if(el.querySelector(".notes-empty")) el.innerHTML="";
   el.insertAdjacentHTML("afterbegin", noteHtml(n));
+  const lc=$("#lastContact"); if(lc) lc.textContent = `Senaste kontakt: ${fmtDateTime(n.created_at)}`;
 }
 
 /* ============================================================
@@ -535,18 +553,19 @@ function renderAll(){renderStats();renderStatusFilter();renderTable();}
 /* ============================================================
    7. DETALJPANEL
    ============================================================ */
-async function openPanel(id){
+async function openPanel(id){async function openPanel(id){
   sel = LEADS.find(l=>l.id===id); if(!sel) return;
-  const bd = scoreBreakdown(sel), st = STATUS[sel.status]||STATUS.ny;
+  const bd = scoreBreakdown(sel);
 
   $("#pRing").textContent= sel.score==null ? "–" : sel.score;
   $("#pRing").style.background= sel.score==null ? "#cfd6e2" : `conic-gradient(${scoreColor(sel.score)} ${sel.score*3.6}deg, #eef1f5 0deg)`;
   $("#pRing").style.boxShadow=`inset 0 0 0 6px #fff`;
   $("#pName").textContent=sel.company_name;
-  $("#pMeta").textContent=`${sel.org_nr||"Org.nr ej hämtat"} · ${sel.city||"–"} · SNI ${sel.sni_code||"–"}`;
+  $("#pMeta").textContent=`${sel.org_nr||"Org.nr ej hämtat"} · ${sel.city||"–"}`;
+  $("#followup").value = sel.follow_up_date||"";
 
   const breakdownHtml = bd.notEnriched
-    ? `<div class="notenriched">Det här bolaget är inte anrikat ännu. Klicka "⚙ Anrik 20 leads" i toppmenyn för att hämta org.nr, SNI-kod, antal anställda, omsättning och soliditet.</div>`
+    ? `<div class="notenriched">Det här bolaget är inte anrikat ännu. Klicka "⚙ Anrik 20 leads" i toppmenyn för att hämta org.nr, antal anställda, omsättning och soliditet.</div>`
     : bd.parts.map(p=>`<div class="bd-row">
         <span class="lab">${p.lab}</span>
         <span class="track"><span class="fill" style="width:${(p.pts/p.max)*100}%"></span></span>
@@ -563,18 +582,22 @@ async function openPanel(id){
       <h4>Nyckeltal</h4>
       <div class="kpis">
         <div class="kpi"><div class="v num">${fmtMSEK(sel.revenue)}</div><div class="l">Omsättning</div></div>
+        <div class="kpi"><div class="v num">${fmtMSEK(sel.result_after_fin)}</div><div class="l">Resultat e. fin</div></div>
         <div class="kpi"><div class="v num">${sel.employees??"–"}</div><div class="l">Anställda</div></div>
         <div class="kpi"><div class="v num">${sel.solidity!=null?sel.solidity+" %":"–"}</div><div class="l">Soliditet</div></div>
-        <div class="kpi"><div class="v num">${sel.sni_code||"–"}</div><div class="l">SNI-kod</div></div>
       </div>
     </div>
 
     <div class="p-sec">
-      <h4>Kontakt</h4>
-      <div class="contact">
-        ${sel.contact_name?`<span><span class="ic">👤</span>${sel.contact_name}</span>`:`<span class="none"><span class="ic">👤</span>Ingen kontaktperson</span>`}
-        ${sel.contact_phone?`<a href="tel:${sel.contact_phone}"><span class="ic">📞</span>${sel.contact_phone}</a>`:""}
-        ${sel.contact_email?`<a href="mailto:${sel.contact_email}"><span class="ic">✉</span>${sel.contact_email}</a>`:""}
+      <h4>Kontaktperson</h4>
+      <div class="contact-form">
+        <input type="text" id="contactName" class="dateinput" placeholder="Namn">
+        <input type="text" id="contactPhone" class="dateinput" placeholder="Telefon">
+        <input type="email" id="contactEmail" class="dateinput" placeholder="E-post">
+      </div>
+      <div class="notes-foot">
+        <button class="btn btn-prim" id="saveContact">Spara kontakt</button>
+        <span class="saved" id="contactSavedMsg">✓ Sparat</span>
       </div>
     </div>
 
@@ -585,42 +608,16 @@ async function openPanel(id){
       </div>
     </div>
 
-<div class="p-sec">
-      <h4>Uppföljning</h4>
-      <input type="date" id="followup" class="dateinput" value="${sel.follow_up_date||""}">
-      <div class="quickdates">
-        <button class="btn btn-ghost qd-btn" data-days="1">Imorgon</button>
-        <button class="btn btn-ghost qd-btn" data-days="7">+1 vecka</button>
-        <button class="btn btn-ghost qd-btn" data-days="30">+1 månad</button>
-        <button class="btn btn-ghost qd-btn" data-days="clear">Rensa</button>
-      </div>
-      <div class="notes-foot">
-        <button class="btn btn-prim" id="saveFollowup">Spara uppföljning</button>
-        <span class="saved" id="fuSavedMsg">✓ Sparat</span>
-      </div>
-    </div>
-
-    <div class="p-sec">
+    <div class="p-sec notes-section">
       <h4>Anteckningar</h4>
-      <textarea id="newNote" placeholder="Skriv en ny anteckning…" style="min-height:64px"></textarea>
+      <div class="notes-meta" id="lastContact">Senaste kontakt: –</div>
+      <textarea id="newNote" placeholder="Skriv en ny anteckning…"></textarea>
       <div class="notes-foot">
-        <button class="btn btn-prim" id="addNoteBtn">Lägg till</button>
+        <button class="btn btn-prim" id="addNoteBtn">Lägg till anteckning</button>
         <span class="saved" id="noteSavedMsg">✓ Sparat</span>
       </div>
       <div class="notes-list" id="notesList">
         <div class="notes-empty">Laddar anteckningar…</div>
-      </div>
-    </div>
-
-    <div class="p-sec" style="margin-bottom:0">
-      <h4>Första kontakt</h4>
-      <button class="btn btn-acc" id="genBtn">✨ Generera kontaktmeddelande</button>
-      <div class="outreach" id="outreachWrap">
-        <span class="tag">⚡ Utkast · redigerbart</span>
-        <textarea id="outreachText"></textarea>
-        <div class="notes-foot">
-          <button class="btn btn-prim" id="sendBtn">✉ Öppna i Outlook</button>
-        </div>
       </div>
     </div>`;
 
@@ -631,25 +628,6 @@ async function openPanel(id){
     if(ok){sel.status=ns;openPanel(sel.id);renderAll();toast("Status uppdaterad");}
     else toast("Kunde inte uppdatera status");
   });
-
-  // snabbval för uppföljningsdatum
-  $("#pBody").querySelectorAll("[data-days]").forEach(b=>b.onclick=()=>{
-    const v=b.dataset.days;
-    if(v==="clear"){ $("#followup").value=""; return; }
-    const d=new Date(); d.setDate(d.getDate()+(+v));
-    $("#followup").value = d.toISOString().slice(0,10);
-  });
-
-  // spara uppföljningsdatum
-  $("#saveFollowup").onclick=async()=>{
-    const fu=$("#followup").value || null;
-    const ok=await patchLead(sel.id,{follow_up_date:fu, updated_at:new Date().toISOString()});
-    if(ok){
-      sel.follow_up_date=fu;
-      const m=$("#fuSavedMsg");m.classList.add("show");setTimeout(()=>m.classList.remove("show"),1600);
-      renderAll();
-    } else toast("Kunde inte spara uppföljning");
-  };
 
   // lägg till anteckning
   $("#addNoteBtn").onclick=async()=>{
@@ -662,36 +640,36 @@ async function openPanel(id){
     prependNote(data);
   };
 
-  // generera + skicka via Outlook
-  $("#genBtn").onclick=()=>{
-    const msg =
-`Hej${sel.contact_name?` ${sel.contact_name.split(" ")[0]}`:""}!
-
-Jag heter Anton och jobbar på AOTO. Jag ser att ${sel.company_name} i ${sel.city||"er region"} skulle kunna frigöra rörelsekapital genom lagerfinansiering av begagnade bilar – ni betalar bara för det lager ni faktiskt har ute.
-
-Har du 15 minuter nästa vecka för ett kort samtal om hur det skulle se ut för er?
-
-Vänliga hälsningar,
-Anton, AOTO`;
-    $("#outreachText").value = msg;
-    $("#outreachWrap").classList.add("show");
-    $("#outreachWrap").scrollIntoView({behavior:"smooth",block:"nearest"});
-  };
-  $("#sendBtn").onclick=()=>{
-    const subject = encodeURIComponent(`AOTO – lagerfinansiering för ${sel.company_name}`);
-    const body = encodeURIComponent($("#outreachText").value);
-    const to = sel.contact_email || "";
-    window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+  // spara kontaktperson
+  $("#saveContact").onclick=async()=>{
+    const name=$("#contactName").value.trim()||null;
+    const phone=$("#contactPhone").value.trim()||null;
+    const email=$("#contactEmail").value.trim()||null;
+    const { error } = await sb.from("lead_contacts")
+      .upsert({lead_id:sel.id, name, phone, email, updated_at:new Date().toISOString()}, {onConflict:"lead_id"});
+    if(error){ console.error(error); toast("Kunde inte spara kontakt"); return; }
+    const m=$("#contactSavedMsg");m.classList.add("show");setTimeout(()=>m.classList.remove("show"),1600);
   };
 
   $("#panel").classList.add("open");$("#scrim").classList.add("open");
   renderTable();
-  // hämta anteckningshistorik
-  const { data: notes, error: notesErr } = await sb.from("lead_notes")
-    .select("*").eq("lead_id", id).order("created_at",{ascending:false});
+
+  // hämta anteckningshistorik + kontaktperson parallellt
+  const [notesRes, contactRes] = await Promise.all([
+    sb.from("lead_notes").select("*").eq("lead_id", id).order("created_at",{ascending:false}),
+    sb.from("lead_contacts").select("*").eq("lead_id", id).maybeSingle()
+  ]);
   if(!sel || sel.id!==id) return; // panelen bytte lead under väntan
-  if(notesErr){ console.error(notesErr); $("#notesList").innerHTML=`<div class="notes-empty">Kunde inte hämta anteckningar.</div>`; return; }
-  renderNotesList(notes||[]);
+
+  if(notesRes.error){ console.error(notesRes.error); $("#notesList").innerHTML=`<div class="notes-empty">Kunde inte hämta anteckningar.</div>`; }
+  else renderNotesList(notesRes.data||[]);
+
+  if(!contactRes.error && contactRes.data){
+    $("#contactName").value = contactRes.data.name||"";
+    $("#contactPhone").value = contactRes.data.phone||"";
+    $("#contactEmail").value = contactRes.data.email||"";
+  }
+}
 }
 function closePanel(){$("#panel").classList.remove("open");$("#scrim").classList.remove("open");sel=null;renderTable();}
 
@@ -703,6 +681,32 @@ $("#scoreSlider").oninput=e=>{state.minScore=+e.target.value;$("#scoreVal").text
   e.target.style.setProperty("--p",e.target.value+"%");renderTable();};
 $("#search").oninput=e=>{state.q=e.target.value.trim();renderTable();};
 $("#pClose").onclick=closePanel;$("#scrim").onclick=closePanel;
+$("#saveFollowup").onclick=async()=>{
+  if(!sel) return;
+  const fu=$("#followup").value || null;
+  const ok=await patchLead(sel.id,{follow_up_date:fu, updated_at:new Date().toISOString()});
+  if(ok){ sel.follow_up_date=fu; toast("Uppföljning sparad"); renderAll(); }
+  else toast("Kunde inte spara uppföljning");
+};
+
+$("#mailBtn").onclick=()=>{
+  if(!sel) return;
+  const email = $("#contactEmail").value.trim();
+  if(!email){ toast("Lägg till kontaktpersonens e-post först"); return; }
+  const firstName = $("#contactName").value.trim().split(" ")[0];
+  const msg =
+`Hej${firstName?` ${firstName}`:""}!
+
+Jag heter [Ditt namn] och jobbar på AOTO. Jag ser att ${sel.company_name} i ${sel.city||"er region"} skulle kunna frigöra rörelsekapital genom lagerfinansiering av begagnade bilar – ni betalar bara för det lager ni faktiskt har ute.
+
+Har du 15 minuter nästa vecka för ett kort samtal om hur det skulle se ut för er?
+
+Vänliga hälsningar,
+[Ditt namn], AOTO`;
+  const subject = encodeURIComponent(`AOTO – lagerfinansiering för ${sel.company_name}`);
+  const body = encodeURIComponent(msg);
+  window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+};
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closePanel();});
 document.querySelectorAll("thead th[data-sort]").forEach(th=>th.onclick=()=>{
   const k=th.dataset.sort;
