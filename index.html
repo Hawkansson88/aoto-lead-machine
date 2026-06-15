@@ -145,11 +145,13 @@ td.right{text-align:right}
 .scrim{position:fixed;inset:0;background:rgba(13,20,36,.34);opacity:0;pointer-events:none;transition:.22s;z-index:40}
 .scrim.open{opacity:1;pointer-events:auto}
 .panel{
-  position:fixed;top:0;right:0;height:100vh;width:440px;max-width:92vw;background:var(--surface);
-  box-shadow:var(--shadow);transform:translateX(100%);transition:transform .26s cubic-bezier(.4,.0,.2,1);
-  z-index:50;display:flex;flex-direction:column;
+  position:fixed;top:50%;left:50%;width:560px;max-width:92vw;max-height:86vh;background:var(--surface);
+  border-radius:18px;box-shadow:var(--shadow);
+  transform:translate(-50%,-46%) scale(.97);opacity:0;pointer-events:none;
+  transition:transform .22s cubic-bezier(.4,.0,.2,1),opacity .2s;
+  z-index:50;display:flex;flex-direction:column;overflow:hidden;
 }
-.panel.open{transform:translateX(0)}
+.panel.open{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
 .p-head{padding:24px 26px 20px;border-bottom:1px solid var(--line);position:relative;background:linear-gradient(180deg,var(--surface-2),var(--surface))}
 .p-close{position:absolute;top:18px;right:18px;width:30px;height:30px;border-radius:8px;border:1px solid var(--line);
   background:#fff;cursor:pointer;color:var(--muted);font-size:16px;line-height:1}
@@ -199,6 +201,12 @@ textarea:focus,.dateinput:focus{outline:none;border-color:var(--accent);box-shad
 .quickdates{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .qd-btn{font-size:11.5px;padding:6px 10px}
 .notes-foot{display:flex;align-items:center;gap:10px;margin-top:12px}
+.notes-list{margin-top:14px;max-height:240px;overflow-y:auto;display:flex;flex-direction:column}
+.note-item{padding:10px 0;border-bottom:1px solid var(--line)}
+.note-item:last-child{border-bottom:none}
+.note-item .txt{font-size:13.5px;line-height:1.5;white-space:pre-wrap;color:var(--ink)}
+.note-item .meta{font-size:11px;color:var(--faint);margin-top:4px}
+.notes-empty{font-size:12.5px;color:var(--faint);font-style:italic;padding:6px 0}
 .btn{font-family:inherit;font-size:13px;font-weight:600;padding:9px 15px;border-radius:9px;cursor:pointer;border:none;transition:.14s}
 .btn-prim{background:var(--ink);color:#fff} .btn-prim:hover{background:#000}
 .btn-acc{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#062a20;width:100%;justify-content:center;
@@ -247,7 +255,7 @@ textarea:focus,.dateinput:focus{outline:none;border-color:var(--accent);box-shad
 <div id="authGate">
   <div class="auth-card">
     <div class="brand"><div class="mark">A</div></div>
-    <h2>Lead Machine</h2>
+    <h2>Lead Generator</h2>
     <p class="lead">Logga in för att fortsätta</p>
     <div class="field"><label>E-post</label><input id="authEmail" type="email" autocomplete="username"></div>
     <div class="field"><label>Lösenord</label><input id="authPw" type="password" autocomplete="current-password"></div>
@@ -261,7 +269,7 @@ textarea:focus,.dateinput:focus{outline:none;border-color:var(--accent);box-shad
   <aside class="sidebar">
     <div class="brand">
       <div class="mark">A</div>
-      <div class="wm">Lead Machine<small>CRM · Lagerfinansiering</small></div>
+      <div class="wm">Lead Generato<small>CRM · Lagerfinansiering</small></div>
     </div>
 
     <div class="stat-grid" id="stats"></div>
@@ -410,6 +418,23 @@ function followupInfo(d){
   return {label:fmt, cls:"fu-future"};
 }
 
+function fmtDateTime(iso){
+  const d=new Date(iso);
+  return d.toLocaleDateString("sv-SE",{day:"numeric",month:"short",year:"numeric"})+" kl "+d.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
+}
+function noteHtml(n){
+  return `<div class="note-item"><div class="txt">${n.note.replace(/</g,"&lt;")}</div><div class="meta">${fmtDateTime(n.created_at)}</div></div>`;
+}
+function renderNotesList(notes){
+  const el=$("#notesList"); if(!el) return;
+  el.innerHTML = notes.length ? notes.map(noteHtml).join("") : `<div class="notes-empty">Inga anteckningar ännu.</div>`;
+}
+function prependNote(n){
+  const el=$("#notesList"); if(!el) return;
+  if(el.querySelector(".notes-empty")) el.innerHTML="";
+  el.insertAdjacentHTML("afterbegin", noteHtml(n));
+}
+
 /* ============================================================
    4. DATA — Supabase
    ============================================================ */
@@ -510,7 +535,7 @@ function renderAll(){renderStats();renderStatusFilter();renderTable();}
 /* ============================================================
    7. DETALJPANEL
    ============================================================ */
-function openPanel(id){
+async function openPanel(id){
   sel = LEADS.find(l=>l.id===id); if(!sel) return;
   const bd = scoreBreakdown(sel), st = STATUS[sel.status]||STATUS.ny;
 
@@ -560,10 +585,8 @@ function openPanel(id){
       </div>
     </div>
 
-    <div class="p-sec">
-      <h4>Anteckningar & uppföljning</h4>
-      <textarea id="notes" placeholder="Skriv anteckningar om leaden…">${sel.notes||""}</textarea>
-      <label class="fu-label">Nästa uppföljning</label>
+<div class="p-sec">
+      <h4>Uppföljning</h4>
       <input type="date" id="followup" class="dateinput" value="${sel.follow_up_date||""}">
       <div class="quickdates">
         <button class="btn btn-ghost qd-btn" data-days="1">Imorgon</button>
@@ -572,8 +595,20 @@ function openPanel(id){
         <button class="btn btn-ghost qd-btn" data-days="clear">Rensa</button>
       </div>
       <div class="notes-foot">
-        <button class="btn btn-prim" id="saveNotes">Spara</button>
-        <span class="saved" id="savedMsg">✓ Sparat</span>
+        <button class="btn btn-prim" id="saveFollowup">Spara uppföljning</button>
+        <span class="saved" id="fuSavedMsg">✓ Sparat</span>
+      </div>
+    </div>
+
+    <div class="p-sec">
+      <h4>Anteckningar</h4>
+      <textarea id="newNote" placeholder="Skriv en ny anteckning…" style="min-height:64px"></textarea>
+      <div class="notes-foot">
+        <button class="btn btn-prim" id="addNoteBtn">Lägg till</button>
+        <span class="saved" id="noteSavedMsg">✓ Sparat</span>
+      </div>
+      <div class="notes-list" id="notesList">
+        <div class="notes-empty">Laddar anteckningar…</div>
       </div>
     </div>
 
@@ -605,16 +640,26 @@ function openPanel(id){
     $("#followup").value = d.toISOString().slice(0,10);
   });
 
-  // spara anteckning + uppföljning
-  $("#saveNotes").onclick=async()=>{
-    const v=$("#notes").value;
+  // spara uppföljningsdatum
+  $("#saveFollowup").onclick=async()=>{
     const fu=$("#followup").value || null;
-    const ok=await patchLead(sel.id,{notes:v, follow_up_date:fu, updated_at:new Date().toISOString()});
+    const ok=await patchLead(sel.id,{follow_up_date:fu, updated_at:new Date().toISOString()});
     if(ok){
-      sel.notes=v; sel.follow_up_date=fu;
-      const m=$("#savedMsg");m.classList.add("show");setTimeout(()=>m.classList.remove("show"),1600);
+      sel.follow_up_date=fu;
+      const m=$("#fuSavedMsg");m.classList.add("show");setTimeout(()=>m.classList.remove("show"),1600);
       renderAll();
-    } else toast("Kunde inte spara");
+    } else toast("Kunde inte spara uppföljning");
+  };
+
+  // lägg till anteckning
+  $("#addNoteBtn").onclick=async()=>{
+    const text=$("#newNote").value.trim();
+    if(!text) return;
+    const { data, error } = await sb.from("lead_notes").insert({lead_id:sel.id, note:text}).select().single();
+    if(error){ console.error(error); toast("Kunde inte spara anteckning"); return; }
+    $("#newNote").value="";
+    const m=$("#noteSavedMsg");m.classList.add("show");setTimeout(()=>m.classList.remove("show"),1600);
+    prependNote(data);
   };
 
   // generera + skicka via Outlook
@@ -641,6 +686,12 @@ Anton, AOTO`;
 
   $("#panel").classList.add("open");$("#scrim").classList.add("open");
   renderTable();
+  // hämta anteckningshistorik
+  const { data: notes, error: notesErr } = await sb.from("lead_notes")
+    .select("*").eq("lead_id", id).order("created_at",{ascending:false});
+  if(!sel || sel.id!==id) return; // panelen bytte lead under väntan
+  if(notesErr){ console.error(notesErr); $("#notesList").innerHTML=`<div class="notes-empty">Kunde inte hämta anteckningar.</div>`; return; }
+  renderNotesList(notes||[]);
 }
 function closePanel(){$("#panel").classList.remove("open");$("#scrim").classList.remove("open");sel=null;renderTable();}
 
