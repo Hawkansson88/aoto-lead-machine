@@ -1,9 +1,12 @@
 /**
- * AOTO Lead Machine — Roaring-import
+ * AOTO Lead Machine — Roaring-import (upptäckt)
  * Netlify Function (ESM)
  *
  * Hämtar bilhandlare (SNI 45111/45112/45191/45192) från Roaring Company Search
- * och skriver in dem i Supabase leads-tabellen.
+ * och skriver in minimala rader i Supabase leads-tabellen.
+ *
+ * Anrikning (org.nr, SNI, anställda, omsättning, soliditet) görs separat
+ * av roaring-enrich.mjs i batchar — denna funktion gör BARA upptäckt.
  *
  * Miljövariabler (sätts i Netlify dashboard → Environment variables):
  *   ROARING_CLIENT_ID, ROARING_CLIENT_SECRET
@@ -17,81 +20,21 @@ const ROARING_SEARCH_URL = "https://api.roaring.io/se/company/search/2.0/search"
 
 /* ─── Hjälpare ─── */
 
-/** Formatera org.nr med bindestreck: 5565926911 → 556592-6911 */
-function fmtOrg(id) {
-  const s = (id || "").replace(/\D/g, "");
-  return s.length >= 10 ? s.slice(0, 6) + "-" + s.slice(6) : s;
-}
-
-/** Konvertera "10-19 anställda" → 15 (medelvärde) */
-function parseEmployees(interval) {
-  if (!interval) return null;
-  const range = interval.match(/(\d+)\s*-\s*(\d+)/);
-  if (range) return Math.round((+range[1] + +range[2]) / 2);
-  const single = interval.match(/(\d+)/);
-  return single ? +single[1] : null;
-}
-
-/** Mappa ett Roaring SearchHit till vår leads-schema */
-async function mapToLead(hit, token) {
-  const enrich = await enrichHit(hit, token);
-  const financials = enrich.org_nr ? await enrichFinancials(enrich.org_nr, token) : {};
+/** Mappa ett Roaring SearchHit till en minimal leads-rad (ingen anrikning) */
+function mapToLead(hit) {
   return {
-    org_nr:              enrich.org_nr ?? null,
+    org_nr:              null,           // fylls i av roaring-enrich.mjs
     roaring_company_id:  hit.companyId,
     company_name:        hit.companyName || "Okänt",
-    city:         hit.town || hit.visitTown || null,
-    sni_code:     enrich.sni_code ?? (hit.industryCode || null),
-    brand:        null,
-    revenue:      financials.revenue ?? null,
-    employees:    enrich.employees ?? parseEmployees(hit.numberEmployeesInterval),
-    solidity:     financials.solidity ?? null,
-    score:        null,
-    status:       "ny",
+    city:                hit.town || hit.visitTown || null,
+    sni_code:            null,           // fylls i av roaring-enrich.mjs
+    brand:               null,
+    revenue:             null,           // fylls i av roaring-enrich.mjs
+    employees:           null,           // fylls i av roaring-enrich.mjs
+    solidity:            null,           // fylls i av roaring-enrich.mjs
+    score:               null,
+    status:              "ny",
   };
-}
-
-/** Hämta riktigt org.nr, SNI-kod och antal anställda via Overview-API */
-async function enrichHit(hit, token) {
-  try {
-    const res = await fetch(
-      `https://api.roaring.io/se/company/overview/2.0/${hit.companyId}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    if (!res.ok) return {};
-    const data = await res.json();
-    const record = data.records?.[0];
-    if (!record) return {};
-    return {
-      org_nr: fmtOrg(record.companyId),
-      sni_code: record.industryCode || null,
-      employees: parseEmployees(record.numberEmployeesInterval),
-    };
-  } catch {
-    return {};
-  }
-}
-
-/** Hämta omsättning och soliditet via Financial Information API */
-async function enrichFinancials(orgNr, token) {
-  try {
-    const id = (orgNr || "").replace(/\D/g, ""); // ta bort bindestreck
-    if (!id) return {};
-    const res = await fetch(
-      `https://api.roaring.io/se/company/economy-overview/2.1/extended/${id}?years=1`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    if (!res.ok) return {};
-    const data = await res.json();
-    const record = data.records?.[0];
-    if (!record) return {};
-    return {
-      revenue:  record.plSales != null ? Math.round(record.plSales * 1000) : null,  // tkr → kr
-      solidity: record.kpiEquityRatioPercent != null ? Math.round(record.kpiEquityRatioPercent) : null,
-    };
-  } catch {
-    return {};
-  }
 }
 
 /* ─── Auth ─── */
@@ -167,7 +110,7 @@ async function searchCompanies(token) {
 /* ─── Supabase skrivning ─── */
 
 async function upsertLeads(leads, sbUrl, serviceKey) {
-  // Hämta existerande org_nr så vi inte skriver över status/notes
+  // Hämta existerande roaring_company_id så vi inte skriver dubbletter
   const existRes = await fetch(
     `${sbUrl}/rest/v1/leads?select=roaring_company_id`,
     { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
@@ -232,23 +175,13 @@ export async function handler(event) {
     // 2. Sök bilhandlare
     const hits = await searchCompanies(roaringToken);
 
-    // TEMP: testa Overview-API för första bolaget
-    let overviewTest = null;
-    if (hits.length > 0) {
-      const testRes = await fetch(
-        `https://api.roaring.io/se/company/overview/2.0/${hits[0].companyId}`,
-        { headers: { Authorization: `Bearer ${roaringToken}` } }
-      );
-      overviewTest = { status: testRes.status, body: await testRes.text() };
-    }
-
     // 3. Mappa + deduplika (samma companyId kan dyka upp under flera SNI)
     const seen = new Set();
     const leads = [];
     for (const hit of hits) {
       if (!hit.companyId || seen.has(hit.companyId)) continue;
       seen.add(hit.companyId);
-      leads.push(await mapToLead(hit, roaringToken));
+      leads.push(mapToLead(hit));
     }
 
     // 4. Skriv till Supabase
@@ -258,10 +191,10 @@ export async function handler(event) {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        success: true, overviewTest,
+        success: true,
         found: leads.length,
         ...result,
-        message: `Hittade ${leads.length} bolag, importerade ${result.inserted} nya (${result.skipped} fanns redan).`,
+        message: `Hittade ${leads.length} bolag, importerade ${result.inserted} nya (${result.skipped} fanns redan). Anrikning sker separat.`,
       }),
     };
   } catch (err) {
