@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AOTO Lead Machine</title>
+<title>Antons CRM-verktyg</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -261,7 +261,7 @@ textarea:focus,.dateinput:focus{outline:none;border-color:var(--accent);box-shad
   <aside class="sidebar">
     <div class="brand">
       <div class="mark">A</div>
-      <div class="wm">Lead Machine<small>AOTO · Lagerfinansiering</small></div>
+      <div class="wm">Lead Machine<small>CRM · Lagerfinansiering</small></div>
     </div>
 
     <div class="stat-grid" id="stats"></div>
@@ -622,12 +622,12 @@ function openPanel(id){
     const msg =
 `Hej${sel.contact_name?` ${sel.contact_name.split(" ")[0]}`:""}!
 
-Jag heter [Ditt namn] och jobbar på AOTO. Jag ser att ${sel.company_name} i ${sel.city||"er region"} skulle kunna frigöra rörelsekapital genom lagerfinansiering av begagnade bilar – ni betalar bara för det lager ni faktiskt har ute.
+Jag heter Anton och jobbar på AOTO. Jag ser att ${sel.company_name} i ${sel.city||"er region"} skulle kunna frigöra rörelsekapital genom lagerfinansiering av begagnade bilar – ni betalar bara för det lager ni faktiskt har ute.
 
 Har du 15 minuter nästa vecka för ett kort samtal om hur det skulle se ut för er?
 
 Vänliga hälsningar,
-[Ditt namn], AOTO`;
+Anton, AOTO`;
     $("#outreachText").value = msg;
     $("#outreachWrap").classList.add("show");
     $("#outreachWrap").scrollIntoView({behavior:"smooth",block:"nearest"});
