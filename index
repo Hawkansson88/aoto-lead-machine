@@ -8,141 +8,91 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 <style>
 :root{
   --navy-900:#0d1424; --navy-800:#131e35; --navy-700:#1b2945; --navy-600:#243557;
   --canvas:#f3f5f8; --surface:#ffffff; --surface-2:#fafbfc;
   --ink:#14202e; --muted:#69748a; --faint:#9aa6b8; --line:#e6eaf0;
   --accent:#00b388; --accent-2:#06caa0; --accent-soft:rgba(0,179,136,.12);
-  --hot:#ff7a45; --hot-soft:rgba(255,122,69,.14);
+  --hot:#ff7a45;
   --st-ny:#5b6b85; --st-kontaktad:#cf8a12; --st-mote:#0f9d6f; --st-ej:#9aa6b8;
   --sc-low:#e0556b; --sc-mid:#e0a23a; --sc-high:#11a37a;
   --shadow:0 18px 50px -20px rgba(13,20,36,.45);
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
-body{
-  font-family:'IBM Plex Sans',system-ui,sans-serif;
-  background:var(--canvas); color:var(--ink);
-  -webkit-font-smoothing:antialiased; overflow:hidden;
-}
-.num{font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums; font-feature-settings:"tnum"}
+body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--canvas);color:var(--ink);-webkit-font-smoothing:antialiased;overflow:hidden}
+.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 
-/* ---------- Layout ---------- */
-.app{display:none; grid-template-columns:288px 1fr; height:100vh}
+/* Layout */
+.app{display:none;grid-template-columns:288px 1fr;height:100vh}
 
-/* ---------- Sidebar ---------- */
-.sidebar{
-  background:linear-gradient(178deg,var(--navy-800),var(--navy-900) 70%);
-  color:#dce4f1; padding:22px 20px; overflow-y:auto; position:relative;
-  border-right:1px solid rgba(255,255,255,.04);
-}
+/* Sidebar */
+.sidebar{background:linear-gradient(178deg,var(--navy-800),var(--navy-900) 70%);color:#dce4f1;padding:22px 20px;overflow-y:auto;position:relative;border-right:1px solid rgba(255,255,255,.04)}
 .sidebar::-webkit-scrollbar{width:8px}
 .sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:8px}
 .brand{display:flex;align-items:center;gap:11px;margin-bottom:26px}
-.brand .mark{
-  width:38px;height:38px;border-radius:10px;display:grid;place-items:center;
-  background:linear-gradient(135deg,var(--accent),var(--accent-2));
-  font-family:'Archivo';font-weight:800;color:#06241c;font-size:19px;
-  box-shadow:0 6px 18px -6px var(--accent);
-}
+.brand .mark{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--accent-2));font-family:'Archivo';font-weight:800;color:#06241c;font-size:19px;box-shadow:0 6px 18px -6px var(--accent)}
 .brand .wm{font-family:'Archivo';font-weight:800;font-size:18px;letter-spacing:-.4px;line-height:1;color:#fff}
 .brand .wm small{display:block;font-family:'IBM Plex Sans';font-weight:500;font-size:10.5px;letter-spacing:1.4px;color:var(--accent-2);margin-top:3px;text-transform:uppercase}
-
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:24px}
-.stat{
-  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);
-  border-radius:12px;padding:12px 13px;position:relative;overflow:hidden;
-}
+.stat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:12px 13px;position:relative;overflow:hidden}
 .stat .v{font-family:'Archivo';font-weight:800;font-size:25px;line-height:1;letter-spacing:-.5px}
 .stat .l{font-size:10.5px;color:#9fb0cc;margin-top:6px;letter-spacing:.3px}
-.stat.mote .v{color:var(--st-mote)} .stat.hot .v{color:var(--hot)} .stat.followup .v{color:var(--accent-2)} .stat.untouched .v{color:#c4cee0}
+.stat.mote .v{color:var(--st-mote)}.stat.hot .v{color:var(--hot)}.stat.followup .v{color:var(--accent-2)}.stat.untouched .v{color:#c4cee0}
 .stat .spark{position:absolute;right:-6px;top:-6px;font-size:34px;opacity:.10}
-
 .section-label{font-size:10.5px;font-weight:600;letter-spacing:1.3px;text-transform:uppercase;color:#7f8eaa;margin:0 0 11px 2px}
-
 .status-list{display:flex;flex-direction:column;gap:4px;margin-bottom:24px}
-.status-item{
-  display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:9px;
-  cursor:pointer;font-size:13.5px;color:#c4cee0;transition:.14s;border:1px solid transparent;
-}
+.status-item{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:9px;cursor:pointer;font-size:13.5px;color:#c4cee0;transition:.14s;border:1px solid transparent}
 .status-item:hover{background:rgba(255,255,255,.05)}
 .status-item.active{background:rgba(0,179,136,.13);border-color:rgba(0,179,136,.32);color:#fff}
 .status-item .dot{width:9px;height:9px;border-radius:50%;flex:none}
 .status-item .cnt{margin-left:auto;font-size:11.5px;color:#8595b3;font-family:'IBM Plex Mono'}
-
 .slider-wrap{margin-bottom:20px}
 .slider-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
 .slider-head b{font-family:'Archivo';font-size:16px;color:var(--accent-2)}
-input[type=range]{width:100%;-webkit-appearance:none;height:5px;border-radius:5px;
-  background:linear-gradient(90deg,var(--accent) var(--p,0%),rgba(255,255,255,.12) var(--p,0%));outline:none}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;
-  background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.4)}
-
-/* Omsättningsfilter */
+input[type=range]{width:100%;-webkit-appearance:none;height:5px;border-radius:5px;background:linear-gradient(90deg,var(--accent) var(--p,0%),rgba(255,255,255,.12) var(--p,0%));outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.4)}
 .rev-filter{margin-bottom:20px}
 .rev-inputs{display:flex;align-items:center;gap:8px;margin-top:8px}
-.rev-inputs input{
-  flex:1;padding:7px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.1);
-  background:rgba(255,255,255,.06);color:#fff;font-family:'IBM Plex Mono';font-size:12px;
-  width:0;
-}
+.rev-inputs input{flex:1;padding:7px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#fff;font-family:'IBM Plex Mono';font-size:12px;width:0}
 .rev-inputs input::placeholder{color:#7f8eaa}
 .rev-inputs input:focus{outline:none;border-color:var(--accent)}
 .rev-inputs span{font-size:11px;color:#7f8eaa;flex:none}
-.save-filters-btn{
-  width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,179,136,.3);
-  background:rgba(0,179,136,.08);color:var(--accent-2);font-family:inherit;font-size:12px;
-  font-weight:600;cursor:pointer;transition:.14s;margin-top:4px;
-}
+.save-filters-btn{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,179,136,.3);background:rgba(0,179,136,.08);color:var(--accent-2);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:.14s;margin-top:4px}
 .save-filters-btn:hover{background:rgba(0,179,136,.16)}
 .filter-saved{font-size:11px;color:var(--accent);text-align:center;opacity:0;transition:.2s;margin-top:6px;min-height:14px}
 .filter-saved.show{opacity:1}
-
-.user-foot{margin-top:26px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08);
-  display:flex;align-items:center;gap:10px}
-.user-foot .av{width:30px;height:30px;border-radius:50%;background:rgba(0,179,136,.18);display:grid;place-items:center;
-  font-size:12px;font-weight:600;color:var(--accent-2);flex:none;text-transform:uppercase}
+.user-foot{margin-top:26px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px}
+.user-foot .av{width:30px;height:30px;border-radius:50%;background:rgba(0,179,136,.18);display:grid;place-items:center;font-size:12px;font-weight:600;color:var(--accent-2);flex:none;text-transform:uppercase}
 .user-foot .em{font-size:11.5px;color:#9fb0cc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.user-foot .lo{font-size:11.5px;color:#c4cee0;cursor:pointer;background:none;border:1px solid rgba(255,255,255,.12);
-  padding:5px 9px;border-radius:7px;font-family:inherit}
-.user-foot .lo:hover{background:rgba(255,255,255,.08)}
-.settings-btn{
-  width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.12);
-  background:none;color:#9fb0cc;cursor:pointer;font-size:14px;flex:none;
-  display:grid;place-items:center;
-}
+.settings-btn{width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:none;color:#9fb0cc;cursor:pointer;font-size:14px;flex:none;display:grid;place-items:center}
 .settings-btn:hover{background:rgba(255,255,255,.08);color:#fff}
+.user-foot .lo{font-size:11.5px;color:#c4cee0;cursor:pointer;background:none;border:1px solid rgba(255,255,255,.12);padding:5px 9px;border-radius:7px;font-family:inherit}
+.user-foot .lo:hover{background:rgba(255,255,255,.08)}
 
-/* ---------- Main ---------- */
+/* Main */
 .main{display:flex;flex-direction:column;overflow:hidden}
-.topbar{
-  display:flex;align-items:center;gap:16px;padding:18px 28px;background:var(--surface);
-  border-bottom:1px solid var(--line);flex:none;
-}
+.topbar{display:flex;align-items:center;gap:16px;padding:18px 28px;background:var(--surface);border-bottom:1px solid var(--line);flex:none}
 .topbar h1{font-family:'Archivo';font-weight:700;font-size:20px;margin:0;letter-spacing:-.4px}
 .topbar .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
 .search{margin-left:auto;position:relative}
-.search input{
-  width:280px;padding:9px 14px 9px 36px;border:1px solid var(--line);border-radius:10px;
-  font-family:inherit;font-size:13.5px;background:var(--surface-2);transition:.15s;
-}
+.search input{width:280px;padding:9px 14px 9px 36px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:13.5px;background:var(--surface-2);transition:.15s}
 .search input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:#fff}
 .search .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:14px}
-.conn-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
-  padding:5px 10px;border-radius:20px;letter-spacing:.2px}
+.conn-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:5px 10px;border-radius:20px;letter-spacing:.2px}
 .conn-pill.live{background:var(--accent-soft);color:#0a7a5c}
 .conn-pill .d{width:7px;height:7px;border-radius:50%;background:currentColor}
-
 .table-scroll{overflow-y:auto;flex:1;padding:8px 28px 40px}
 .table-scroll::-webkit-scrollbar{width:10px}
 .table-scroll::-webkit-scrollbar-thumb{background:#d3d9e2;border-radius:8px;border:3px solid var(--canvas)}
 table{width:100%;border-collapse:separate;border-spacing:0 7px}
-thead th{
-  position:sticky;top:0;background:var(--canvas);z-index:2;text-align:left;
-  font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);
-  padding:6px 14px;cursor:pointer;user-select:none;white-space:nowrap;
-}
+thead th{position:sticky;top:0;background:var(--canvas);z-index:2;text-align:left;font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);padding:6px 14px;cursor:pointer;user-select:none;white-space:nowrap}
 thead th:hover{color:var(--ink)}
 thead th .ar{font-size:9px;color:var(--accent);margin-left:4px}
 thead th.right{text-align:right}
@@ -155,80 +105,58 @@ tbody td:last-child{border-right:1px solid var(--line);border-radius:0 11px 11px
 td.right{text-align:right}
 .co-name{font-weight:600}
 .co-org{font-size:11px;color:var(--faint);margin-top:2px}
-
 .score-cell{display:flex;align-items:center;gap:10px;min-width:118px}
 .score-num{font-family:'Archivo';font-weight:800;font-size:16px;width:26px;flex:none}
 .score-bar{flex:1;height:7px;border-radius:7px;background:#eef1f5;overflow:hidden}
-.score-fill{height:100%;border-radius:7px}
-
+.score-fill{height:100%;border-radius:7px;display:block}
 .badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:7px}
 .badge .dot{width:7px;height:7px;border-radius:50%}
-.b-ny{background:#eef1f6;color:var(--st-ny)} .b-ny .dot{background:var(--st-ny)}
-.b-kontaktad{background:#fbf1dd;color:var(--st-kontaktad)} .b-kontaktad .dot{background:var(--st-kontaktad)}
-.b-mote{background:#e3f6ee;color:var(--st-mote)} .b-mote .dot{background:var(--st-mote)}
-.b-ejaktuell{background:#f1f3f6;color:var(--st-ej)} .b-ejaktuell .dot{background:var(--st-ej)}
-
-.fu-late{color:var(--sc-low);font-weight:600}
-.fu-today{color:var(--hot);font-weight:600}
-.fu-future{color:var(--muted)}
-.fu-none{color:var(--faint)}
+.b-ny{background:#eef1f6;color:var(--st-ny)}.b-ny .dot{background:var(--st-ny)}
+.b-kontaktad{background:#fbf1dd;color:var(--st-kontaktad)}.b-kontaktad .dot{background:var(--st-kontaktad)}
+.b-mote{background:#e3f6ee;color:var(--st-mote)}.b-mote .dot{background:var(--st-mote)}
+.b-ejaktuell{background:#f1f3f6;color:var(--st-ej)}.b-ejaktuell .dot{background:var(--st-ej)}
+.fu-late{color:var(--sc-low);font-weight:600}.fu-today{color:var(--hot);font-weight:600}.fu-future{color:var(--muted)}.fu-none{color:var(--faint)}
 .empty{text-align:center;color:var(--muted);padding:60px 0;font-size:14px}
 
-/* ---------- Detail panel ---------- */
+/* Detail panel */
 .scrim{position:fixed;inset:0;background:rgba(13,20,36,.34);opacity:0;pointer-events:none;transition:.22s;z-index:40}
 .scrim.open{opacity:1;pointer-events:auto}
-.panel{
-  position:fixed;top:50%;left:50%;width:950px;max-width:92vw;max-height:86vh;background:var(--surface);
-  border-radius:18px;box-shadow:var(--shadow);
-  transform:translate(-50%,-46%) scale(.97);opacity:0;pointer-events:none;
-  transition:transform .22s cubic-bezier(.4,.0,.2,1),opacity .2s;
-  z-index:50;display:flex;flex-direction:column;overflow:hidden;
-}
+.panel{position:fixed;top:50%;left:50%;width:950px;max-width:92vw;max-height:86vh;background:var(--surface);border-radius:18px;box-shadow:var(--shadow);transform:translate(-50%,-46%) scale(.97);opacity:0;pointer-events:none;transition:transform .22s cubic-bezier(.4,.0,.2,1),opacity .2s;z-index:50;display:flex;flex-direction:column;overflow:hidden}
 .panel.open{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
 .p-head{padding:24px 26px 20px;border-bottom:1px solid var(--line);position:relative;background:linear-gradient(180deg,var(--surface-2),var(--surface))}
 .p-head-actions{position:absolute;top:18px;right:18px;display:flex;align-items:center;gap:8px}
-.p-close{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);
-  background:#fff;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;flex:none}
+.p-close{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;flex:none}
 .p-close:hover{background:var(--canvas);color:var(--ink)}
-.btn-icon{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:#fff;
-  cursor:pointer;color:var(--accent);font-size:15px;flex:none;display:grid;place-items:center;transition:.13s}
+.btn-icon{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;color:var(--accent);font-size:15px;flex:none;display:grid;place-items:center;transition:.13s}
 .btn-icon:hover{background:var(--accent-soft);border-color:var(--accent)}
 .dateinput-sm{width:128px;padding:8px 10px;font-size:12.5px}
 .btn-sm{padding:8px 12px;font-size:12px;flex:none}
 .p-score{display:flex;align-items:center;gap:14px;margin-bottom:14px}
-.p-score .ring{width:58px;height:58px;flex:none;border-radius:50%;display:grid;place-items:center;
-  font-family:'Archivo';font-weight:800;font-size:21px;color:#fff}
+.p-score .ring{width:58px;height:58px;flex:none;border-radius:50%;display:grid;place-items:center;font-family:'Archivo';font-weight:800;font-size:21px;color:#fff}
 .p-name{font-family:'Archivo';font-weight:700;font-size:21px;line-height:1.15;letter-spacing:-.4px}
 .p-meta{font-size:12.5px;color:var(--muted);margin-top:5px}
 .p-body{overflow-y:auto;flex:1;padding:22px 26px 36px}
-.p-body::-webkit-scrollbar{width:8px}
-.p-body::-webkit-scrollbar-thumb{background:#d3d9e2;border-radius:8px}
+.p-body::-webkit-scrollbar{width:8px}.p-body::-webkit-scrollbar-thumb{background:#d3d9e2;border-radius:8px}
 .p-sec{margin-bottom:26px}
 .p-sec h4{font-size:11px;font-weight:600;letter-spacing:.9px;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
-
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .kpi{background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:12px 14px}
 .kpi .v{font-family:'Archivo';font-weight:700;font-size:18px}
 .kpi .l{font-size:11px;color:var(--muted);margin-top:3px}
-
 .bd-row{display:flex;align-items:center;gap:10px;margin-bottom:11px}
 .bd-row .lab{width:108px;flex:none;font-size:12.5px;color:var(--ink)}
 .bd-row .track{flex:1;height:8px;background:#eef1f5;border-radius:8px;overflow:hidden}
-.bd-row .fill{height:100%;border-radius:8px}
+.bd-row .fill{height:100%;border-radius:8px;display:block;background:var(--sc-high)}
 .bd-row .pts{width:48px;flex:none;text-align:right;font-family:'IBM Plex Mono';font-size:12px;color:var(--muted)}
 .notenriched{font-size:13px;color:var(--muted);line-height:1.5;background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:14px}
-
 .status-switch{display:flex;flex-wrap:wrap;gap:7px}
-.ss-btn{font-size:12px;font-weight:600;padding:8px 12px;border-radius:9px;border:1px solid var(--line);
-  background:#fff;cursor:pointer;color:var(--muted);transition:.13s;display:flex;align-items:center;gap:7px}
+.ss-btn{font-size:12px;font-weight:600;padding:8px 12px;border-radius:9px;border:1px solid var(--line);background:#fff;cursor:pointer;color:var(--muted);transition:.13s;display:flex;align-items:center;gap:7px}
 .ss-btn:hover{border-color:var(--faint)}
 .ss-btn.on{color:#fff;border-color:transparent}
-.ss-btn.on[data-s=ny]{background:var(--st-ny)} .ss-btn.on[data-s=kontaktad]{background:var(--st-kontaktad)}
-.ss-btn.on[data-s=mote]{background:var(--st-mote)} .ss-btn.on[data-s=ejaktuell]{background:var(--st-ej)}
+.ss-btn.on[data-s=ny]{background:var(--st-ny)}.ss-btn.on[data-s=kontaktad]{background:var(--st-kontaktad)}
+.ss-btn.on[data-s=mote]{background:var(--st-mote)}.ss-btn.on[data-s=ejaktuell]{background:var(--st-ej)}
 .ss-btn .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
-
-textarea,.dateinput{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px 13px;
-  font-family:inherit;font-size:13px;resize:vertical;background:var(--surface-2);transition:.15s}
+textarea,.dateinput{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px 13px;font-family:inherit;font-size:13px;resize:vertical;background:var(--surface-2);transition:.15s}
 textarea{min-height:74px}
 textarea:focus,.dateinput:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:#fff}
 .notes-foot{display:flex;align-items:center;gap:10px;margin-top:12px}
@@ -247,65 +175,60 @@ textarea:focus,.dateinput:focus{outline:none;border-color:var(--accent);box-shad
 .contact-card .cd{color:var(--muted);font-size:12px}
 .contact-card .cd a{color:var(--accent);text-decoration:none}
 .btn{font-family:inherit;font-size:13px;font-weight:600;padding:9px 15px;border-radius:9px;cursor:pointer;border:none;transition:.14s}
-.btn-prim{background:var(--ink);color:#fff} .btn-prim:hover{background:#000}
-.btn-acc{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#062a20;width:100%;justify-content:center;
-  display:flex;align-items:center;gap:8px;padding:12px} .btn-acc:hover{filter:brightness(1.05)}
-.btn-ghost{background:#fff;border:1px solid var(--line);color:var(--muted)} .btn-ghost:hover{border-color:var(--faint);color:var(--ink)}
-.saved{font-size:12px;color:var(--accent);opacity:0;transition:.2s} .saved.show{opacity:1}
-
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;
-  padding:11px 18px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:90}
+.btn-prim{background:var(--ink);color:#fff}.btn-prim:hover{background:#000}
+.btn-acc{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#062a20;width:100%;justify-content:center;display:flex;align-items:center;gap:8px;padding:12px}.btn-acc:hover{filter:brightness(1.05)}
+.btn-ghost{background:#fff;border:1px solid var(--line);color:var(--muted)}.btn-ghost:hover{border-color:var(--faint);color:var(--ink)}
+.saved{font-size:12px;color:var(--accent);opacity:0;transition:.2s}.saved.show{opacity:1}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:90}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* ---------- Settings modal ---------- */
+/* Settings modal */
 .modal-scrim{position:fixed;inset:0;background:rgba(13,20,36,.5);opacity:0;pointer-events:none;transition:.2s;z-index:60}
 .modal-scrim.open{opacity:1;pointer-events:auto}
-.modal{
-  position:fixed;top:50%;left:50%;width:560px;max-width:92vw;max-height:88vh;
-  background:var(--surface);border-radius:18px;box-shadow:var(--shadow);
-  transform:translate(-50%,-46%) scale(.97);opacity:0;pointer-events:none;
-  transition:transform .2s cubic-bezier(.4,0,.2,1),opacity .18s;
-  z-index:70;display:flex;flex-direction:column;overflow:hidden;
-}
+.modal{position:fixed;top:50%;left:50%;width:560px;max-width:92vw;max-height:88vh;background:var(--surface);border-radius:18px;box-shadow:var(--shadow);transform:translate(-50%,-46%) scale(.97);opacity:0;pointer-events:none;transition:transform .2s cubic-bezier(.4,0,.2,1),opacity .18s;z-index:70;display:flex;flex-direction:column;overflow:hidden}
 .modal.open{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
 .modal-head{padding:22px 24px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
 .modal-head h2{font-family:'Archivo';font-weight:700;font-size:18px;margin:0;letter-spacing:-.3px}
 .modal-body{overflow-y:auto;flex:1;padding:22px 24px 28px}
-.modal-body::-webkit-scrollbar{width:8px}
-.modal-body::-webkit-scrollbar-thumb{background:#d3d9e2;border-radius:8px}
-
+.modal-body::-webkit-scrollbar{width:8px}.modal-body::-webkit-scrollbar-thumb{background:#d3d9e2;border-radius:8px}
 .sc-param{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
 .sc-param-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .sc-param-head .name{font-weight:600;font-size:14px}
 .sc-param-head .weight-wrap{display:flex;align-items:center;gap:8px}
 .sc-param-head .weight-wrap label{font-size:11.5px;color:var(--muted)}
-.sc-param-head .weight-wrap input{
-  width:60px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;
-  font-family:'IBM Plex Mono';font-size:13px;text-align:center;background:#fff;
-}
+.sc-param-head .weight-wrap input{width:60px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-family:'IBM Plex Mono';font-size:13px;text-align:center;background:#fff}
 .sc-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .sc-field label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:600;letter-spacing:.3px}
-.sc-field input{
-  width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;
-  font-family:'IBM Plex Mono';font-size:13px;background:#fff;
-}
+.sc-field input{width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-family:'IBM Plex Mono';font-size:13px;background:#fff}
 .sc-field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.total-bar{
-  background:var(--surface-2);border:1px solid var(--line);border-radius:10px;
-  padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;
-}
+.total-bar{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .total-bar .lbl{font-size:12.5px;color:var(--muted)}
 .total-bar .val{font-family:'Archivo';font-weight:700;font-size:18px}
 .modal-foot{padding:16px 24px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px}
 
+/* Karta modal */
+.map-modal{position:fixed;top:50%;left:50%;width:90vw;max-width:1100px;height:80vh;background:var(--surface);border-radius:18px;box-shadow:var(--shadow);transform:translate(-50%,-46%) scale(.97);opacity:0;pointer-events:none;transition:transform .22s cubic-bezier(.4,0,.2,1),opacity .2s;z-index:70;display:flex;flex-direction:column;overflow:hidden}
+.map-modal.open{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
+.map-head{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex:none}
+.map-head h2{font-family:'Archivo';font-weight:700;font-size:18px;margin:0;letter-spacing:-.3px}
+.map-head .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+#mapContainer{flex:1;width:100%;min-height:0}
+.map-no-coords{padding:40px;text-align:center;color:var(--muted);font-size:14px;display:none}
+
+/* Leaflet popup override */
+.leaflet-popup-content-wrapper{border-radius:10px;box-shadow:0 8px 24px rgba(13,20,36,.18);font-family:'IBM Plex Sans',sans-serif}
+.leaflet-popup-content{margin:12px 14px;font-size:13px}
+.map-popup .name{font-family:'Archivo';font-weight:700;font-size:14px;margin-bottom:6px}
+.map-popup .score{display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600;color:#fff;margin-bottom:6px}
+.map-popup .meta{font-size:12px;color:var(--muted);margin-bottom:8px}
+.map-popup button{font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;padding:6px 12px;border-radius:7px;border:none;background:var(--ink);color:#fff;cursor:pointer;width:100%}
+
 @media(max-width:860px){.app{grid-template-columns:1fr}.sidebar{display:none}}
 
-/* ---------- Auth ---------- */
-#authGate{position:fixed;inset:0;z-index:200;display:none;place-items:center;
-  background:linear-gradient(160deg,var(--navy-800),var(--navy-900))}
+/* Auth */
+#authGate{position:fixed;inset:0;z-index:200;display:none;place-items:center;background:linear-gradient(160deg,var(--navy-800),var(--navy-900))}
 #authGate.show{display:grid}
-.auth-card{width:362px;max-width:90vw;background:var(--surface);border-radius:18px;padding:34px 32px;
-  box-shadow:0 30px 80px -20px rgba(0,0,0,.6);}
+.auth-card{width:362px;max-width:90vw;background:var(--surface);border-radius:18px;padding:34px 32px;box-shadow:0 30px 80px -20px rgba(0,0,0,.6)}
 .auth-card .brand{justify-content:center;margin-bottom:10px}
 .auth-card h2{font-family:'Archivo';font-weight:700;text-align:center;margin:4px 0 4px;font-size:20px;color:var(--ink)}
 .auth-card p.lead{text-align:center;color:var(--muted);font-size:13px;margin:0 0 22px}
@@ -318,7 +241,6 @@ textarea:focus,.dateinput:focus{outline:none;border-color:var(--accent);box-shad
 </head>
 <body>
 
-<!-- AUTH -->
 <div id="authGate">
   <div class="auth-card">
     <div class="brand"><div class="mark">A</div></div>
@@ -331,19 +253,15 @@ textarea:focus,.dateinput:focus{outline:none;border-color:var(--accent);box-shad
   </div>
 </div>
 
-<!-- APP -->
 <div class="app" id="app">
   <aside class="sidebar">
     <div class="brand">
       <div class="mark">A</div>
       <div class="wm">Lead Machine<small>CRM · Lagerfinansiering</small></div>
     </div>
-
     <div class="stat-grid" id="stats"></div>
-
     <p class="section-label">Status</p>
     <div class="status-list" id="statusList"></div>
-
     <div class="slider-wrap">
       <div class="slider-head">
         <p class="section-label" style="margin:0">Min. score</p>
@@ -351,7 +269,6 @@ textarea:focus,.dateinput:focus{outline:none;border-color:var(--accent);box-shad
       </div>
       <input type="range" id="scoreSlider" min="0" max="100" value="0" step="5">
     </div>
-
     <div class="rev-filter">
       <p class="section-label" style="margin-bottom:8px">Omsättning (MSEK)</p>
       <div class="rev-inputs">
@@ -360,10 +277,8 @@ textarea:focus,.dateinput:focus{outline:none;border-color:var(--accent);box-shad
         <input type="number" id="revMax" placeholder="Max" min="0">
       </div>
     </div>
-
     <button class="save-filters-btn" id="saveFiltersBtn">Spara filter</button>
     <div class="filter-saved" id="filterSavedMsg">✓ Filter sparat</div>
-
     <div class="user-foot">
       <div class="av" id="userAv">–</div>
       <div class="em" id="userEmail">–</div>
@@ -382,11 +297,12 @@ textarea:focus,.dateinput:focus{outline:none;border-color:var(--accent);box-shad
         <span class="ic">⌕</span>
         <input id="search" placeholder="Sök företag, stad, org.nr…" autocomplete="off">
       </div>
+      <button class="btn btn-ghost" id="mapBtn" style="font-size:12px;padding:7px 13px">🗺 Karta</button>
+      <button class="btn btn-ghost" id="geocodeBtn" style="display:none;font-size:12px;padding:7px 13px">📍 Geocoda</button>
       <button class="btn btn-ghost" id="importBtn" style="display:none;font-size:12px;padding:7px 13px">⬇ Importera</button>
       <button class="btn btn-ghost" id="enrichBtn" style="display:none;font-size:12px;padding:7px 13px">⚙ Anrika 20</button>
       <span class="conn-pill live"><span class="d"></span>Live · Supabase</span>
     </header>
-
     <div class="table-scroll">
       <table>
         <thead>
@@ -448,6 +364,20 @@ textarea:focus,.dateinput:focus{outline:none;border-color:var(--accent);box-shad
   </div>
 </div>
 
+<!-- KARTA MODAL -->
+<div class="modal-scrim" id="mapScrim"></div>
+<div class="map-modal" id="mapModal">
+  <div class="map-head">
+    <div>
+      <h2>Karta</h2>
+      <div class="sub" id="mapSub">Visar filtrerade leads</div>
+    </div>
+    <button class="p-close" id="mapClose">✕</button>
+  </div>
+  <div class="map-no-coords" id="mapNoCoords">Inga bolag med koordinater hittades. Kör "📍 Geocoda" för att hämta positioner.</div>
+  <div id="mapContainer"></div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -459,24 +389,20 @@ const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 let sb = null;
 
 /* ============================================================
-   2. SCORING-KONFIGURATION (defaults)
+   2. SCORING
    ============================================================ */
 const DEFAULT_SCORING = {
-  revenue:   { weight: 35, sweet_low: 10,  sweet_high: 120, max: 200 },
+  revenue:   { weight: 35, sweet_low: 10, sweet_high: 120, max: 200 },
   employees: { weight: 25, min: 5, max: 50 },
   solidity:  { weight: 25, breaks: [15, 30, 45], points: [25, 18, 11, 4] },
-  sni:       { weight: 15 },
-  result:    { weight: 10, mode: "relative", breaks: [-5, 0, 5], points: [0, 4, 8, 10] },
+  result:    { weight: 10, breaks: [-5, 0, 5], points: [0, 4, 8, 10] },
 };
-
 let scoringCfg = JSON.parse(JSON.stringify(DEFAULT_SCORING));
 
 function scoreBreakdown(l) {
   if (l.org_nr == null) return { total: null, parts: [], notEnriched: true };
-
   const cfg = scoringCfg;
 
-  // Omsättning
   const mskr = (l.revenue || 0) / 1e6;
   let oms = 0;
   const sw = cfg.revenue.sweet_low, sh = cfg.revenue.sweet_high, rm = cfg.revenue.max;
@@ -485,7 +411,6 @@ function scoreBreakdown(l) {
   else if (mskr > 0 && mskr < sw) oms = (mskr / sw) * (cfg.revenue.weight * 0.5);
   oms = Math.max(0, Math.round(oms));
 
-  // Anställda
   const e = l.employees || 0;
   let ans = 0;
   const emin = cfg.employees.min, emax = cfg.employees.max, ew = cfg.employees.weight;
@@ -494,15 +419,10 @@ function scoreBreakdown(l) {
   else if (e > emax) ans = Math.max(ew * 0.3, ew - ((e - emax) / emax) * ew);
   ans = Math.round(ans);
 
-  // Soliditet
   const s = l.solidity == null ? 40 : l.solidity;
   const sb_ = cfg.solidity.breaks, sp = cfg.solidity.points;
   let sol = s <= sb_[0] ? sp[0] : s <= sb_[1] ? sp[1] : s <= sb_[2] ? sp[2] : sp[3];
 
-  // SNI
-  const sni = (l.sni_code || "").trim() === "47811" ? cfg.sni.weight : Math.round(cfg.sni.weight * 0.4);
-
-  // Resultat
   let res = 0;
   if (l.result_after_fin != null && l.revenue) {
     const rp = cfg.result;
@@ -512,18 +432,14 @@ function scoreBreakdown(l) {
   }
 
   const parts = [
-    { lab: "Omsättning",   pts: oms,  max: cfg.revenue.weight },
-    { lab: "Anställda",    pts: ans,  max: cfg.employees.weight },
-    { lab: "Soliditet",    pts: sol,  max: cfg.solidity.weight },
-    { lab: "SNI / bransch",pts: sni,  max: cfg.sni.weight },
-    { lab: "Resultat",     pts: res,  max: cfg.result.weight },
+    { lab: "Omsättning",  pts: oms, max: cfg.revenue.weight },
+    { lab: "Anställda",   pts: ans, max: cfg.employees.weight },
+    { lab: "Soliditet",   pts: sol, max: cfg.solidity.weight },
+    { lab: "Resultat",    pts: res, max: cfg.result.weight },
   ];
-
   const rawTotal = parts.reduce((a, p) => a + p.pts, 0);
   const maxTotal = parts.reduce((a, p) => a + p.max, 0);
-  const total = maxTotal > 0 ? Math.round((rawTotal / maxTotal) * 100) : 0;
-
-  return { total: Math.min(100, total), parts, notEnriched: false };
+  return { total: Math.min(100, maxTotal > 0 ? Math.round((rawTotal / maxTotal) * 100) : 0), parts, notEnriched: false };
 }
 
 /* ============================================================
@@ -532,6 +448,8 @@ function scoreBreakdown(l) {
 let LEADS = [];
 let sel = null;
 let appReady = false;
+let leafletMap = null;
+let markerCluster = null;
 const state = { status: "alla", minScore: 0, revMin: null, revMax: null, q: "", sortKey: "score", sortDir: -1 };
 
 const STATUS = {
@@ -544,21 +462,14 @@ const STATUS = {
 const $ = s => document.querySelector(s);
 const fmtMSEK = v => v == null ? "–" : (v / 1e6).toLocaleString("sv-SE", { maximumFractionDigits: 1 }) + " MSEK";
 const scoreColor = sc => sc >= 80 ? "var(--sc-high)" : sc >= 50 ? "var(--sc-mid)" : "var(--sc-low)";
-const scoreBarColor = (pts, max) => {
-  const r = pts / max;
-  return r >= 0.7 ? "var(--sc-high)" : r >= 0.4 ? "var(--sc-mid)" : "var(--sc-low)";
-};
+const scoreColorHex = sc => sc >= 80 ? "#11a37a" : sc >= 50 ? "#e0a23a" : "#e0556b";
+const scoreBarColor = (pts, max) => { const r = pts / max; return r >= 0.7 ? "var(--sc-high)" : r >= 0.4 ? "var(--sc-mid)" : "var(--sc-low)"; };
 
 function toast(msg) {
-  const t = $("#toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  clearTimeout(t._t);
-  t._t = setTimeout(() => t.classList.remove("show"), 2200);
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("show"), 2200);
 }
-
 function todayStr() { return new Date().toISOString().slice(0, 10); }
-
 function followupInfo(d) {
   if (!d) return { label: "–", cls: "fu-none" };
   const fmt = new Date(d + "T00:00:00").toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
@@ -566,17 +477,13 @@ function followupInfo(d) {
   if (d === todayStr()) return { label: `${fmt} · idag`, cls: "fu-today" };
   return { label: fmt, cls: "fu-future" };
 }
-
 function fmtDateTime(iso) {
   const d = new Date(iso);
-  return d.toLocaleDateString("sv-SE", { day: "numeric", month: "short", year: "numeric" }) +
-    " kl " + d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString("sv-SE", { day: "numeric", month: "short", year: "numeric" }) + " kl " + d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
 }
-
 function noteHtml(n) {
   return `<div class="note-item"><div class="meta">${fmtDateTime(n.created_at)}</div><div class="txt">${n.note.replace(/</g, "&lt;")}</div></div>`;
 }
-
 function renderNotesList(notes) {
   const el = $("#notesList"); if (!el) return;
   const lc = $("#lastContact");
@@ -585,12 +492,11 @@ function renderNotesList(notes) {
 }
 
 /* ============================================================
-   4. USER SETTINGS — Supabase
+   4. USER SETTINGS
    ============================================================ */
 async function loadUserSettings(userId) {
   const { data } = await sb.from("user_settings").select("filters").eq("user_id", userId).maybeSingle();
   if (!data) return;
-
   const f = data.filters || {};
   if (f.minScore != null) { state.minScore = f.minScore; $("#scoreSlider").value = f.minScore; $("#scoreVal").textContent = f.minScore; $("#scoreSlider").style.setProperty("--p", f.minScore + "%"); }
   if (f.revMin != null)   { state.revMin = f.revMin; $("#revMin").value = f.revMin; }
@@ -606,7 +512,7 @@ async function saveUserSettings(userId, patch) {
 }
 
 /* ============================================================
-   5. DATA — Supabase
+   5. DATA
    ============================================================ */
 async function loadLeads() {
   const { data, error } = await sb.from("leads").select("*");
@@ -630,11 +536,7 @@ async function loadContacts(leadId) {
   el.innerHTML = data.map(c => `
     <div class="contact-card">
       <div class="cn">${c.name || "–"}</div>
-      <div class="cd">
-        ${c.phone ? `<span>${c.phone}</span>` : ""}
-        ${c.phone && c.email ? " · " : ""}
-        ${c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : ""}
-      </div>
+      <div class="cd">${c.phone ? `<span>${c.phone}</span>` : ""}${c.phone && c.email ? " · " : ""}${c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : ""}</div>
     </div>`).join("");
 }
 
@@ -647,10 +549,7 @@ function visible() {
     if ((l.score || 0) < state.minScore) return false;
     if (state.revMin != null && l.revenue != null && l.revenue / 1e6 < state.revMin) return false;
     if (state.revMax != null && l.revenue != null && l.revenue / 1e6 > state.revMax) return false;
-    if (state.q) {
-      const q = state.q.toLowerCase();
-      if (!`${l.company_name} ${l.city} ${l.org_nr || ""}`.toLowerCase().includes(q)) return false;
-    }
+    if (state.q) { const q = state.q.toLowerCase(); if (!`${l.company_name} ${l.city} ${l.org_nr || ""}`.toLowerCase().includes(q)) return false; }
     return true;
   });
   const k = state.sortKey, d = state.sortDir;
@@ -681,14 +580,8 @@ function renderStats() {
 function renderStatusFilter() {
   const counts = { alla: LEADS.length };
   Object.keys(STATUS).forEach(k => counts[k] = LEADS.filter(l => l.status === k).length);
-  const item = (key, label, col) => `
-    <div class="status-item ${state.status === key ? 'active' : ''}" data-st="${key}">
-      <span class="dot" style="background:${col}"></span>${label}
-      <span class="cnt">${counts[key] || 0}</span>
-    </div>`;
-  $("#statusList").innerHTML =
-    item("alla", "Alla leads", "#7f8eaa") +
-    Object.entries(STATUS).map(([k, v]) => item(k, v.label, v.col)).join("");
+  const item = (key, label, col) => `<div class="status-item ${state.status === key ? 'active' : ''}" data-st="${key}"><span class="dot" style="background:${col}"></span>${label}<span class="cnt">${counts[key] || 0}</span></div>`;
+  $("#statusList").innerHTML = item("alla", "Alla leads", "#7f8eaa") + Object.entries(STATUS).map(([k, v]) => item(k, v.label, v.col)).join("");
 }
 
 function renderTable() {
@@ -718,88 +611,130 @@ function renderTable() {
 function renderAll() { renderStats(); renderStatusFilter(); renderTable(); }
 
 /* ============================================================
-   8. SETTINGS MODAL
+   8. KARTA
    ============================================================ */
-function openSettings() {
-  renderScoringParams();
-  $("#settingsModal").classList.add("open");
-  $("#modalScrim").classList.add("open");
+function openMap() {
+  const rows = visible().filter(l => l.lat && l.lng);
+  const noCoords = $("#mapNoCoords");
+  const mapContainer = $("#mapContainer");
+
+  $("#mapSub").textContent = `Visar ${rows.length} av ${visible().length} leads med koordinater`;
+
+  if (rows.length === 0) {
+    noCoords.style.display = "block";
+    mapContainer.style.display = "none";
+  } else {
+    noCoords.style.display = "none";
+    mapContainer.style.display = "block";
+  }
+
+  $("#mapModal").classList.add("open");
+  $("#mapScrim").classList.add("open");
+
+  // Initiera karta första gången
+  if (!leafletMap) {
+    leafletMap = L.map("mapContainer").setView([62.5, 16.5], 5);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+      maxZoom: 18,
+    }).addTo(leafletMap);
+    markerCluster = L.markerClusterGroup({ maxClusterRadius: 40 });
+    leafletMap.addLayer(markerCluster);
+  }
+
+  // Rensa gamla markörer
+  markerCluster.clearLayers();
+
+  if (rows.length === 0) return;
+
+  rows.forEach(l => {
+    const color = scoreColorHex(l.score || 0);
+    const icon = L.divIcon({
+      className: "",
+      html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+    });
+    const marker = L.marker([l.lat, l.lng], { icon });
+    const st = STATUS[l.status] || STATUS.ny;
+    marker.bindPopup(`
+      <div class="map-popup">
+        <div class="name">${l.company_name}</div>
+        <span class="score" style="background:${color}">${l.score ?? "–"} p</span>
+        <div class="meta">${l.city || "–"} · ${fmtMSEK(l.revenue)} · ${l.employees ?? "–"} anst.</div>
+        <div class="meta" style="margin-bottom:8px"><span class="badge ${st.cls}" style="font-size:11px;padding:3px 7px"><span class="dot"></span>${st.label}</span></div>
+        <button onclick="openPanelFromMap(${l.id})">Öppna lead →</button>
+      </div>`);
+    markerCluster.addLayer(marker);
+  });
+
+  // Zooma in på synliga markörer
+  const bounds = L.featureGroup(markerCluster.getLayers()).getBounds();
+  if (bounds.isValid()) leafletMap.fitBounds(bounds, { padding: [40, 40] });
+
+  // Leaflet behöver invalidateSize när den öppnas i en modal
+  setTimeout(() => leafletMap.invalidateSize(), 50);
 }
 
-function closeSettings() {
-  $("#settingsModal").classList.remove("open");
-  $("#modalScrim").classList.remove("open");
+function closeMap() {
+  $("#mapModal").classList.remove("open");
+  $("#mapScrim").classList.remove("open");
 }
+
+window.openPanelFromMap = (id) => {
+  closeMap();
+  setTimeout(() => openPanel(id), 100);
+};
+
+/* ============================================================
+   9. SETTINGS MODAL
+   ============================================================ */
+function openSettings() { renderScoringParams(); $("#settingsModal").classList.add("open"); $("#modalScrim").classList.add("open"); }
+function closeSettings() { $("#settingsModal").classList.remove("open"); $("#modalScrim").classList.remove("open"); }
 
 function renderScoringParams() {
   const cfg = scoringCfg;
   const params = [
-    {
-      key: "revenue", name: "Omsättning", weight: cfg.revenue.weight,
-      fields: [
-        { key: "sweet_low",  label: "Sweet spot från (MSEK)", val: cfg.revenue.sweet_low },
-        { key: "sweet_high", label: "Sweet spot till (MSEK)", val: cfg.revenue.sweet_high },
-        { key: "max",        label: "Max (MSEK)",             val: cfg.revenue.max },
-      ]
-    },
-    {
-      key: "employees", name: "Anställda", weight: cfg.employees.weight,
-      fields: [
-        { key: "min", label: "Min anställda", val: cfg.employees.min },
-        { key: "max", label: "Max anställda", val: cfg.employees.max },
-      ]
-    },
-    {
-      key: "solidity", name: "Soliditet", weight: cfg.solidity.weight,
-      fields: [
-        { key: "b0", label: "Brytpunkt 1 (%)", val: cfg.solidity.breaks[0] },
-        { key: "b1", label: "Brytpunkt 2 (%)", val: cfg.solidity.breaks[1] },
-        { key: "b2", label: "Brytpunkt 3 (%)", val: cfg.solidity.breaks[2] },
-        { key: "p0", label: "Poäng ≤ B1",      val: cfg.solidity.points[0] },
-        { key: "p1", label: "Poäng B1–B2",     val: cfg.solidity.points[1] },
-        { key: "p2", label: "Poäng B2–B3",     val: cfg.solidity.points[2] },
-        { key: "p3", label: "Poäng > B3",      val: cfg.solidity.points[3] },
-      ]
-    },
-    {
-      key: "sni", name: "SNI / Bransch", weight: cfg.sni.weight,
-      fields: []
-    },
-    {
-      key: "result", name: "Resultat efter fin.", weight: cfg.result.weight,
-      fields: [
-        { key: "b0", label: "Brytpunkt 1 (%)", val: cfg.result.breaks[0] },
-        { key: "b1", label: "Brytpunkt 2 (%)", val: cfg.result.breaks[1] },
-        { key: "b2", label: "Brytpunkt 3 (%)", val: cfg.result.breaks[2] },
-        { key: "p0", label: "Poäng ≤ B1",      val: cfg.result.points[0] },
-        { key: "p1", label: "Poäng B1–B2",     val: cfg.result.points[1] },
-        { key: "p2", label: "Poäng B2–B3",     val: cfg.result.points[2] },
-        { key: "p3", label: "Poäng > B3",      val: cfg.result.points[3] },
-      ]
-    },
+    { key: "revenue", name: "Omsättning", weight: cfg.revenue.weight, fields: [
+      { key: "sweet_low",  label: "Sweet spot från (MSEK)", val: cfg.revenue.sweet_low },
+      { key: "sweet_high", label: "Sweet spot till (MSEK)", val: cfg.revenue.sweet_high },
+      { key: "max",        label: "Max (MSEK)",             val: cfg.revenue.max },
+    ]},
+    { key: "employees", name: "Anställda", weight: cfg.employees.weight, fields: [
+      { key: "min", label: "Min anställda", val: cfg.employees.min },
+      { key: "max", label: "Max anställda", val: cfg.employees.max },
+    ]},
+    { key: "solidity", name: "Soliditet", weight: cfg.solidity.weight, fields: [
+      { key: "b0", label: "Brytpunkt 1 (%)", val: cfg.solidity.breaks[0] },
+      { key: "b1", label: "Brytpunkt 2 (%)", val: cfg.solidity.breaks[1] },
+      { key: "b2", label: "Brytpunkt 3 (%)", val: cfg.solidity.breaks[2] },
+      { key: "p0", label: "Poäng ≤ B1",      val: cfg.solidity.points[0] },
+      { key: "p1", label: "Poäng B1–B2",     val: cfg.solidity.points[1] },
+      { key: "p2", label: "Poäng B2–B3",     val: cfg.solidity.points[2] },
+      { key: "p3", label: "Poäng > B3",      val: cfg.solidity.points[3] },
+    ]},
+    { key: "result", name: "Resultat efter fin.", weight: cfg.result.weight, fields: [
+      { key: "b0", label: "Brytpunkt 1 (%)", val: cfg.result.breaks[0] },
+      { key: "b1", label: "Brytpunkt 2 (%)", val: cfg.result.breaks[1] },
+      { key: "b2", label: "Brytpunkt 3 (%)", val: cfg.result.breaks[2] },
+      { key: "p0", label: "Poäng ≤ B1",      val: cfg.result.points[0] },
+      { key: "p1", label: "Poäng B1–B2",     val: cfg.result.points[1] },
+      { key: "p2", label: "Poäng B2–B3",     val: cfg.result.points[2] },
+      { key: "p3", label: "Poäng > B3",      val: cfg.result.points[3] },
+    ]},
   ];
 
   $("#scoringParams").innerHTML = params.map(p => `
     <div class="sc-param" data-param="${p.key}">
       <div class="sc-param-head">
         <span class="name">${p.name}</span>
-        <div class="weight-wrap">
-          <label>Vikt</label>
-          <input type="number" class="weight-input" data-param="${p.key}" value="${p.weight}" min="0" max="999">
-        </div>
+        <div class="weight-wrap"><label>Vikt</label><input type="number" class="weight-input" data-param="${p.key}" value="${p.weight}" min="0" max="999"></div>
       </div>
-      ${p.fields.length ? `<div class="sc-fields">${p.fields.map(f => `
-        <div class="sc-field">
-          <label>${f.label}</label>
-          <input type="number" data-param="${p.key}" data-field="${f.key}" value="${f.val}">
-        </div>`).join("")}</div>` : `<div style="font-size:12px;color:var(--faint)">SNI 47811 ger full vikt, övriga 40%.</div>`}
+      ${p.fields.length ? `<div class="sc-fields">${p.fields.map(f => `<div class="sc-field"><label>${f.label}</label><input type="number" data-param="${p.key}" data-field="${f.key}" value="${f.val}"></div>`).join("")}</div>` : ""}
     </div>`).join("");
 
   updateTotalWeight();
-
-  $("#scoringParams").querySelectorAll(".weight-input").forEach(inp => {
-    inp.oninput = updateTotalWeight;
-  });
+  $("#scoringParams").querySelectorAll(".weight-input").forEach(inp => { inp.oninput = updateTotalWeight; });
 }
 
 function updateTotalWeight() {
@@ -810,50 +745,32 @@ function updateTotalWeight() {
 
 async function saveScoring(userId) {
   const newCfg = JSON.parse(JSON.stringify(scoringCfg));
-
-  document.querySelectorAll(".weight-input").forEach(inp => {
-    const param = inp.dataset.param;
-    newCfg[param].weight = parseFloat(inp.value) || 0;
-  });
-
+  document.querySelectorAll(".weight-input").forEach(inp => { newCfg[inp.dataset.param].weight = parseFloat(inp.value) || 0; });
   document.querySelectorAll(".sc-fields input").forEach(inp => {
-    const param = inp.dataset.param;
-    const field = inp.dataset.field;
-    const val = parseFloat(inp.value);
-    if (param === "revenue")   { newCfg.revenue[field] = val; }
-    if (param === "employees") { newCfg.employees[field] = val; }
-    if (param === "solidity") {
-      if (field.startsWith("b")) newCfg.solidity.breaks[+field[1]] = val;
-      if (field.startsWith("p")) newCfg.solidity.points[+field[1]] = val;
-    }
-    if (param === "result") {
-      if (field.startsWith("b")) newCfg.result.breaks[+field[1]] = val;
-      if (field.startsWith("p")) newCfg.result.points[+field[1]] = val;
-    }
+    const param = inp.dataset.param, field = inp.dataset.field, val = parseFloat(inp.value);
+    if (param === "revenue")   newCfg.revenue[field] = val;
+    if (param === "employees") newCfg.employees[field] = val;
+    if (param === "solidity")  { if (field.startsWith("b")) newCfg.solidity.breaks[+field[1]] = val; if (field.startsWith("p")) newCfg.solidity.points[+field[1]] = val; }
+    if (param === "result")    { if (field.startsWith("b")) newCfg.result.breaks[+field[1]] = val;   if (field.startsWith("p")) newCfg.result.points[+field[1]] = val; }
   });
-
   scoringCfg = newCfg;
   LEADS = LEADS.map(l => ({ ...l, score: scoreBreakdown(l).total }));
   renderAll();
-
   const ok = await saveUserSettings(userId, { scoring: newCfg });
   if (ok) { toast("Scoring sparad"); closeSettings(); }
   else toast("Kunde inte spara scoring");
 }
 
 /* ============================================================
-   9. DETALJPANEL
+   10. DETALJPANEL
    ============================================================ */
 async function openPanel(id) {
   sel = LEADS.find(l => l.id === id);
   if (!sel) return;
-
   const bd = scoreBreakdown(sel);
 
   $("#pRing").textContent = sel.score == null ? "–" : sel.score;
-  $("#pRing").style.background = sel.score == null
-    ? "#cfd6e2"
-    : `conic-gradient(${scoreColor(sel.score)} ${sel.score * 3.6}deg, #eef1f5 0deg)`;
+  $("#pRing").style.background = sel.score == null ? "#cfd6e2" : `conic-gradient(${scoreColor(sel.score)} ${sel.score * 3.6}deg, #eef1f5 0deg)`;
   $("#pRing").style.boxShadow = "inset 0 0 0 6px #fff";
   $("#pName").textContent = sel.company_name;
   $("#pMeta").textContent = `${sel.org_nr || "Org.nr ej hämtat"} · ${sel.city || "–"}`;
@@ -869,10 +786,7 @@ async function openPanel(id) {
         </div>`).join("");
 
   $("#pBody").innerHTML = `
-    <div class="p-sec">
-      <h4>Varför den här poängen</h4>
-      ${breakdownHtml}
-    </div>
+    <div class="p-sec"><h4>Varför den här poängen</h4>${breakdownHtml}</div>
     <div class="p-sec">
       <h4>Nyckeltal</h4>
       <div class="kpis">
@@ -901,9 +815,7 @@ async function openPanel(id) {
     <div class="p-sec">
       <h4>Status</h4>
       <div class="status-switch" id="ssw">
-        ${Object.entries(STATUS).map(([k, v]) =>
-          `<button class="ss-btn ${sel.status === k ? 'on' : ''}" data-s="${k}"><span class="dot"></span>${v.label}</button>`
-        ).join("")}
+        ${Object.entries(STATUS).map(([k, v]) => `<button class="ss-btn ${sel.status === k ? 'on' : ''}" data-s="${k}"><span class="dot"></span>${v.label}</button>`).join("")}
       </div>
     </div>
     <div class="p-sec notes-section">
@@ -914,12 +826,9 @@ async function openPanel(id) {
         <button class="btn btn-prim" id="addNoteBtn">Lägg till anteckning</button>
         <span class="saved" id="noteSavedMsg">✓ Sparat</span>
       </div>
-      <div class="notes-list" id="notesList">
-        <div class="notes-empty">Laddar anteckningar…</div>
-      </div>
+      <div class="notes-list" id="notesList"><div class="notes-empty">Laddar anteckningar…</div></div>
     </div>`;
 
-  // Bind kontakt-sparning
   document.getElementById("saveContact").onclick = async () => {
     const name  = document.getElementById("contactName").value.trim();
     const phone = document.getElementById("contactPhone").value.trim();
@@ -928,17 +837,12 @@ async function openPanel(id) {
     const { error } = await sb.from("lead_contacts").insert({ lead_id: sel.id, name, phone, email, created_at: new Date().toISOString() });
     if (!error) {
       const msg = document.getElementById("contactSavedMsg");
-      msg.classList.add("show");
-      setTimeout(() => msg.classList.remove("show"), 2000);
+      msg.classList.add("show"); setTimeout(() => msg.classList.remove("show"), 2000);
       loadContacts(sel.id);
       ["contactName", "contactPhone", "contactEmail"].forEach(i => document.getElementById(i).value = "");
-    } else {
-      toast("Kunde inte spara kontakt");
-      console.error(error);
-    }
+    } else { toast("Kunde inte spara kontakt"); console.error(error); }
   };
 
-  // Bind status-switchar
   document.getElementById("ssw").onclick = async e => {
     const btn = e.target.closest(".ss-btn"); if (!btn) return;
     const newStatus = btn.dataset.s;
@@ -952,25 +856,20 @@ async function openPanel(id) {
     }
   };
 
-  // Bind anteckningar
   document.getElementById("addNoteBtn").onclick = async () => {
-    const txt = document.getElementById("newNote").value.trim();
-    if (!txt) return;
+    const txt = document.getElementById("newNote").value.trim(); if (!txt) return;
     const note = { lead_id: sel.id, note: txt, created_at: new Date().toISOString() };
     const { data, error } = await sb.from("lead_notes").insert(note).select().single();
     if (!error) {
       document.getElementById("newNote").value = "";
       const msg = document.getElementById("noteSavedMsg");
-      msg.classList.add("show");
-      setTimeout(() => msg.classList.remove("show"), 2000);
+      msg.classList.add("show"); setTimeout(() => msg.classList.remove("show"), 2000);
       const el = document.getElementById("notesList");
       if (el.querySelector(".notes-empty")) el.innerHTML = "";
       el.insertAdjacentHTML("afterbegin", noteHtml(data));
       const lc = document.getElementById("lastContact");
       if (lc) lc.textContent = `Senaste kontakt: ${fmtDateTime(data.created_at)}`;
-    } else {
-      toast("Kunde inte spara anteckning");
-    }
+    } else { toast("Kunde inte spara anteckning"); }
   };
 
   $("#panel").classList.add("open");
@@ -981,43 +880,26 @@ async function openPanel(id) {
     sb.from("lead_notes").select("*").eq("lead_id", id).order("created_at", { ascending: false })
   ]);
   if (!sel || sel.id !== id) return;
-  if (notesRes.error) {
-    document.getElementById("notesList").innerHTML = `<div class="notes-empty">Kunde inte hämta anteckningar.</div>`;
-  } else {
-    renderNotesList(notesRes.data || []);
-  }
+  if (notesRes.error) { document.getElementById("notesList").innerHTML = `<div class="notes-empty">Kunde inte hämta anteckningar.</div>`; }
+  else { renderNotesList(notesRes.data || []); }
   loadContacts(id);
 }
 
-function closePanel() {
-  $("#panel").classList.remove("open");
-  $("#scrim").classList.remove("open");
-  sel = null;
-  renderTable();
-}
+function closePanel() { $("#panel").classList.remove("open"); $("#scrim").classList.remove("open"); sel = null; renderTable(); }
 
 /* ============================================================
-   10. EVENTS
+   11. EVENTS
    ============================================================ */
-$("#statusList").onclick = e => {
-  const it = e.target.closest(".status-item"); if (!it) return;
-  state.status = it.dataset.st;
-  renderStatusFilter(); renderTable();
-};
-
-$("#scoreSlider").oninput = e => {
-  state.minScore = +e.target.value;
-  $("#scoreVal").textContent = e.target.value;
-  e.target.style.setProperty("--p", e.target.value + "%");
-  renderTable();
-};
-
+$("#statusList").onclick = e => { const it = e.target.closest(".status-item"); if (!it) return; state.status = it.dataset.st; renderStatusFilter(); renderTable(); };
+$("#scoreSlider").oninput = e => { state.minScore = +e.target.value; $("#scoreVal").textContent = e.target.value; e.target.style.setProperty("--p", e.target.value + "%"); renderTable(); };
 $("#revMin").oninput = e => { state.revMin = e.target.value ? +e.target.value : null; renderTable(); };
 $("#revMax").oninput = e => { state.revMax = e.target.value ? +e.target.value : null; renderTable(); };
-
 $("#search").oninput = e => { state.q = e.target.value.trim(); renderTable(); };
 $("#pClose").onclick = closePanel;
 $("#scrim").onclick = closePanel;
+$("#mapBtn").onclick = openMap;
+$("#mapClose").onclick = closeMap;
+$("#mapScrim").onclick = closeMap;
 
 $("#saveFollowup").onclick = async () => {
   if (!sel) return;
@@ -1027,19 +909,17 @@ $("#saveFollowup").onclick = async () => {
   else toast("Kunde inte spara uppföljning");
 };
 
-$("#mailBtn").onclick = () => {
+$("#mailBtn").onclick = async () => {
   if (!sel) return;
-  const emailEl = document.getElementById("contactEmail");
-  const email = emailEl ? emailEl.value.trim() : "";
+  const { data } = await sb.from("lead_contacts").select("name, email").eq("lead_id", sel.id).order("created_at", { ascending: true }).limit(1).maybeSingle();
+  const email = data?.email?.trim();
   if (!email) { toast("Lägg till kontaktpersonens e-post först"); return; }
-  const nameEl = document.getElementById("contactName");
-  const firstName = nameEl ? nameEl.value.trim().split(" ")[0] : "";
+  const firstName = data?.name?.trim().split(" ")[0] || "";
   const msg = `Hej${firstName ? ` ${firstName}` : ""}!\n\nJag heter [Ditt namn] och jobbar på AOTO. Jag ser att ${sel.company_name} i ${sel.city || "er region"} skulle kunna frigöra rörelsekapital genom lagerfinansiering av begagnade bilar – ni betalar bara för det lager ni faktiskt har ute.\n\nHar du 15 minuter nästa vecka för ett kort samtal om hur det skulle se ut för er?\n\nVänliga hälsningar,\n[Ditt namn], AOTO`;
   window.location.href = `mailto:${email}?subject=${encodeURIComponent(`AOTO – lagerfinansiering för ${sel.company_name}`)}&body=${encodeURIComponent(msg)}`;
 };
 
-document.addEventListener("keydown", e => { if (e.key === "Escape") { closePanel(); closeSettings(); } });
-
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closePanel(); closeSettings(); closeMap(); } });
 document.querySelectorAll("thead th[data-sort]").forEach(th => th.onclick = () => {
   const k = th.dataset.sort;
   if (state.sortKey === k) state.sortDir *= -1;
@@ -1050,7 +930,7 @@ document.querySelectorAll("thead th[data-sort]").forEach(th => th.onclick = () =
 });
 
 /* ============================================================
-   11. AUTH + INIT
+   12. AUTH + INIT
    ============================================================ */
 const appEl = $("#app");
 let currentUserId = null;
@@ -1066,20 +946,13 @@ async function enterApp(session) {
   $("#userAv").textContent = (email[0] || "–");
   if (appReady) return;
   appReady = true;
-  try {
-    await loadUserSettings(currentUserId);
-    await loadLeads();
-    renderAll();
-  } catch (err) {
-    console.error(err);
-    toast("Kunde inte hämta leads – kontrollera RLS-policy");
-  }
+  try { await loadUserSettings(currentUserId); await loadLeads(); renderAll(); }
+  catch (err) { console.error(err); toast("Kunde inte hämta leads – kontrollera RLS-policy"); }
 }
 
 async function doLogin() {
-  const email = $("#authEmail").value.trim();
-  const pw = $("#authPw").value;
-  const btn = $("#authBtn"); const err = $("#authErr");
+  const email = $("#authEmail").value.trim(), pw = $("#authPw").value;
+  const btn = $("#authBtn"), err = $("#authErr");
   err.textContent = "";
   if (!email || !pw) { err.textContent = "Fyll i e-post och lösenord."; return; }
   btn.disabled = true; btn.textContent = "Loggar in…";
@@ -1095,7 +968,6 @@ async function doLogin() {
   $("#authPw").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
   $("#authEmail").addEventListener("keydown", e => { if (e.key === "Enter") $("#authPw").focus(); });
   $("#logoutBtn").onclick = () => sb.auth.signOut();
-
   $("#settingsBtn").onclick = openSettings;
   $("#modalClose").onclick = closeSettings;
   $("#modalCancel").onclick = closeSettings;
@@ -1104,18 +976,9 @@ async function doLogin() {
 
   $("#saveFiltersBtn").onclick = async () => {
     if (!currentUserId) return;
-    const ok = await saveUserSettings(currentUserId, {
-      minScore: state.minScore,
-      revMin: state.revMin,
-      revMax: state.revMax,
-    });
-    if (ok) {
-      const msg = $("#filterSavedMsg");
-      msg.classList.add("show");
-      setTimeout(() => msg.classList.remove("show"), 2000);
-    } else {
-      toast("Kunde inte spara filter");
-    }
+    const ok = await saveUserSettings(currentUserId, { minScore: state.minScore, revMin: state.revMin, revMax: state.revMax });
+    if (ok) { const msg = $("#filterSavedMsg"); msg.classList.add("show"); setTimeout(() => msg.classList.remove("show"), 2000); }
+    else toast("Kunde inte spara filter");
   };
 
   const importBtn = $("#importBtn"); importBtn.style.display = "";
@@ -1127,7 +990,7 @@ async function doLogin() {
       const res = await fetch("/.netlify/functions/roaring-import", { method: "POST", headers: { Authorization: "Bearer " + s.access_token } });
       const body = await res.json();
       if (body.success) { toast(body.message); await loadLeads(); renderAll(); }
-      else { toast("Import misslyckades: " + (body.error || res.status)); }
+      else toast("Import misslyckades: " + (body.error || res.status));
     } catch (err) { toast("Import-fel: " + err.message); }
     finally { importBtn.disabled = false; importBtn.textContent = "⬇ Importera"; }
   };
@@ -1141,9 +1004,23 @@ async function doLogin() {
       const res = await fetch("/.netlify/functions/roaring-enrich", { method: "POST", headers: { Authorization: "Bearer " + s.access_token } });
       const body = await res.json();
       if (body.success) { toast(body.message); await loadLeads(); renderAll(); }
-      else { toast("Anrikning misslyckades: " + (body.error || res.status)); }
+      else toast("Anrikning misslyckades: " + (body.error || res.status));
     } catch (err) { toast("Anrik-fel: " + err.message); }
     finally { enrichBtn.disabled = false; enrichBtn.textContent = "⚙ Anrika 20"; }
+  };
+
+  const geocodeBtn = $("#geocodeBtn"); geocodeBtn.style.display = "";
+  geocodeBtn.onclick = async () => {
+    geocodeBtn.disabled = true; geocodeBtn.textContent = "Geocodar…";
+    try {
+      const { data: { session: s } } = await sb.auth.getSession();
+      if (!s) { toast("Du måste vara inloggad"); return; }
+      const res = await fetch("/.netlify/functions/geocode", { method: "POST", headers: { Authorization: "Bearer " + s.access_token } });
+      const body = await res.json();
+      if (body.success) { toast(body.message); await loadLeads(); renderAll(); }
+      else toast("Geocoding misslyckades: " + (body.error || res.status));
+    } catch (err) { toast("Geocode-fel: " + err.message); }
+    finally { geocodeBtn.disabled = false; geocodeBtn.textContent = "📍 Geocoda"; }
   };
 
   const { data: { session } } = await sb.auth.getSession();
