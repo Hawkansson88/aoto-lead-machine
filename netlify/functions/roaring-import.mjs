@@ -77,7 +77,7 @@ for (const sni of SNI_CODES) {
       const params = new URLSearchParams();
       // TEMP: SNI-filter avstängt för att testa nya GUI:t mot sandbox-data
       // TODO: kommentera in igen när produktionscredentials är på plats
-      // params.append("industryCode", sni);
+      params.append("industryCode", sni);
       params.append("statusCode", "100");      // Aktivt bolag
       params.append("legalGroupCode", "AB");    // Aktiebolag
       params.append("pageSize", String(PAGE_SIZE));
@@ -98,7 +98,7 @@ for (const sni of SNI_CODES) {
       allHits.push(...hits);
       requestKey = data.requestKey || null;
 
-      if (hits.length < PAGE_SIZE || allHits.length >= 500) break;
+      if (hits.length < PAGE_SIZE || allHits.length >= 50) break;
       from += PAGE_SIZE;
     }
   }
