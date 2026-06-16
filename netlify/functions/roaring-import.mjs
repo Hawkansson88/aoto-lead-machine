@@ -98,7 +98,7 @@ for (const sni of SNI_CODES) {
       allHits.push(...hits);
       requestKey = data.requestKey || null;
 
-      if (hits.length < PAGE_SIZE || allHits.length >= 500) break;
+      if (hits.length < PAGE_SIZE || allHits.length >= 50) break;
       from += PAGE_SIZE;
     }
   }
