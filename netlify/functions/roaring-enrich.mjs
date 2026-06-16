@@ -10,6 +10,7 @@
  */
 
 const BATCH_SIZE = 20;
+const MAX_CALLS = 40; // hårt tak — aldrig fler Roaring-anrop per körning
 const ROARING_TOKEN_URL = "https://api.roaring.io/token";
 
 /* ─── Hjälpare ─── */
@@ -176,17 +177,25 @@ export async function handler(event) {
     const roaringToken = await getRoaringToken(ROARING_CLIENT_ID, ROARING_CLIENT_SECRET);
     const batch = await fetchBatch(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    let callCount = 0;
     let overviewCalls = 0;
     let financialCalls = 0;
 
     for (const lead of batch) {
+      if (callCount >= MAX_CALLS) {
+        console.warn("MAX_CALLS nått — avbryter batch");
+        break;
+      }
+
       const ov = await enrichHit(lead.roaring_company_id, roaringToken);
       overviewCalls++;
+      callCount++;
 
       let fin = {};
       if (ov.org_nr) {
         fin = await enrichFinancials(ov.org_nr, roaringToken);
         financialCalls++;
+        callCount++;
       }
 
       await updateLead(lead.roaring_company_id, {
