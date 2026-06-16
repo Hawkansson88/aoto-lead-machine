@@ -1,0 +1,1159 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AOTO Lead Machine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --navy-900:#0d1424; --navy-800:#131e35; --navy-700:#1b2945; --navy-600:#243557;
+  --canvas:#f3f5f8; --surface:#ffffff; --surface-2:#fafbfc;
+  --ink:#14202e; --muted:#69748a; --faint:#9aa6b8; --line:#e6eaf0;
+  --accent:#00b388; --accent-2:#06caa0; --accent-soft:rgba(0,179,136,.12);
+  --hot:#ff7a45; --hot-soft:rgba(255,122,69,.14);
+  --st-ny:#5b6b85; --st-kontaktad:#cf8a12; --st-mote:#0f9d6f; --st-ej:#9aa6b8;
+  --sc-low:#e0556b; --sc-mid:#e0a23a; --sc-high:#11a37a;
+  --shadow:0 18px 50px -20px rgba(13,20,36,.45);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  font-family:'IBM Plex Sans',system-ui,sans-serif;
+  background:var(--canvas); color:var(--ink);
+  -webkit-font-smoothing:antialiased; overflow:hidden;
+}
+.num{font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums; font-feature-settings:"tnum"}
+
+/* ---------- Layout ---------- */
+.app{display:none; grid-template-columns:288px 1fr; height:100vh}
+
+/* ---------- Sidebar ---------- */
+.sidebar{
+  background:linear-gradient(178deg,var(--navy-800),var(--navy-900) 70%);
+  color:#dce4f1; padding:22px 20px; overflow-y:auto; position:relative;
+  border-right:1px solid rgba(255,255,255,.04);
+}
+.sidebar::-webkit-scrollbar{width:8px}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:8px}
+.brand{display:flex;align-items:center;gap:11px;margin-bottom:26px}
+.brand .mark{
+  width:38px;height:38px;border-radius:10px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  font-family:'Archivo';font-weight:800;color:#06241c;font-size:19px;
+  box-shadow:0 6px 18px -6px var(--accent);
+}
+.brand .wm{font-family:'Archivo';font-weight:800;font-size:18px;letter-spacing:-.4px;line-height:1;color:#fff}
+.brand .wm small{display:block;font-family:'IBM Plex Sans';font-weight:500;font-size:10.5px;letter-spacing:1.4px;color:var(--accent-2);margin-top:3px;text-transform:uppercase}
+
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:24px}
+.stat{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);
+  border-radius:12px;padding:12px 13px;position:relative;overflow:hidden;
+}
+.stat .v{font-family:'Archivo';font-weight:800;font-size:25px;line-height:1;letter-spacing:-.5px}
+.stat .l{font-size:10.5px;color:#9fb0cc;margin-top:6px;letter-spacing:.3px}
+.stat.mote .v{color:var(--st-mote)} .stat.hot .v{color:var(--hot)} .stat.followup .v{color:var(--accent-2)} .stat.untouched .v{color:#c4cee0}
+.stat .spark{position:absolute;right:-6px;top:-6px;font-size:34px;opacity:.10}
+
+.section-label{font-size:10.5px;font-weight:600;letter-spacing:1.3px;text-transform:uppercase;color:#7f8eaa;margin:0 0 11px 2px}
+
+.status-list{display:flex;flex-direction:column;gap:4px;margin-bottom:24px}
+.status-item{
+  display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:9px;
+  cursor:pointer;font-size:13.5px;color:#c4cee0;transition:.14s;border:1px solid transparent;
+}
+.status-item:hover{background:rgba(255,255,255,.05)}
+.status-item.active{background:rgba(0,179,136,.13);border-color:rgba(0,179,136,.32);color:#fff}
+.status-item .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.status-item .cnt{margin-left:auto;font-size:11.5px;color:#8595b3;font-family:'IBM Plex Mono'}
+
+.slider-wrap{margin-bottom:20px}
+.slider-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.slider-head b{font-family:'Archivo';font-size:16px;color:var(--accent-2)}
+input[type=range]{width:100%;-webkit-appearance:none;height:5px;border-radius:5px;
+  background:linear-gradient(90deg,var(--accent) var(--p,0%),rgba(255,255,255,.12) var(--p,0%));outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;
+  background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+
+/* Omsättningsfilter */
+.rev-filter{margin-bottom:20px}
+.rev-inputs{display:flex;align-items:center;gap:8px;margin-top:8px}
+.rev-inputs input{
+  flex:1;padding:7px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.06);color:#fff;font-family:'IBM Plex Mono';font-size:12px;
+  width:0;
+}
+.rev-inputs input::placeholder{color:#7f8eaa}
+.rev-inputs input:focus{outline:none;border-color:var(--accent)}
+.rev-inputs span{font-size:11px;color:#7f8eaa;flex:none}
+.save-filters-btn{
+  width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,179,136,.3);
+  background:rgba(0,179,136,.08);color:var(--accent-2);font-family:inherit;font-size:12px;
+  font-weight:600;cursor:pointer;transition:.14s;margin-top:4px;
+}
+.save-filters-btn:hover{background:rgba(0,179,136,.16)}
+.filter-saved{font-size:11px;color:var(--accent);text-align:center;opacity:0;transition:.2s;margin-top:6px;min-height:14px}
+.filter-saved.show{opacity:1}
+
+.user-foot{margin-top:26px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;gap:10px}
+.user-foot .av{width:30px;height:30px;border-radius:50%;background:rgba(0,179,136,.18);display:grid;place-items:center;
+  font-size:12px;font-weight:600;color:var(--accent-2);flex:none;text-transform:uppercase}
+.user-foot .em{font-size:11.5px;color:#9fb0cc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.user-foot .lo{font-size:11.5px;color:#c4cee0;cursor:pointer;background:none;border:1px solid rgba(255,255,255,.12);
+  padding:5px 9px;border-radius:7px;font-family:inherit}
+.user-foot .lo:hover{background:rgba(255,255,255,.08)}
+.settings-btn{
+  width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,.12);
+  background:none;color:#9fb0cc;cursor:pointer;font-size:14px;flex:none;
+  display:grid;place-items:center;
+}
+.settings-btn:hover{background:rgba(255,255,255,.08);color:#fff}
+
+/* ---------- Main ---------- */
+.main{display:flex;flex-direction:column;overflow:hidden}
+.topbar{
+  display:flex;align-items:center;gap:16px;padding:18px 28px;background:var(--surface);
+  border-bottom:1px solid var(--line);flex:none;
+}
+.topbar h1{font-family:'Archivo';font-weight:700;font-size:20px;margin:0;letter-spacing:-.4px}
+.topbar .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+.search{margin-left:auto;position:relative}
+.search input{
+  width:280px;padding:9px 14px 9px 36px;border:1px solid var(--line);border-radius:10px;
+  font-family:inherit;font-size:13.5px;background:var(--surface-2);transition:.15s;
+}
+.search input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:#fff}
+.search .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:14px}
+.conn-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+  padding:5px 10px;border-radius:20px;letter-spacing:.2px}
+.conn-pill.live{background:var(--accent-soft);color:#0a7a5c}
+.conn-pill .d{width:7px;height:7px;border-radius:50%;background:currentColor}
+
+.table-scroll{overflow-y:auto;flex:1;padding:8px 28px 40px}
+.table-scroll::-webkit-scrollbar{width:10px}
+.table-scroll::-webkit-scrollbar-thumb{background:#d3d9e2;border-radius:8px;border:3px solid var(--canvas)}
+table{width:100%;border-collapse:separate;border-spacing:0 7px}
+thead th{
+  position:sticky;top:0;background:var(--canvas);z-index:2;text-align:left;
+  font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);
+  padding:6px 14px;cursor:pointer;user-select:none;white-space:nowrap;
+}
+thead th:hover{color:var(--ink)}
+thead th .ar{font-size:9px;color:var(--accent);margin-left:4px}
+thead th.right{text-align:right}
+tbody tr{background:var(--surface);cursor:pointer;transition:.12s;box-shadow:0 1px 2px rgba(13,20,36,.04)}
+tbody tr:hover{transform:translateY(-1px);box-shadow:0 6px 18px -8px rgba(13,20,36,.22)}
+tbody tr.sel{box-shadow:0 0 0 2px var(--accent),0 6px 18px -8px rgba(0,179,136,.4)}
+tbody td{padding:13px 14px;font-size:13.5px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+tbody td:first-child{border-left:1px solid var(--line);border-radius:11px 0 0 11px}
+tbody td:last-child{border-right:1px solid var(--line);border-radius:0 11px 11px 0}
+td.right{text-align:right}
+.co-name{font-weight:600}
+.co-org{font-size:11px;color:var(--faint);margin-top:2px}
+
+.score-cell{display:flex;align-items:center;gap:10px;min-width:118px}
+.score-num{font-family:'Archivo';font-weight:800;font-size:16px;width:26px;flex:none}
+.score-bar{flex:1;height:7px;border-radius:7px;background:#eef1f5;overflow:hidden}
+.score-fill{height:100%;border-radius:7px}
+
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:7px}
+.badge .dot{width:7px;height:7px;border-radius:50%}
+.b-ny{background:#eef1f6;color:var(--st-ny)} .b-ny .dot{background:var(--st-ny)}
+.b-kontaktad{background:#fbf1dd;color:var(--st-kontaktad)} .b-kontaktad .dot{background:var(--st-kontaktad)}
+.b-mote{background:#e3f6ee;color:var(--st-mote)} .b-mote .dot{background:var(--st-mote)}
+.b-ejaktuell{background:#f1f3f6;color:var(--st-ej)} .b-ejaktuell .dot{background:var(--st-ej)}
+
+.fu-late{color:var(--sc-low);font-weight:600}
+.fu-today{color:var(--hot);font-weight:600}
+.fu-future{color:var(--muted)}
+.fu-none{color:var(--faint)}
+.empty{text-align:center;color:var(--muted);padding:60px 0;font-size:14px}
+
+/* ---------- Detail panel ---------- */
+.scrim{position:fixed;inset:0;background:rgba(13,20,36,.34);opacity:0;pointer-events:none;transition:.22s;z-index:40}
+.scrim.open{opacity:1;pointer-events:auto}
+.panel{
+  position:fixed;top:50%;left:50%;width:950px;max-width:92vw;max-height:86vh;background:var(--surface);
+  border-radius:18px;box-shadow:var(--shadow);
+  transform:translate(-50%,-46%) scale(.97);opacity:0;pointer-events:none;
+  transition:transform .22s cubic-bezier(.4,.0,.2,1),opacity .2s;
+  z-index:50;display:flex;flex-direction:column;overflow:hidden;
+}
+.panel.open{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
+.p-head{padding:24px 26px 20px;border-bottom:1px solid var(--line);position:relative;background:linear-gradient(180deg,var(--surface-2),var(--surface))}
+.p-head-actions{position:absolute;top:18px;right:18px;display:flex;align-items:center;gap:8px}
+.p-close{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);
+  background:#fff;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;flex:none}
+.p-close:hover{background:var(--canvas);color:var(--ink)}
+.btn-icon{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:#fff;
+  cursor:pointer;color:var(--accent);font-size:15px;flex:none;display:grid;place-items:center;transition:.13s}
+.btn-icon:hover{background:var(--accent-soft);border-color:var(--accent)}
+.dateinput-sm{width:128px;padding:8px 10px;font-size:12.5px}
+.btn-sm{padding:8px 12px;font-size:12px;flex:none}
+.p-score{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.p-score .ring{width:58px;height:58px;flex:none;border-radius:50%;display:grid;place-items:center;
+  font-family:'Archivo';font-weight:800;font-size:21px;color:#fff}
+.p-name{font-family:'Archivo';font-weight:700;font-size:21px;line-height:1.15;letter-spacing:-.4px}
+.p-meta{font-size:12.5px;color:var(--muted);margin-top:5px}
+.p-body{overflow-y:auto;flex:1;padding:22px 26px 36px}
+.p-body::-webkit-scrollbar{width:8px}
+.p-body::-webkit-scrollbar-thumb{background:#d3d9e2;border-radius:8px}
+.p-sec{margin-bottom:26px}
+.p-sec h4{font-size:11px;font-weight:600;letter-spacing:.9px;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:12px 14px}
+.kpi .v{font-family:'Archivo';font-weight:700;font-size:18px}
+.kpi .l{font-size:11px;color:var(--muted);margin-top:3px}
+
+.bd-row{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.bd-row .lab{width:108px;flex:none;font-size:12.5px;color:var(--ink)}
+.bd-row .track{flex:1;height:8px;background:#eef1f5;border-radius:8px;overflow:hidden}
+.bd-row .fill{height:100%;border-radius:8px}
+.bd-row .pts{width:48px;flex:none;text-align:right;font-family:'IBM Plex Mono';font-size:12px;color:var(--muted)}
+.notenriched{font-size:13px;color:var(--muted);line-height:1.5;background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:14px}
+
+.status-switch{display:flex;flex-wrap:wrap;gap:7px}
+.ss-btn{font-size:12px;font-weight:600;padding:8px 12px;border-radius:9px;border:1px solid var(--line);
+  background:#fff;cursor:pointer;color:var(--muted);transition:.13s;display:flex;align-items:center;gap:7px}
+.ss-btn:hover{border-color:var(--faint)}
+.ss-btn.on{color:#fff;border-color:transparent}
+.ss-btn.on[data-s=ny]{background:var(--st-ny)} .ss-btn.on[data-s=kontaktad]{background:var(--st-kontaktad)}
+.ss-btn.on[data-s=mote]{background:var(--st-mote)} .ss-btn.on[data-s=ejaktuell]{background:var(--st-ej)}
+.ss-btn .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+
+textarea,.dateinput{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px 13px;
+  font-family:inherit;font-size:13px;resize:vertical;background:var(--surface-2);transition:.15s}
+textarea{min-height:74px}
+textarea:focus,.dateinput:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:#fff}
+.notes-foot{display:flex;align-items:center;gap:10px;margin-top:12px}
+.notes-meta{font-size:12px;color:var(--muted);margin-bottom:10px}
+.notes-section{margin-bottom:0}
+.notes-list{margin-top:16px;max-height:340px;overflow-y:auto;display:flex;flex-direction:column}
+.note-item{padding:12px 0 12px 18px;border-bottom:1px solid var(--line);position:relative}
+.note-item::before{content:"";position:absolute;left:0;top:17px;width:8px;height:8px;border-radius:50%;background:var(--accent-2)}
+.note-item:last-child{border-bottom:none}
+.note-item .meta{font-size:11.5px;font-weight:600;color:var(--ink);margin-bottom:4px}
+.note-item .txt{font-size:13.5px;line-height:1.55;white-space:pre-wrap;color:var(--ink)}
+.notes-empty{font-size:12.5px;color:var(--faint);font-style:italic;padding:6px 0}
+.contact-form{display:flex;flex-direction:column;gap:8px}
+.contact-card{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 13px;font-size:13px}
+.contact-card .cn{font-weight:600;margin-bottom:3px}
+.contact-card .cd{color:var(--muted);font-size:12px}
+.contact-card .cd a{color:var(--accent);text-decoration:none}
+.btn{font-family:inherit;font-size:13px;font-weight:600;padding:9px 15px;border-radius:9px;cursor:pointer;border:none;transition:.14s}
+.btn-prim{background:var(--ink);color:#fff} .btn-prim:hover{background:#000}
+.btn-acc{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#062a20;width:100%;justify-content:center;
+  display:flex;align-items:center;gap:8px;padding:12px} .btn-acc:hover{filter:brightness(1.05)}
+.btn-ghost{background:#fff;border:1px solid var(--line);color:var(--muted)} .btn-ghost:hover{border-color:var(--faint);color:var(--ink)}
+.saved{font-size:12px;color:var(--accent);opacity:0;transition:.2s} .saved.show{opacity:1}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;
+  padding:11px 18px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:90}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ---------- Settings modal ---------- */
+.modal-scrim{position:fixed;inset:0;background:rgba(13,20,36,.5);opacity:0;pointer-events:none;transition:.2s;z-index:60}
+.modal-scrim.open{opacity:1;pointer-events:auto}
+.modal{
+  position:fixed;top:50%;left:50%;width:560px;max-width:92vw;max-height:88vh;
+  background:var(--surface);border-radius:18px;box-shadow:var(--shadow);
+  transform:translate(-50%,-46%) scale(.97);opacity:0;pointer-events:none;
+  transition:transform .2s cubic-bezier(.4,0,.2,1),opacity .18s;
+  z-index:70;display:flex;flex-direction:column;overflow:hidden;
+}
+.modal.open{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
+.modal-head{padding:22px 24px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.modal-head h2{font-family:'Archivo';font-weight:700;font-size:18px;margin:0;letter-spacing:-.3px}
+.modal-body{overflow-y:auto;flex:1;padding:22px 24px 28px}
+.modal-body::-webkit-scrollbar{width:8px}
+.modal-body::-webkit-scrollbar-thumb{background:#d3d9e2;border-radius:8px}
+
+.sc-param{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+.sc-param-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sc-param-head .name{font-weight:600;font-size:14px}
+.sc-param-head .weight-wrap{display:flex;align-items:center;gap:8px}
+.sc-param-head .weight-wrap label{font-size:11.5px;color:var(--muted)}
+.sc-param-head .weight-wrap input{
+  width:60px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;
+  font-family:'IBM Plex Mono';font-size:13px;text-align:center;background:#fff;
+}
+.sc-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sc-field label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:600;letter-spacing:.3px}
+.sc-field input{
+  width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;
+  font-family:'IBM Plex Mono';font-size:13px;background:#fff;
+}
+.sc-field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.total-bar{
+  background:var(--surface-2);border:1px solid var(--line);border-radius:10px;
+  padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;
+}
+.total-bar .lbl{font-size:12.5px;color:var(--muted)}
+.total-bar .val{font-family:'Archivo';font-weight:700;font-size:18px}
+.modal-foot{padding:16px 24px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px}
+
+@media(max-width:860px){.app{grid-template-columns:1fr}.sidebar{display:none}}
+
+/* ---------- Auth ---------- */
+#authGate{position:fixed;inset:0;z-index:200;display:none;place-items:center;
+  background:linear-gradient(160deg,var(--navy-800),var(--navy-900))}
+#authGate.show{display:grid}
+.auth-card{width:362px;max-width:90vw;background:var(--surface);border-radius:18px;padding:34px 32px;
+  box-shadow:0 30px 80px -20px rgba(0,0,0,.6);}
+.auth-card .brand{justify-content:center;margin-bottom:10px}
+.auth-card h2{font-family:'Archivo';font-weight:700;text-align:center;margin:4px 0 4px;font-size:20px;color:var(--ink)}
+.auth-card p.lead{text-align:center;color:var(--muted);font-size:13px;margin:0 0 22px}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px;letter-spacing:.3px}
+.field input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:14px;background:var(--surface-2)}
+.field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:#fff}
+.auth-err{color:var(--sc-low);font-size:12.5px;min-height:16px;margin:2px 0 10px}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="authGate">
+  <div class="auth-card">
+    <div class="brand"><div class="mark">A</div></div>
+    <h2>Lead Machine</h2>
+    <p class="lead">Logga in för att fortsätta</p>
+    <div class="field"><label>E-post</label><input id="authEmail" type="email" autocomplete="username"></div>
+    <div class="field"><label>Lösenord</label><input id="authPw" type="password" autocomplete="current-password"></div>
+    <div class="auth-err" id="authErr"></div>
+    <button class="btn btn-acc" id="authBtn">Logga in</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">A</div>
+      <div class="wm">Lead Machine<small>CRM · Lagerfinansiering</small></div>
+    </div>
+
+    <div class="stat-grid" id="stats"></div>
+
+    <p class="section-label">Status</p>
+    <div class="status-list" id="statusList"></div>
+
+    <div class="slider-wrap">
+      <div class="slider-head">
+        <p class="section-label" style="margin:0">Min. score</p>
+        <b class="num" id="scoreVal">0</b>
+      </div>
+      <input type="range" id="scoreSlider" min="0" max="100" value="0" step="5">
+    </div>
+
+    <div class="rev-filter">
+      <p class="section-label" style="margin-bottom:8px">Omsättning (MSEK)</p>
+      <div class="rev-inputs">
+        <input type="number" id="revMin" placeholder="Min" min="0">
+        <span>–</span>
+        <input type="number" id="revMax" placeholder="Max" min="0">
+      </div>
+    </div>
+
+    <button class="save-filters-btn" id="saveFiltersBtn">Spara filter</button>
+    <div class="filter-saved" id="filterSavedMsg">✓ Filter sparat</div>
+
+    <div class="user-foot">
+      <div class="av" id="userAv">–</div>
+      <div class="em" id="userEmail">–</div>
+      <button class="settings-btn" id="settingsBtn" title="Scoring-inställningar">⚙</button>
+      <button class="lo" id="logoutBtn">Logga ut</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1>Bilhandlare</h1>
+        <div class="sub"><span id="resultCount">0</span> leads · sorterade efter potential</div>
+      </div>
+      <div class="search">
+        <span class="ic">⌕</span>
+        <input id="search" placeholder="Sök företag, stad, org.nr…" autocomplete="off">
+      </div>
+      <button class="btn btn-ghost" id="importBtn" style="display:none;font-size:12px;padding:7px 13px">⬇ Importera</button>
+      <button class="btn btn-ghost" id="enrichBtn" style="display:none;font-size:12px;padding:7px 13px">⚙ Anrika 20</button>
+      <span class="conn-pill live"><span class="d"></span>Live · Supabase</span>
+    </header>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="score" class="right">Score</th>
+            <th data-sort="company_name">Företag</th>
+            <th data-sort="city">Stad</th>
+            <th data-sort="revenue" class="right">Omsättning</th>
+            <th data-sort="employees" class="right">Anställda</th>
+            <th data-sort="follow_up_date">Uppföljning</th>
+            <th data-sort="status">Status</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="empty" style="display:none">Inga leads matchar filtren.</div>
+    </div>
+  </main>
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="scrim" id="scrim"></div>
+<aside class="panel" id="panel">
+  <div class="p-head">
+    <div class="p-head-actions">
+      <button class="btn-icon" id="mailBtn" title="Skicka kontaktmail">✉</button>
+      <input type="date" id="followup" class="dateinput dateinput-sm">
+      <button class="btn btn-prim btn-sm" id="saveFollowup">Spara</button>
+      <button class="p-close" id="pClose">✕</button>
+    </div>
+    <div class="p-score">
+      <div class="ring" id="pRing">0</div>
+      <div>
+        <div class="p-name" id="pName">—</div>
+        <div class="p-meta num" id="pMeta">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="p-body" id="pBody"></div>
+</aside>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-scrim" id="modalScrim"></div>
+<div class="modal" id="settingsModal">
+  <div class="modal-head">
+    <h2>Scoring-inställningar</h2>
+    <button class="p-close" id="modalClose">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="total-bar">
+      <span class="lbl">Total vikt (normaliseras till 0–100)</span>
+      <span class="val" id="totalWeight">0p</span>
+    </div>
+    <div id="scoringParams"></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" id="modalCancel">Avbryt</button>
+    <button class="btn btn-prim" id="modalSave">Spara inställningar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   1. KONFIG
+   ============================================================ */
+const SUPABASE_URL  = "https://plydduphthqhpmwasznr.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBseWRkdXBodGhxaHBtd2Fzem5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MTcxNjksImV4cCI6MjA5NjA5MzE2OX0.fdxR8DXxFjsT0f7fL0LamsNTj6WdFx5R_rFdi67SNWo";
+let sb = null;
+
+/* ============================================================
+   2. SCORING-KONFIGURATION (defaults)
+   ============================================================ */
+const DEFAULT_SCORING = {
+  revenue:   { weight: 35, sweet_low: 10,  sweet_high: 120, max: 200 },
+  employees: { weight: 25, min: 5, max: 50 },
+  solidity:  { weight: 25, breaks: [15, 30, 45], points: [25, 18, 11, 4] },
+  sni:       { weight: 15 },
+  result:    { weight: 10, mode: "relative", breaks: [-5, 0, 5], points: [0, 4, 8, 10] },
+};
+
+let scoringCfg = JSON.parse(JSON.stringify(DEFAULT_SCORING));
+
+function scoreBreakdown(l) {
+  if (l.org_nr == null) return { total: null, parts: [], notEnriched: true };
+
+  const cfg = scoringCfg;
+
+  // Omsättning
+  const mskr = (l.revenue || 0) / 1e6;
+  let oms = 0;
+  const sw = cfg.revenue.sweet_low, sh = cfg.revenue.sweet_high, rm = cfg.revenue.max;
+  if (mskr >= sw && mskr <= sh) oms = cfg.revenue.weight;
+  else if (mskr > sh && mskr <= rm) oms = cfg.revenue.weight - ((mskr - sh) / (rm - sh)) * (cfg.revenue.weight * 0.35);
+  else if (mskr > 0 && mskr < sw) oms = (mskr / sw) * (cfg.revenue.weight * 0.5);
+  oms = Math.max(0, Math.round(oms));
+
+  // Anställda
+  const e = l.employees || 0;
+  let ans = 0;
+  const emin = cfg.employees.min, emax = cfg.employees.max, ew = cfg.employees.weight;
+  if (e >= emin && e <= emax) ans = ew;
+  else if (e > 0 && e < emin) ans = (e / emin) * (ew * 0.6);
+  else if (e > emax) ans = Math.max(ew * 0.3, ew - ((e - emax) / emax) * ew);
+  ans = Math.round(ans);
+
+  // Soliditet
+  const s = l.solidity == null ? 40 : l.solidity;
+  const sb_ = cfg.solidity.breaks, sp = cfg.solidity.points;
+  let sol = s <= sb_[0] ? sp[0] : s <= sb_[1] ? sp[1] : s <= sb_[2] ? sp[2] : sp[3];
+
+  // SNI
+  const sni = (l.sni_code || "").trim() === "47811" ? cfg.sni.weight : Math.round(cfg.sni.weight * 0.4);
+
+  // Resultat
+  let res = 0;
+  if (l.result_after_fin != null && l.revenue) {
+    const rp = cfg.result;
+    const pct = (l.result_after_fin / l.revenue) * 100;
+    const rb = rp.breaks, rpts = rp.points;
+    res = pct <= rb[0] ? rpts[0] : pct <= rb[1] ? rpts[1] : pct <= rb[2] ? rpts[2] : rpts[3];
+  }
+
+  const parts = [
+    { lab: "Omsättning",   pts: oms,  max: cfg.revenue.weight },
+    { lab: "Anställda",    pts: ans,  max: cfg.employees.weight },
+    { lab: "Soliditet",    pts: sol,  max: cfg.solidity.weight },
+    { lab: "SNI / bransch",pts: sni,  max: cfg.sni.weight },
+    { lab: "Resultat",     pts: res,  max: cfg.result.weight },
+  ];
+
+  const rawTotal = parts.reduce((a, p) => a + p.pts, 0);
+  const maxTotal = parts.reduce((a, p) => a + p.max, 0);
+  const total = maxTotal > 0 ? Math.round((rawTotal / maxTotal) * 100) : 0;
+
+  return { total: Math.min(100, total), parts, notEnriched: false };
+}
+
+/* ============================================================
+   3. STATE + HJÄLPARE
+   ============================================================ */
+let LEADS = [];
+let sel = null;
+let appReady = false;
+const state = { status: "alla", minScore: 0, revMin: null, revMax: null, q: "", sortKey: "score", sortDir: -1 };
+
+const STATUS = {
+  ny:        { label: "Ej kontaktad", cls: "b-ny",        col: "var(--st-ny)" },
+  kontaktad: { label: "Kontaktad",    cls: "b-kontaktad", col: "var(--st-kontaktad)" },
+  mote:      { label: "Möte bokat",   cls: "b-mote",      col: "var(--st-mote)" },
+  ejaktuell: { label: "Ej intressant",cls: "b-ejaktuell", col: "var(--st-ej)" },
+};
+
+const $ = s => document.querySelector(s);
+const fmtMSEK = v => v == null ? "–" : (v / 1e6).toLocaleString("sv-SE", { maximumFractionDigits: 1 }) + " MSEK";
+const scoreColor = sc => sc >= 80 ? "var(--sc-high)" : sc >= 50 ? "var(--sc-mid)" : "var(--sc-low)";
+const scoreBarColor = (pts, max) => {
+  const r = pts / max;
+  return r >= 0.7 ? "var(--sc-high)" : r >= 0.4 ? "var(--sc-mid)" : "var(--sc-low)";
+};
+
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+function followupInfo(d) {
+  if (!d) return { label: "–", cls: "fu-none" };
+  const fmt = new Date(d + "T00:00:00").toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
+  if (d < todayStr()) return { label: `${fmt} · försenad`, cls: "fu-late" };
+  if (d === todayStr()) return { label: `${fmt} · idag`, cls: "fu-today" };
+  return { label: fmt, cls: "fu-future" };
+}
+
+function fmtDateTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("sv-SE", { day: "numeric", month: "short", year: "numeric" }) +
+    " kl " + d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+}
+
+function noteHtml(n) {
+  return `<div class="note-item"><div class="meta">${fmtDateTime(n.created_at)}</div><div class="txt">${n.note.replace(/</g, "&lt;")}</div></div>`;
+}
+
+function renderNotesList(notes) {
+  const el = $("#notesList"); if (!el) return;
+  const lc = $("#lastContact");
+  if (lc) lc.textContent = notes.length ? `Senaste kontakt: ${fmtDateTime(notes[0].created_at)}` : "Senaste kontakt: –";
+  el.innerHTML = notes.length ? notes.map(noteHtml).join("") : `<div class="notes-empty">Inga anteckningar ännu.</div>`;
+}
+
+/* ============================================================
+   4. USER SETTINGS — Supabase
+   ============================================================ */
+async function loadUserSettings(userId) {
+  const { data } = await sb.from("user_settings").select("filters").eq("user_id", userId).maybeSingle();
+  if (!data) return;
+
+  const f = data.filters || {};
+  if (f.minScore != null) { state.minScore = f.minScore; $("#scoreSlider").value = f.minScore; $("#scoreVal").textContent = f.minScore; $("#scoreSlider").style.setProperty("--p", f.minScore + "%"); }
+  if (f.revMin != null)   { state.revMin = f.revMin; $("#revMin").value = f.revMin; }
+  if (f.revMax != null)   { state.revMax = f.revMax; $("#revMax").value = f.revMax; }
+  if (f.scoring)          { scoringCfg = { ...DEFAULT_SCORING, ...f.scoring }; }
+}
+
+async function saveUserSettings(userId, patch) {
+  const { data: existing } = await sb.from("user_settings").select("filters").eq("user_id", userId).maybeSingle();
+  const merged = { ...(existing?.filters || {}), ...patch };
+  const { error } = await sb.from("user_settings").upsert({ user_id: userId, filters: merged, updated_at: new Date().toISOString() });
+  return !error;
+}
+
+/* ============================================================
+   5. DATA — Supabase
+   ============================================================ */
+async function loadLeads() {
+  const { data, error } = await sb.from("leads").select("*");
+  if (error) throw error;
+  LEADS = data.map(d => ({ ...d, score: scoreBreakdown(d).total }));
+}
+
+async function patchLead(id, fields) {
+  const { error } = await sb.from("leads").update(fields).eq("id", id);
+  if (error) console.error(error);
+  return !error;
+}
+
+async function loadContacts(leadId) {
+  const el = document.getElementById("contactsList"); if (!el) return;
+  const { data, error } = await sb.from("lead_contacts").select("*").eq("lead_id", leadId).order("created_at", { ascending: true });
+  if (error || !data || data.length === 0) {
+    el.innerHTML = `<span style="font-size:12.5px;color:var(--faint);font-style:italic">Inga kontakter tillagda.</span>`;
+    return;
+  }
+  el.innerHTML = data.map(c => `
+    <div class="contact-card">
+      <div class="cn">${c.name || "–"}</div>
+      <div class="cd">
+        ${c.phone ? `<span>${c.phone}</span>` : ""}
+        ${c.phone && c.email ? " · " : ""}
+        ${c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : ""}
+      </div>
+    </div>`).join("");
+}
+
+/* ============================================================
+   6. FILTRERING + SORTERING
+   ============================================================ */
+function visible() {
+  let r = LEADS.filter(l => {
+    if (state.status !== "alla" && l.status !== state.status) return false;
+    if ((l.score || 0) < state.minScore) return false;
+    if (state.revMin != null && l.revenue != null && l.revenue / 1e6 < state.revMin) return false;
+    if (state.revMax != null && l.revenue != null && l.revenue / 1e6 > state.revMax) return false;
+    if (state.q) {
+      const q = state.q.toLowerCase();
+      if (!`${l.company_name} ${l.city} ${l.org_nr || ""}`.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+  const k = state.sortKey, d = state.sortDir;
+  r.sort((a, b) => {
+    let x = a[k], y = b[k];
+    if (k === "follow_up_date") { if (!x && !y) return 0; if (!x) return 1; if (!y) return -1; return x < y ? -d : x > y ? d : 0; }
+    if (typeof x === "string") { x = (x || "").toLowerCase(); y = (y || "").toLowerCase(); return x < y ? -d : x > y ? d : 0; }
+    return ((x || 0) - (y || 0)) * d;
+  });
+  return r;
+}
+
+/* ============================================================
+   7. RENDER
+   ============================================================ */
+function renderStats() {
+  const mote = LEADS.filter(l => l.status === "mote").length;
+  const hot  = LEADS.filter(l => l.score >= 80 && l.status !== "ejaktuell").length;
+  const fu   = LEADS.filter(l => l.follow_up_date && l.follow_up_date <= todayStr() && l.status !== "ejaktuell").length;
+  const unt  = LEADS.filter(l => l.status === "ny" && l.score >= 80).length;
+  $("#stats").innerHTML = `
+    <div class="stat mote"><span class="spark">📅</span><div class="v num">${mote}</div><div class="l">Möten bokade</div></div>
+    <div class="stat hot"><span class="spark">🔥</span><div class="v num">${hot}</div><div class="l">Heta leads (80+)</div></div>
+    <div class="stat followup"><span class="spark">⏰</span><div class="v num">${fu}</div><div class="l">Uppföljning idag/försenad</div></div>
+    <div class="stat untouched"><span class="spark">✦</span><div class="v num">${unt}</div><div class="l">Orörda · score 80+</div></div>`;
+}
+
+function renderStatusFilter() {
+  const counts = { alla: LEADS.length };
+  Object.keys(STATUS).forEach(k => counts[k] = LEADS.filter(l => l.status === k).length);
+  const item = (key, label, col) => `
+    <div class="status-item ${state.status === key ? 'active' : ''}" data-st="${key}">
+      <span class="dot" style="background:${col}"></span>${label}
+      <span class="cnt">${counts[key] || 0}</span>
+    </div>`;
+  $("#statusList").innerHTML =
+    item("alla", "Alla leads", "#7f8eaa") +
+    Object.entries(STATUS).map(([k, v]) => item(k, v.label, v.col)).join("");
+}
+
+function renderTable() {
+  const rows = visible();
+  $("#resultCount").textContent = rows.length;
+  const tb = $("#rows");
+  $("#empty").style.display = rows.length ? "none" : "block";
+  tb.innerHTML = rows.map(l => {
+    const st = STATUS[l.status] || STATUS.ny;
+    const fu = followupInfo(l.follow_up_date);
+    const scoreCell = l.score == null
+      ? `<div class="score-cell"><span class="score-num" style="color:var(--faint)">–</span><span class="score-bar"></span></div>`
+      : `<div class="score-cell"><span class="score-num" style="color:${scoreColor(l.score)}">${l.score}</span><span class="score-bar"><span class="score-fill" style="width:${l.score}%;background:${scoreColor(l.score)}"></span></span></div>`;
+    return `<tr data-id="${l.id}" class="${sel && sel.id === l.id ? 'sel' : ''}">
+      <td class="right">${scoreCell}</td>
+      <td><div class="co-name">${l.company_name}</div><div class="co-org num">${l.org_nr || "org.nr ej hämtat"}</div></td>
+      <td>${l.city || "–"}</td>
+      <td class="right num">${fmtMSEK(l.revenue)}</td>
+      <td class="right num">${l.employees ?? "–"}</td>
+      <td><span class="${fu.cls}">${fu.label}</span></td>
+      <td><span class="badge ${st.cls}"><span class="dot"></span>${st.label}</span></td>
+    </tr>`;
+  }).join("");
+  tb.querySelectorAll("tr").forEach(tr => tr.onclick = () => openPanel(+tr.dataset.id));
+}
+
+function renderAll() { renderStats(); renderStatusFilter(); renderTable(); }
+
+/* ============================================================
+   8. SETTINGS MODAL
+   ============================================================ */
+function openSettings() {
+  renderScoringParams();
+  $("#settingsModal").classList.add("open");
+  $("#modalScrim").classList.add("open");
+}
+
+function closeSettings() {
+  $("#settingsModal").classList.remove("open");
+  $("#modalScrim").classList.remove("open");
+}
+
+function renderScoringParams() {
+  const cfg = scoringCfg;
+  const params = [
+    {
+      key: "revenue", name: "Omsättning", weight: cfg.revenue.weight,
+      fields: [
+        { key: "sweet_low",  label: "Sweet spot från (MSEK)", val: cfg.revenue.sweet_low },
+        { key: "sweet_high", label: "Sweet spot till (MSEK)", val: cfg.revenue.sweet_high },
+        { key: "max",        label: "Max (MSEK)",             val: cfg.revenue.max },
+      ]
+    },
+    {
+      key: "employees", name: "Anställda", weight: cfg.employees.weight,
+      fields: [
+        { key: "min", label: "Min anställda", val: cfg.employees.min },
+        { key: "max", label: "Max anställda", val: cfg.employees.max },
+      ]
+    },
+    {
+      key: "solidity", name: "Soliditet", weight: cfg.solidity.weight,
+      fields: [
+        { key: "b0", label: "Brytpunkt 1 (%)", val: cfg.solidity.breaks[0] },
+        { key: "b1", label: "Brytpunkt 2 (%)", val: cfg.solidity.breaks[1] },
+        { key: "b2", label: "Brytpunkt 3 (%)", val: cfg.solidity.breaks[2] },
+        { key: "p0", label: "Poäng ≤ B1",      val: cfg.solidity.points[0] },
+        { key: "p1", label: "Poäng B1–B2",     val: cfg.solidity.points[1] },
+        { key: "p2", label: "Poäng B2–B3",     val: cfg.solidity.points[2] },
+        { key: "p3", label: "Poäng > B3",      val: cfg.solidity.points[3] },
+      ]
+    },
+    {
+      key: "sni", name: "SNI / Bransch", weight: cfg.sni.weight,
+      fields: []
+    },
+    {
+      key: "result", name: "Resultat efter fin.", weight: cfg.result.weight,
+      fields: [
+        { key: "b0", label: "Brytpunkt 1 (%)", val: cfg.result.breaks[0] },
+        { key: "b1", label: "Brytpunkt 2 (%)", val: cfg.result.breaks[1] },
+        { key: "b2", label: "Brytpunkt 3 (%)", val: cfg.result.breaks[2] },
+        { key: "p0", label: "Poäng ≤ B1",      val: cfg.result.points[0] },
+        { key: "p1", label: "Poäng B1–B2",     val: cfg.result.points[1] },
+        { key: "p2", label: "Poäng B2–B3",     val: cfg.result.points[2] },
+        { key: "p3", label: "Poäng > B3",      val: cfg.result.points[3] },
+      ]
+    },
+  ];
+
+  $("#scoringParams").innerHTML = params.map(p => `
+    <div class="sc-param" data-param="${p.key}">
+      <div class="sc-param-head">
+        <span class="name">${p.name}</span>
+        <div class="weight-wrap">
+          <label>Vikt</label>
+          <input type="number" class="weight-input" data-param="${p.key}" value="${p.weight}" min="0" max="999">
+        </div>
+      </div>
+      ${p.fields.length ? `<div class="sc-fields">${p.fields.map(f => `
+        <div class="sc-field">
+          <label>${f.label}</label>
+          <input type="number" data-param="${p.key}" data-field="${f.key}" value="${f.val}">
+        </div>`).join("")}</div>` : `<div style="font-size:12px;color:var(--faint)">SNI 47811 ger full vikt, övriga 40%.</div>`}
+    </div>`).join("");
+
+  updateTotalWeight();
+
+  $("#scoringParams").querySelectorAll(".weight-input").forEach(inp => {
+    inp.oninput = updateTotalWeight;
+  });
+}
+
+function updateTotalWeight() {
+  const total = Array.from(document.querySelectorAll(".weight-input")).reduce((s, i) => s + (parseFloat(i.value) || 0), 0);
+  $("#totalWeight").textContent = total + "p";
+  $("#totalWeight").style.color = total === 0 ? "var(--sc-low)" : "var(--ink)";
+}
+
+async function saveScoring(userId) {
+  const newCfg = JSON.parse(JSON.stringify(scoringCfg));
+
+  document.querySelectorAll(".weight-input").forEach(inp => {
+    const param = inp.dataset.param;
+    newCfg[param].weight = parseFloat(inp.value) || 0;
+  });
+
+  document.querySelectorAll(".sc-fields input").forEach(inp => {
+    const param = inp.dataset.param;
+    const field = inp.dataset.field;
+    const val = parseFloat(inp.value);
+    if (param === "revenue")   { newCfg.revenue[field] = val; }
+    if (param === "employees") { newCfg.employees[field] = val; }
+    if (param === "solidity") {
+      if (field.startsWith("b")) newCfg.solidity.breaks[+field[1]] = val;
+      if (field.startsWith("p")) newCfg.solidity.points[+field[1]] = val;
+    }
+    if (param === "result") {
+      if (field.startsWith("b")) newCfg.result.breaks[+field[1]] = val;
+      if (field.startsWith("p")) newCfg.result.points[+field[1]] = val;
+    }
+  });
+
+  scoringCfg = newCfg;
+  LEADS = LEADS.map(l => ({ ...l, score: scoreBreakdown(l).total }));
+  renderAll();
+
+  const ok = await saveUserSettings(userId, { scoring: newCfg });
+  if (ok) { toast("Scoring sparad"); closeSettings(); }
+  else toast("Kunde inte spara scoring");
+}
+
+/* ============================================================
+   9. DETALJPANEL
+   ============================================================ */
+async function openPanel(id) {
+  sel = LEADS.find(l => l.id === id);
+  if (!sel) return;
+
+  const bd = scoreBreakdown(sel);
+
+  $("#pRing").textContent = sel.score == null ? "–" : sel.score;
+  $("#pRing").style.background = sel.score == null
+    ? "#cfd6e2"
+    : `conic-gradient(${scoreColor(sel.score)} ${sel.score * 3.6}deg, #eef1f5 0deg)`;
+  $("#pRing").style.boxShadow = "inset 0 0 0 6px #fff";
+  $("#pName").textContent = sel.company_name;
+  $("#pMeta").textContent = `${sel.org_nr || "Org.nr ej hämtat"} · ${sel.city || "–"}`;
+  $("#followup").value = sel.follow_up_date || "";
+
+  const breakdownHtml = bd.notEnriched
+    ? `<div class="notenriched">Det här bolaget är inte anrikat ännu. Klicka "⚙ Anrika 20" för att hämta finansiell data.</div>`
+    : bd.parts.map(p => `
+        <div class="bd-row">
+          <span class="lab">${p.lab}</span>
+          <span class="track"><span class="fill" style="width:${(p.pts / p.max) * 100}%;background:${scoreBarColor(p.pts, p.max)}"></span></span>
+          <span class="pts">${p.pts}/${p.max}</span>
+        </div>`).join("");
+
+  $("#pBody").innerHTML = `
+    <div class="p-sec">
+      <h4>Varför den här poängen</h4>
+      ${breakdownHtml}
+    </div>
+    <div class="p-sec">
+      <h4>Nyckeltal</h4>
+      <div class="kpis">
+        <div class="kpi"><div class="v num">${fmtMSEK(sel.revenue)}</div><div class="l">Omsättning</div></div>
+        <div class="kpi"><div class="v num">${fmtMSEK(sel.result_after_fin)}</div><div class="l">Resultat e. fin</div></div>
+        <div class="kpi"><div class="v num">${sel.employees ?? "–"}</div><div class="l">Anställda</div></div>
+        <div class="kpi"><div class="v num">${sel.solidity != null ? sel.solidity + " %" : "–"}</div><div class="l">Soliditet</div></div>
+      </div>
+    </div>
+    <div class="p-sec">
+      <h4>Kontaktpersoner</h4>
+      <div id="contactsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+      <details>
+        <summary style="font-size:12.5px;color:var(--accent);cursor:pointer;list-style:none;padding:4px 0">+ Lägg till kontakt</summary>
+        <div class="contact-form" style="margin-top:10px">
+          <input type="text" id="contactName" class="dateinput" placeholder="Namn">
+          <input type="text" id="contactPhone" class="dateinput" placeholder="Telefon">
+          <input type="email" id="contactEmail" class="dateinput" placeholder="E-post">
+          <div class="notes-foot">
+            <button class="btn btn-prim" id="saveContact">Spara kontakt</button>
+            <span class="saved" id="contactSavedMsg">✓ Sparat</span>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="p-sec">
+      <h4>Status</h4>
+      <div class="status-switch" id="ssw">
+        ${Object.entries(STATUS).map(([k, v]) =>
+          `<button class="ss-btn ${sel.status === k ? 'on' : ''}" data-s="${k}"><span class="dot"></span>${v.label}</button>`
+        ).join("")}
+      </div>
+    </div>
+    <div class="p-sec notes-section">
+      <h4>Anteckningar</h4>
+      <div class="notes-meta" id="lastContact">Senaste kontakt: –</div>
+      <textarea id="newNote" placeholder="Skriv en ny anteckning…"></textarea>
+      <div class="notes-foot">
+        <button class="btn btn-prim" id="addNoteBtn">Lägg till anteckning</button>
+        <span class="saved" id="noteSavedMsg">✓ Sparat</span>
+      </div>
+      <div class="notes-list" id="notesList">
+        <div class="notes-empty">Laddar anteckningar…</div>
+      </div>
+    </div>`;
+
+  // Bind kontakt-sparning
+  document.getElementById("saveContact").onclick = async () => {
+    const name  = document.getElementById("contactName").value.trim();
+    const phone = document.getElementById("contactPhone").value.trim();
+    const email = document.getElementById("contactEmail").value.trim();
+    if (!name && !phone && !email) return;
+    const { error } = await sb.from("lead_contacts").insert({ lead_id: sel.id, name, phone, email, created_at: new Date().toISOString() });
+    if (!error) {
+      const msg = document.getElementById("contactSavedMsg");
+      msg.classList.add("show");
+      setTimeout(() => msg.classList.remove("show"), 2000);
+      loadContacts(sel.id);
+      ["contactName", "contactPhone", "contactEmail"].forEach(i => document.getElementById(i).value = "");
+    } else {
+      toast("Kunde inte spara kontakt");
+      console.error(error);
+    }
+  };
+
+  // Bind status-switchar
+  document.getElementById("ssw").onclick = async e => {
+    const btn = e.target.closest(".ss-btn"); if (!btn) return;
+    const newStatus = btn.dataset.s;
+    const ok = await patchLead(sel.id, { status: newStatus, updated_at: new Date().toISOString() });
+    if (ok) {
+      sel.status = newStatus;
+      const lead = LEADS.find(l => l.id === sel.id);
+      if (lead) lead.status = newStatus;
+      document.querySelectorAll(".ss-btn").forEach(b => b.classList.toggle("on", b.dataset.s === newStatus));
+      renderAll();
+    }
+  };
+
+  // Bind anteckningar
+  document.getElementById("addNoteBtn").onclick = async () => {
+    const txt = document.getElementById("newNote").value.trim();
+    if (!txt) return;
+    const note = { lead_id: sel.id, note: txt, created_at: new Date().toISOString() };
+    const { data, error } = await sb.from("lead_notes").insert(note).select().single();
+    if (!error) {
+      document.getElementById("newNote").value = "";
+      const msg = document.getElementById("noteSavedMsg");
+      msg.classList.add("show");
+      setTimeout(() => msg.classList.remove("show"), 2000);
+      const el = document.getElementById("notesList");
+      if (el.querySelector(".notes-empty")) el.innerHTML = "";
+      el.insertAdjacentHTML("afterbegin", noteHtml(data));
+      const lc = document.getElementById("lastContact");
+      if (lc) lc.textContent = `Senaste kontakt: ${fmtDateTime(data.created_at)}`;
+    } else {
+      toast("Kunde inte spara anteckning");
+    }
+  };
+
+  $("#panel").classList.add("open");
+  $("#scrim").classList.add("open");
+  renderTable();
+
+  const [notesRes] = await Promise.all([
+    sb.from("lead_notes").select("*").eq("lead_id", id).order("created_at", { ascending: false })
+  ]);
+  if (!sel || sel.id !== id) return;
+  if (notesRes.error) {
+    document.getElementById("notesList").innerHTML = `<div class="notes-empty">Kunde inte hämta anteckningar.</div>`;
+  } else {
+    renderNotesList(notesRes.data || []);
+  }
+  loadContacts(id);
+}
+
+function closePanel() {
+  $("#panel").classList.remove("open");
+  $("#scrim").classList.remove("open");
+  sel = null;
+  renderTable();
+}
+
+/* ============================================================
+   10. EVENTS
+   ============================================================ */
+$("#statusList").onclick = e => {
+  const it = e.target.closest(".status-item"); if (!it) return;
+  state.status = it.dataset.st;
+  renderStatusFilter(); renderTable();
+};
+
+$("#scoreSlider").oninput = e => {
+  state.minScore = +e.target.value;
+  $("#scoreVal").textContent = e.target.value;
+  e.target.style.setProperty("--p", e.target.value + "%");
+  renderTable();
+};
+
+$("#revMin").oninput = e => { state.revMin = e.target.value ? +e.target.value : null; renderTable(); };
+$("#revMax").oninput = e => { state.revMax = e.target.value ? +e.target.value : null; renderTable(); };
+
+$("#search").oninput = e => { state.q = e.target.value.trim(); renderTable(); };
+$("#pClose").onclick = closePanel;
+$("#scrim").onclick = closePanel;
+
+$("#saveFollowup").onclick = async () => {
+  if (!sel) return;
+  const fu = $("#followup").value || null;
+  const ok = await patchLead(sel.id, { follow_up_date: fu, updated_at: new Date().toISOString() });
+  if (ok) { sel.follow_up_date = fu; toast("Uppföljning sparad"); renderAll(); }
+  else toast("Kunde inte spara uppföljning");
+};
+
+$("#mailBtn").onclick = () => {
+  if (!sel) return;
+  const emailEl = document.getElementById("contactEmail");
+  const email = emailEl ? emailEl.value.trim() : "";
+  if (!email) { toast("Lägg till kontaktpersonens e-post först"); return; }
+  const nameEl = document.getElementById("contactName");
+  const firstName = nameEl ? nameEl.value.trim().split(" ")[0] : "";
+  const msg = `Hej${firstName ? ` ${firstName}` : ""}!\n\nJag heter [Ditt namn] och jobbar på AOTO. Jag ser att ${sel.company_name} i ${sel.city || "er region"} skulle kunna frigöra rörelsekapital genom lagerfinansiering av begagnade bilar – ni betalar bara för det lager ni faktiskt har ute.\n\nHar du 15 minuter nästa vecka för ett kort samtal om hur det skulle se ut för er?\n\nVänliga hälsningar,\n[Ditt namn], AOTO`;
+  window.location.href = `mailto:${email}?subject=${encodeURIComponent(`AOTO – lagerfinansiering för ${sel.company_name}`)}&body=${encodeURIComponent(msg)}`;
+};
+
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closePanel(); closeSettings(); } });
+
+document.querySelectorAll("thead th[data-sort]").forEach(th => th.onclick = () => {
+  const k = th.dataset.sort;
+  if (state.sortKey === k) state.sortDir *= -1;
+  else { state.sortKey = k; state.sortDir = (k === "company_name" || k === "city" || k === "status" || k === "follow_up_date") ? 1 : -1; }
+  document.querySelectorAll("thead th .ar").forEach(a => a.remove());
+  const ar = document.createElement("span"); ar.className = "ar"; ar.textContent = state.sortDir > 0 ? "▲" : "▼"; th.appendChild(ar);
+  renderTable();
+});
+
+/* ============================================================
+   11. AUTH + INIT
+   ============================================================ */
+const appEl = $("#app");
+let currentUserId = null;
+
+function showApp() { appEl.style.display = "grid"; $("#authGate").classList.remove("show"); }
+function showGate() { appEl.style.display = "none"; $("#authGate").classList.add("show"); appReady = false; LEADS = []; closePanel(); }
+
+async function enterApp(session) {
+  showApp();
+  currentUserId = session.user.id;
+  const email = session?.user?.email || "";
+  $("#userEmail").textContent = email;
+  $("#userAv").textContent = (email[0] || "–");
+  if (appReady) return;
+  appReady = true;
+  try {
+    await loadUserSettings(currentUserId);
+    await loadLeads();
+    renderAll();
+  } catch (err) {
+    console.error(err);
+    toast("Kunde inte hämta leads – kontrollera RLS-policy");
+  }
+}
+
+async function doLogin() {
+  const email = $("#authEmail").value.trim();
+  const pw = $("#authPw").value;
+  const btn = $("#authBtn"); const err = $("#authErr");
+  err.textContent = "";
+  if (!email || !pw) { err.textContent = "Fyll i e-post och lösenord."; return; }
+  btn.disabled = true; btn.textContent = "Loggar in…";
+  const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+  btn.disabled = false; btn.textContent = "Logga in";
+  if (error) { err.textContent = "Fel e-post eller lösenord."; }
+}
+
+(async function boot() {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  $("#authBtn").onclick = doLogin;
+  $("#authPw").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+  $("#authEmail").addEventListener("keydown", e => { if (e.key === "Enter") $("#authPw").focus(); });
+  $("#logoutBtn").onclick = () => sb.auth.signOut();
+
+  $("#settingsBtn").onclick = openSettings;
+  $("#modalClose").onclick = closeSettings;
+  $("#modalCancel").onclick = closeSettings;
+  $("#modalScrim").onclick = closeSettings;
+  $("#modalSave").onclick = () => saveScoring(currentUserId);
+
+  $("#saveFiltersBtn").onclick = async () => {
+    if (!currentUserId) return;
+    const ok = await saveUserSettings(currentUserId, {
+      minScore: state.minScore,
+      revMin: state.revMin,
+      revMax: state.revMax,
+    });
+    if (ok) {
+      const msg = $("#filterSavedMsg");
+      msg.classList.add("show");
+      setTimeout(() => msg.classList.remove("show"), 2000);
+    } else {
+      toast("Kunde inte spara filter");
+    }
+  };
+
+  const importBtn = $("#importBtn"); importBtn.style.display = "";
+  importBtn.onclick = async () => {
+    importBtn.disabled = true; importBtn.textContent = "Importerar…";
+    try {
+      const { data: { session: s } } = await sb.auth.getSession();
+      if (!s) { toast("Du måste vara inloggad"); return; }
+      const res = await fetch("/.netlify/functions/roaring-import", { method: "POST", headers: { Authorization: "Bearer " + s.access_token } });
+      const body = await res.json();
+      if (body.success) { toast(body.message); await loadLeads(); renderAll(); }
+      else { toast("Import misslyckades: " + (body.error || res.status)); }
+    } catch (err) { toast("Import-fel: " + err.message); }
+    finally { importBtn.disabled = false; importBtn.textContent = "⬇ Importera"; }
+  };
+
+  const enrichBtn = $("#enrichBtn"); enrichBtn.style.display = "";
+  enrichBtn.onclick = async () => {
+    enrichBtn.disabled = true; enrichBtn.textContent = "Anrikar…";
+    try {
+      const { data: { session: s } } = await sb.auth.getSession();
+      if (!s) { toast("Du måste vara inloggad"); return; }
+      const res = await fetch("/.netlify/functions/roaring-enrich", { method: "POST", headers: { Authorization: "Bearer " + s.access_token } });
+      const body = await res.json();
+      if (body.success) { toast(body.message); await loadLeads(); renderAll(); }
+      else { toast("Anrikning misslyckades: " + (body.error || res.status)); }
+    } catch (err) { toast("Anrik-fel: " + err.message); }
+    finally { enrichBtn.disabled = false; enrichBtn.textContent = "⚙ Anrika 20"; }
+  };
+
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) enterApp(session); else showGate();
+
+  sb.auth.onAuthStateChange((event, s) => {
+    if (event === "SIGNED_IN" && s) enterApp(s);
+    if (event === "SIGNED_OUT") showGate();
+  });
+})();
+</script>
+</body>
+</html>
