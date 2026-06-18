@@ -14,6 +14,7 @@ import {
   appReady,
   currentUserId,
   filterState,
+  clearSelection,
 } from "./store.js";
 import { $, toast } from "./utils.js";
 
@@ -29,6 +30,7 @@ export function showGate() {
   $("#authGate").classList.add("show");
   setAppReady(false);
   setLeads([]);
+  clearSelection();
   closePanel();
 }
 
@@ -102,6 +104,7 @@ export async function saveFilters() {
     minScore: filterState.minScore,
     revMin: filterState.revMin,
     revMax: filterState.revMax,
+    dnb: filterState.dnb,
   });
 
   if (ok) {

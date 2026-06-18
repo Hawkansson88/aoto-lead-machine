@@ -35,6 +35,7 @@ export function setCurrentUserId(id) {
 /** UI filter and sort state */
 export const filterState = {
   status: "alla",
+  dnb: "alla",
   minScore: 0,
   revMin: null,
   revMax: null,
@@ -42,6 +43,18 @@ export const filterState = {
   sortKey: "score",
   sortDir: -1,
 };
+
+/** Selected lead ids for bulk actions */
+export const selectedIds = new Set();
+
+export function toggleSelection(id) {
+  if (selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+}
+
+export function clearSelection() {
+  selectedIds.clear();
+}
 
 /** User-specific scoring configuration */
 export let scoringConfig = structuredClone(DEFAULT_SCORING);

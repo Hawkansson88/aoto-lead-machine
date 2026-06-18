@@ -1519,3 +1519,101 @@ textarea:focus,
     display: none;
   }
 }
+
+/* --- Bulk selection ------------------------------------------------------ */
+
+.bulk-bar {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 28px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+
+.bulk-bar.show {
+  display: flex;
+}
+
+.bulk-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-right: 8px;
+}
+
+.bulk-bar .btn-sm {
+  font-size: 12px;
+  padding: 7px 12px;
+}
+
+.bulk-bar .bulk-dnb {
+  color: #2b4c7e;
+  border-color: #c5d4ea;
+}
+
+.bulk-bar .bulk-dnb:hover {
+  background: #e8eef8;
+  border-color: #2b4c7e;
+}
+
+.bulk-bar .bulk-dnb.bulk-dnb-remove {
+  color: var(--sc-low);
+  border-color: #f0c4cb;
+}
+
+.bulk-bar .bulk-dnb.bulk-dnb-remove:hover {
+  background: #fdf0f2;
+  border-color: var(--sc-low);
+}
+
+.bulk-bar .bulk-clear {
+  margin-left: auto;
+}
+
+.check-col,
+.check-cell {
+  width: 40px;
+  padding-left: 14px !important;
+  padding-right: 8px !important;
+  text-align: center;
+}
+
+thead th.check-col {
+  cursor: default;
+}
+
+thead th.check-col:hover {
+  color: var(--muted);
+}
+
+.row-check,
+#selectAll {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+tbody tr.row-checked {
+  background: #f7fbfa;
+}
+
+.badge-dnb {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #e8eef8;
+  color: #2b4c7e;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.p-name .badge-dnb {
+  margin-left: 10px;
+}

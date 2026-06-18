@@ -57,7 +57,7 @@ export function openMap() {
       <div class="map-popup">
         <div class="name">${lead.company_name}</div>
         <span class="score" style="background:${color}">${lead.score ?? "–"} p</span>
-        <div class="meta">${lead.city || "–"} · ${fmtMSEK(lead.revenue)} · ${lead.employees ?? "–"} anst.</div>
+        <div class="meta">${lead.city || "–"} · ${fmtMSEK(lead.revenue)} · ${lead.employees ?? "–"} anst.${lead.is_dnb ? " · <strong>DNB</strong>" : ""}</div>
         <div class="meta" style="margin-bottom:8px">
           <span class="badge ${st.cls}" style="font-size:11px;padding:3px 7px"><span class="dot"></span>${st.label}</span>
         </div>
