@@ -6,6 +6,13 @@ export const STATUS = {
   ejaktuell: { label: "Ej intressant", cls: "b-ejaktuell", col: "var(--st-ej)" },
 };
 
+/** DNB customer filter options in sidebar. */
+export const DNB_FILTERS = {
+  alla: { label: "Alla", col: "#7f8eaa" },
+  dnb: { label: "DNB-kunder", col: "#2b4c7e" },
+  ej_dnb: { label: "Ej DNB", col: "#9aa6b8" },
+};
+
 /** Default scoring weights and thresholds (overridable per user). */
 export const DEFAULT_SCORING = {
   revenue: { weight: 35, sweet_low: 10, sweet_high: 120, max: 200 },

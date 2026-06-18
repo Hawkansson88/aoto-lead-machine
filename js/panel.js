@@ -48,7 +48,8 @@ export async function openPanel(id) {
       ? "#cfd6e2"
       : `conic-gradient(${scoreColor(selectedLead.score)} ${selectedLead.score * 3.6}deg, #eef1f5 0deg)`;
   $("#pRing").style.boxShadow = "inset 0 0 0 6px #fff";
-  $("#pName").textContent = selectedLead.company_name;
+  $("#pName").innerHTML =
+    `${selectedLead.company_name}${selectedLead.is_dnb ? '<span class="badge-dnb">DNB</span>' : ""}`;
   $("#pMeta").textContent = `${selectedLead.org_nr || "Org.nr ej hämtat"} · ${selectedLead.city || "–"}`;
   $("#followup").value = selectedLead.follow_up_date || "";
 
@@ -154,8 +155,16 @@ export async function openPanel(id) {
 
     if (ok) {
       selectedLead.status = newStatus;
+      if (newStatus === "ejaktuell" && !selectedLead.enriched_at) {
+        selectedLead.enriched_at = new Date().toISOString();
+      }
       const lead = LEADS.find((l) => l.id === selectedLead.id);
-      if (lead) lead.status = newStatus;
+      if (lead) {
+        lead.status = newStatus;
+        if (newStatus === "ejaktuell" && !lead.enriched_at) {
+          lead.enriched_at = selectedLead.enriched_at;
+        }
+      }
       document.querySelectorAll(".ss-btn").forEach((b) =>
         b.classList.toggle("on", b.dataset.s === newStatus)
       );

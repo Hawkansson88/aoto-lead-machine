@@ -3,7 +3,13 @@ import { LEADS, filterState } from "./store.js";
 /** Return leads matching current filters, sorted by active column. */
 export function getVisibleLeads() {
   const filtered = LEADS.filter((lead) => {
-    if (filterState.status !== "alla" && lead.status !== filterState.status) return false;
+    if (filterState.status === "alla") {
+      if (lead.status === "ejaktuell") return false;
+    } else if (lead.status !== filterState.status) {
+      return false;
+    }
+    if (filterState.dnb === "dnb" && !lead.is_dnb) return false;
+    if (filterState.dnb === "ej_dnb" && lead.is_dnb) return false;
     if ((lead.score || 0) < filterState.minScore) return false;
     if (filterState.revMin != null && lead.revenue != null && lead.revenue / 1e6 < filterState.revMin) {
       return false;

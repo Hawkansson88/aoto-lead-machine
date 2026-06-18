@@ -1,6 +1,6 @@
 import { filterState, selectedLead, sb } from "./store.js";
 import { patchLead } from "./data.js";
-import { renderAll, renderStatusFilter, renderTable } from "./render.js";
+import { renderAll, renderStatusFilter, renderDnbFilter, renderTable } from "./render.js";
 import { closePanel } from "./panel.js";
 import { openMap, closeMap, handleMapPopupClick } from "./map.js";
 import { closeSettings } from "./settings-modal.js";
@@ -12,6 +12,14 @@ export function bindEvents() {
     if (!item) return;
     filterState.status = item.dataset.st;
     renderStatusFilter();
+    renderTable();
+  };
+
+  $("#dnbFilterList").onclick = (e) => {
+    const item = e.target.closest(".status-item");
+    if (!item) return;
+    filterState.dnb = item.dataset.dnb;
+    renderDnbFilter();
     renderTable();
   };
 

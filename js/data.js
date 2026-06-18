@@ -25,6 +25,7 @@ export async function loadUserSettings(userId) {
     filterState.revMax = filters.revMax;
     $("#revMax").value = filters.revMax;
   }
+  if (filters.dnb) filterState.dnb = filters.dnb;
   if (filters.scoring) {
     setScoringConfig({ ...DEFAULT_SCORING, ...filters.scoring });
   }
@@ -50,13 +51,80 @@ export async function saveUserSettings(userId, patch) {
 // --- Leads ---
 
 export async function loadLeads() {
-  const { data, error } = await sb.from("leads").select("*");
-  if (error) throw error;
-  setLeads(data.map((row) => ({ ...row, score: scoreBreakdown(row).total })));
+  const [leadsRes, dnbRes] = await Promise.all([
+    sb.from("leads").select("*"),
+    sb.from("dnb_customers").select("lead_id"),
+  ]);
+
+  if (leadsRes.error) throw leadsRes.error;
+  if (dnbRes.error) {
+    console.warn("Kunde inte läsa dnb_customers — kör supabase/dnb_customers.sql i Supabase", dnbRes.error);
+  }
+
+  const dnbIds = new Set((dnbRes.data || []).map((row) => row.lead_id));
+  setLeads(
+    leadsRes.data.map((row) => ({
+      ...row,
+      is_dnb: dnbIds.has(row.id),
+      score: scoreBreakdown(row).total,
+    }))
+  );
+}
+
+export async function bulkUpdateStatus(ids, status) {
+  if (!ids.length) return true;
+  const fields = { status, updated_at: new Date().toISOString() };
+  const { error } = await sb.from("leads").update(fields).in("id", ids);
+  if (error) {
+    console.error(error);
+    return false;
+  }
+
+  if (status === "ejaktuell") {
+    const skipAt = new Date().toISOString();
+    const { error: skipErr } = await sb
+      .from("leads")
+      .update({ enriched_at: skipAt })
+      .in("id", ids)
+      .is("enriched_at", null);
+    if (skipErr) console.error(skipErr);
+    else {
+      ids.forEach((id) => {
+        const lead = LEADS.find((l) => l.id === id);
+        if (lead && !lead.enriched_at) lead.enriched_at = skipAt;
+      });
+    }
+  }
+
+  return true;
+}
+
+export async function bulkFlagDnb(ids, userId) {
+  if (!ids.length) return true;
+  const rows = ids.map((lead_id) => ({
+    lead_id,
+    created_by: userId,
+    created_at: new Date().toISOString(),
+  }));
+  const { error } = await sb.from("dnb_customers").upsert(rows, { onConflict: "lead_id" });
+  if (error) console.error(error);
+  return !error;
+}
+
+export async function bulkUnflagDnb(ids) {
+  if (!ids.length) return true;
+  const { error } = await sb.from("dnb_customers").delete().in("lead_id", ids);
+  if (error) console.error(error);
+  return !error;
 }
 
 export async function patchLead(id, fields) {
-  const { error } = await sb.from("leads").update(fields).eq("id", id);
+  const payload = { ...fields };
+  if (fields.status === "ejaktuell") {
+    const lead = LEADS.find((l) => l.id === id);
+    if (lead && !lead.enriched_at) payload.enriched_at = new Date().toISOString();
+  }
+  const { error } = await sb.from("leads").update(payload).eq("id", id);
   if (error) console.error(error);
   return !error;
 }

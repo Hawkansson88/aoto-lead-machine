@@ -52,6 +52,9 @@
       <p class="section-label">Status</p>
       <div class="status-list" id="statusList"></div>
 
+      <p class="section-label">DNB</p>
+      <div class="status-list" id="dnbFilterList"></div>
+
       <div class="slider-wrap">
         <div class="slider-head">
           <p class="section-label" style="margin:0">Min. score</p>
@@ -97,10 +100,20 @@
         <span class="conn-pill live"><span class="d"></span>Live · Supabase</span>
       </header>
 
+      <div class="bulk-bar" id="bulkBar">
+        <span class="bulk-count" id="bulkCount">0 valda</span>
+        <button class="btn btn-ghost btn-sm" id="bulkNotInterested">Markera som Ej intressant</button>
+        <button class="btn btn-ghost btn-sm bulk-dnb" id="bulkDnb">Flagga som DNB-kund</button>
+        <button class="btn btn-ghost btn-sm bulk-clear" id="bulkClear">Avmarkera</button>
+      </div>
+
       <div class="table-scroll">
         <table>
           <thead>
             <tr>
+              <th class="check-col">
+                <input type="checkbox" id="selectAll" aria-label="Välj alla synliga">
+              </th>
               <th data-sort="score" class="right">Score</th>
               <th data-sort="company_name">Företag</th>
               <th data-sort="city">Stad</th>
