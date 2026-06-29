@@ -51,6 +51,20 @@ export function formatOrgNr(digits) {
   return `${digits.slice(0, 6)}-${digits.slice(6)}`;
 }
 
+/** SEK → MSEK for form inputs */
+export function sekToMsekInput(value) {
+  if (value == null) return "";
+  return (value / 1e6).toString();
+}
+
+/** Parse employee count, or null if empty/invalid */
+export function parseEmployees(value) {
+  if (value === "" || value == null) return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n);
+}
+
 export function scoreColor(score) {
   if (score >= 80) return "var(--sc-high)";
   if (score >= 50) return "var(--sc-mid)";

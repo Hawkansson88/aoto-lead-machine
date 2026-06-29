@@ -22,3 +22,9 @@ DROP POLICY IF EXISTS "leads_insert" ON public.leads;
 CREATE POLICY "leads_insert" ON public.leads
   FOR INSERT TO authenticated
   WITH CHECK (true);
+
+-- Unikt org.nr (tillåter flera rader utan org.nr, t.ex. äldre Roaring-import)
+-- Om skapandet misslyckas: rensa befintliga dubbletter med samma org.nr först.
+CREATE UNIQUE INDEX IF NOT EXISTS leads_org_nr_unique
+  ON public.leads (org_nr)
+  WHERE org_nr IS NOT NULL;
