@@ -7,6 +7,7 @@ import {
   fmtMSEK,
   scoreColor,
   followupInfo,
+  formatOrgNr,
 } from "./utils.js";
 
 let onRowClick = () => {};
@@ -124,7 +125,7 @@ export function renderTable() {
         <td class="right">${scoreCell}</td>
         <td>
           <div class="co-name">${lead.company_name}${dnbBadge}</div>
-          <div class="co-org num">${lead.org_nr || "org.nr ej hämtat"}</div>
+          <div class="co-org num">${formatOrgNr(lead.org_nr) || "–"}</div>
         </td>
         <td>${lead.city || "–"}</td>
         <td class="right num">${fmtMSEK(lead.revenue)}</td>

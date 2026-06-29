@@ -1,7 +1,7 @@
 import { DEFAULT_SCORING } from "./constants.js";
 import { scoreBreakdown } from "./scoring.js";
 import { filterState, sb, LEADS, setLeads, setScoringConfig } from "./store.js";
-import { $ } from "./utils.js";
+import { $, msekToSek, normalizeOrgNr, parseCityFromPostalAddress } from "./utils.js";
 
 // --- User settings ---
 
@@ -133,6 +133,79 @@ export function refreshLeadScores() {
   setLeads(LEADS.map((lead) => ({ ...lead, score: scoreBreakdown(lead).total })));
 }
 
+export async function createLead({
+  company_name,
+  org_nr,
+  revenue,
+  result_after_fin,
+  equity,
+  solidity,
+  address,
+  postal_address,
+}) {
+  const orgNr = normalizeOrgNr(org_nr);
+  if (!company_name?.trim()) return { error: "Ange företagsnamn." };
+  if (!orgNr) return { error: "Organisationsnummer måste vara 10 siffror." };
+
+  const { data: existing } = await sb
+    .from("leads")
+    .select("id")
+    .eq("org_nr", orgNr)
+    .maybeSingle();
+
+  if (existing) return { error: "En handlare med detta org.nr finns redan." };
+
+  const addressTrim = address?.trim() || null;
+  const postalTrim = postal_address?.trim() || null;
+  const city = parseCityFromPostalAddress(postalTrim);
+
+  let lat = null;
+  let lng = null;
+  if (addressTrim || postalTrim) {
+    try {
+      const geo = await callNetlifyFunction("geocode", {
+        address: addressTrim,
+        postal_address: postalTrim,
+        city,
+      });
+      if (geo.success && geo.lat != null) {
+        lat = geo.lat;
+        lng = geo.lng;
+      }
+    } catch (err) {
+      console.warn("Geocoding misslyckades:", err);
+    }
+  }
+
+  const now = new Date().toISOString();
+  const row = {
+    company_name: company_name.trim(),
+    org_nr: orgNr,
+    revenue: msekToSek(revenue),
+    result_after_fin: msekToSek(result_after_fin),
+    equity: msekToSek(equity),
+    solidity: solidity !== "" && solidity != null ? Number(solidity) : null,
+    address: addressTrim,
+    postal_address: postalTrim,
+    city,
+    lat,
+    lng,
+    status: "ny",
+    enriched_at: now,
+    updated_at: now,
+  };
+
+  const { data, error } = await sb.from("leads").insert(row).select().single();
+  if (error) {
+    console.error(error);
+    return { error: "Kunde inte skapa handlare. Kontrollera att SQL-migrationen körts." };
+  }
+
+  const lead = { ...data, is_dnb: false, score: scoreBreakdown(data).total };
+  setLeads([...LEADS, lead]);
+  return { data: lead, geocoded: lat != null };
+}
+
 // --- Contacts & notes ---
 
 export async function loadContacts(leadId) {
@@ -168,15 +241,19 @@ export async function loadContacts(leadId) {
 
 // --- Netlify serverless functions ---
 
-export async function callNetlifyFunction(name) {
+export async function callNetlifyFunction(name, body = null) {
   const {
     data: { session },
   } = await sb.auth.getSession();
   if (!session) throw new Error("Du måste vara inloggad");
 
+  const headers = { Authorization: "Bearer " + session.access_token };
+  if (body) headers["Content-Type"] = "application/json";
+
   const res = await fetch(`/.netlify/functions/${name}`, {
     method: "POST",
-    headers: { Authorization: "Bearer " + session.access_token },
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
   });
 
   return res.json();

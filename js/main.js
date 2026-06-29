@@ -4,6 +4,7 @@ import { bindAuthEvents, initAuth } from "./auth.js";
 import { bindEvents } from "./events.js";
 import { openPanel } from "./panel.js";
 import { setRowClickHandler } from "./render.js";
+import { bindCustomerModal } from "./customer-modal.js";
 import { openSettings, closeSettings, saveScoring } from "./settings-modal.js";
 import { bindSelectionEvents } from "./selection.js";
 import { $ } from "./utils.js";
@@ -24,6 +25,7 @@ async function boot() {
 
   bindEvents();
   bindSelectionEvents();
+  bindCustomerModal();
   await initAuth();
 }
 

@@ -2,8 +2,9 @@
  * AOTO Lead Machine — Geocoding
  * Netlify Function (ESM)
  *
- * Hämtar leads utan lat/lng från Supabase, slår upp staden mot
+ * Hämtar leads utan lat/lng från Supabase, slår upp adress mot
  * Nominatim (OpenStreetMap) och sparar koordinaterna tillbaka.
+ * Stödjer även enstaka adressuppslag via POST body.
  *
  * Max 1 anrop/sekund mot Nominatim (deras krav).
  * Kör max 50 bolag per anrop för att undvika timeout.
@@ -19,11 +20,11 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/** Slå upp en stad mot Nominatim, returnera { lat, lng } eller null */
-async function geocodeCity(city) {
-  if (!city) return null;
+/** Slå upp adress mot Nominatim, returnera { lat, lng } eller null */
+async function geocodeQuery(query) {
+  if (!query?.trim()) return null;
   const params = new URLSearchParams({
-    q: city,
+    q: query.trim(),
     countrycodes: "se",
     format: "json",
     limit: "1",
@@ -40,6 +41,12 @@ async function geocodeCity(city) {
     lat: parseFloat(data[0].lat),
     lng: parseFloat(data[0].lon),
   };
+}
+
+function buildLeadQuery(lead) {
+  const parts = [lead.address, lead.postal_address, lead.city].filter((s) => s?.trim());
+  if (parts.length) return parts.join(", ") + ", Sverige";
+  return null;
 }
 
 /* ─── Auth ─── */
@@ -76,9 +83,36 @@ export async function handler(event) {
   if (!user) return { statusCode: 401, body: "Invalid session" };
 
   try {
-    // Hämta leads utan koordinater som har en stad
+    // Enstaka adressuppslag (t.ex. vid manuell kundskapande)
+    if (event.body) {
+      const body = JSON.parse(event.body);
+      const query =
+        body.query?.trim() ||
+        [body.address, body.postal_address, body.city, "Sverige"].filter((s) => s?.trim()).join(", ");
+
+      if (!query) {
+        return {
+          statusCode: 400,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ success: false, error: "Ingen adress angiven" }),
+        };
+      }
+
+      const coords = await geocodeQuery(query);
+      return {
+        statusCode: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          success: !!coords,
+          lat: coords?.lat ?? null,
+          lng: coords?.lng ?? null,
+        }),
+      };
+    }
+
+    // Batch: hämta leads utan koordinater som har adress eller stad
     const fetchRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?select=id,city&lat=is.null&city=not.is.null&limit=${BATCH_SIZE}`,
+      `${SUPABASE_URL}/rest/v1/leads?select=id,city,address,postal_address&lat=is.null&or=(city.not.is.null,postal_address.not.is.null,address.not.is.null)&limit=${BATCH_SIZE}`,
       {
         headers: {
           apikey: SUPABASE_SERVICE_ROLE_KEY,
@@ -96,21 +130,21 @@ export async function handler(event) {
       };
     }
 
-    // Geocoda unika städer (undvik dubbla anrop för samma stad)
-    const cityCache = {};
+    // Geocoda unika adresser (undvik dubbla anrop)
+    const queryCache = {};
     let updated = 0;
     let failed = 0;
 
     for (const lead of leads) {
-      const city = lead.city?.trim();
-      if (!city) continue;
+      const query = buildLeadQuery(lead);
+      if (!query) continue;
 
-      if (!(city in cityCache)) {
-        cityCache[city] = await geocodeCity(city);
+      if (!(query in queryCache)) {
+        queryCache[query] = await geocodeQuery(query);
         await sleep(DELAY_MS);
       }
 
-      const coords = cityCache[city];
+      const coords = queryCache[query];
       if (!coords) { failed++; continue; }
 
       // Uppdatera lead med koordinater

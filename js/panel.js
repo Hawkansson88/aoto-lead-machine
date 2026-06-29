@@ -11,6 +11,7 @@ import {
   scoreBarColor,
   fmtDateTime,
   escapeHtml,
+  formatOrgNr,
 } from "./utils.js";
 
 function noteHtml(note) {
@@ -50,11 +51,20 @@ export async function openPanel(id) {
   $("#pRing").style.boxShadow = "inset 0 0 0 6px #fff";
   $("#pName").innerHTML =
     `${selectedLead.company_name}${selectedLead.is_dnb ? '<span class="badge-dnb">DNB</span>' : ""}`;
-  $("#pMeta").textContent = `${selectedLead.org_nr || "Org.nr ej hämtat"} · ${selectedLead.city || "–"}`;
+  $("#pMeta").textContent = `${formatOrgNr(selectedLead.org_nr) || "–"} · ${selectedLead.city || "–"}`;
   $("#followup").value = selectedLead.follow_up_date || "";
 
+  const addressLines = [selectedLead.address, selectedLead.postal_address].filter(Boolean);
+  const addressHtml = addressLines.length
+    ? `<div class="p-sec">
+      <h4>Adress</h4>
+      <div class="p-address">${addressLines.map((line) => `<div>${escapeHtml(line)}</div>`).join("")}</div>
+      ${selectedLead.lat && selectedLead.lng ? `<div class="p-address-map">📍 Visas på kartan</div>` : `<div class="p-address-map muted">Ingen kartposition</div>`}
+    </div>`
+    : "";
+
   const breakdownHtml = breakdown.notEnriched
-    ? `<div class="notenriched">Det här bolaget är inte anrikat ännu. Klicka "⚙ Anrika 20" för att hämta finansiell data.</div>`
+    ? `<div class="notenriched">Nyckeltal saknas — fyll i org.nr och finansiell data för att beräkna score.</div>`
     : breakdown.parts
         .map(
           (p) => `
@@ -72,11 +82,13 @@ export async function openPanel(id) {
       <h4>Nyckeltal</h4>
       <div class="kpis">
         <div class="kpi"><div class="v num">${fmtMSEK(selectedLead.revenue)}</div><div class="l">Omsättning</div></div>
-        <div class="kpi"><div class="v num">${fmtMSEK(selectedLead.result_after_fin)}</div><div class="l">Resultat e. fin</div></div>
-        <div class="kpi"><div class="v num">${selectedLead.employees ?? "–"}</div><div class="l">Anställda</div></div>
+        <div class="kpi"><div class="v num">${fmtMSEK(selectedLead.result_after_fin)}</div><div class="l">Resultat</div></div>
+        <div class="kpi"><div class="v num">${fmtMSEK(selectedLead.equity)}</div><div class="l">Eget kapital</div></div>
         <div class="kpi"><div class="v num">${selectedLead.solidity != null ? selectedLead.solidity + " %" : "–"}</div><div class="l">Soliditet</div></div>
+        <div class="kpi"><div class="v num">${selectedLead.employees ?? "–"}</div><div class="l">Anställda</div></div>
       </div>
     </div>
+    ${addressHtml}
     <div class="p-sec">
       <h4>Kontaktpersoner</h4>
       <div id="contactsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>

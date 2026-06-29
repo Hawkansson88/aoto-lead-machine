@@ -18,7 +18,8 @@ export function getVisibleLeads() {
       return false;
     }
     if (filterState.q) {
-      const haystack = `${lead.company_name} ${lead.city} ${lead.org_nr || ""}`.toLowerCase();
+      const haystack =
+        `${lead.company_name} ${lead.city} ${lead.address || ""} ${lead.postal_address || ""} ${lead.org_nr || ""}`.toLowerCase();
       if (!haystack.includes(filterState.q.toLowerCase())) return false;
     }
     return true;

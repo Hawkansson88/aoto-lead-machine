@@ -18,6 +18,39 @@ export function fmtMSEK(value) {
   return (value / 1e6).toLocaleString("sv-SE", { maximumFractionDigits: 1 }) + " MSEK";
 }
 
+/** Parse MSEK input to SEK integer, or null if empty/invalid */
+export function msekToSek(value) {
+  if (value === "" || value == null) return null;
+  const n = Number(String(value).replace(",", "."));
+  if (!Number.isFinite(n)) return null;
+  return Math.round(n * 1e6);
+}
+
+/** Normalize Swedish org.nr to 10 digits (no dash) */
+export function normalizeOrgNr(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits.length === 10 ? digits : null;
+}
+
+/** Build Nominatim search query from address parts */
+export function buildGeocodeQuery({ address, postal_address, city }) {
+  return [address, postal_address, city, "Sverige"].filter((s) => s?.trim()).join(", ");
+}
+
+/** Extract city from Swedish postadress, e.g. "412 34 Göteborg" */
+export function parseCityFromPostalAddress(value) {
+  if (!value?.trim()) return null;
+  const trimmed = value.trim();
+  const withCode = trimmed.match(/^\d{3}\s?\d{2}\s+(.+)$/);
+  if (withCode) return withCode[1].trim();
+  return trimmed;
+}
+
+export function formatOrgNr(digits) {
+  if (!digits || digits.length !== 10) return digits || "";
+  return `${digits.slice(0, 6)}-${digits.slice(6)}`;
+}
+
 export function scoreColor(score) {
   if (score >= 80) return "var(--sc-high)";
   if (score >= 50) return "var(--sc-mid)";
