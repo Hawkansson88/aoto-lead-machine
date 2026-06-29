@@ -79,7 +79,10 @@ export async function openPanel(id) {
   $("#pBody").innerHTML = `
     <div class="p-sec"><h4>Varför den här poängen</h4>${breakdownHtml}</div>
     <div class="p-sec">
-      <h4>Nyckeltal</h4>
+      <div class="p-sec-head">
+        <h4>Nyckeltal</h4>
+        <button class="btn-link" id="editLeadBtnInline">Redigera</button>
+      </div>
       <div class="kpis">
         <div class="kpi"><div class="v num">${fmtMSEK(selectedLead.revenue)}</div><div class="l">Omsättning</div></div>
         <div class="kpi"><div class="v num">${fmtMSEK(selectedLead.result_after_fin)}</div><div class="l">Resultat</div></div>
@@ -126,6 +129,10 @@ export async function openPanel(id) {
       </div>
       <div class="notes-list" id="notesList"><div class="notes-empty">Laddar anteckningar…</div></div>
     </div>`;
+
+  document.getElementById("editLeadBtnInline").onclick = () => {
+    import("./customer-modal.js").then(({ openEditModal }) => openEditModal(selectedLead.id));
+  };
 
   document.getElementById("saveContact").onclick = async () => {
     const name = document.getElementById("contactName").value.trim();

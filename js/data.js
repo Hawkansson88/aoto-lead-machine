@@ -1,7 +1,7 @@
 import { DEFAULT_SCORING } from "./constants.js";
 import { scoreBreakdown } from "./scoring.js";
 import { filterState, sb, LEADS, setLeads, setScoringConfig } from "./store.js";
-import { $, msekToSek, normalizeOrgNr, parseCityFromPostalAddress } from "./utils.js";
+import { $, msekToSek, normalizeOrgNr, parseCityFromPostalAddress, parseEmployees } from "./utils.js";
 
 // --- User settings ---
 
@@ -133,61 +133,98 @@ export function refreshLeadScores() {
   setLeads(LEADS.map((lead) => ({ ...lead, score: scoreBreakdown(lead).total })));
 }
 
-export async function createLead({
-  company_name,
-  org_nr,
-  revenue,
-  result_after_fin,
-  equity,
-  solidity,
-  address,
-  postal_address,
-}) {
-  const orgNr = normalizeOrgNr(org_nr);
-  if (!company_name?.trim()) return { error: "Ange företagsnamn." };
-  if (!orgNr) return { error: "Organisationsnummer måste vara 10 siffror." };
+function isUniqueViolation(error) {
+  return error?.code === "23505";
+}
 
-  const { data: existing } = await sb
-    .from("leads")
-    .select("id")
-    .eq("org_nr", orgNr)
-    .maybeSingle();
+async function findDuplicateOrgNr(orgNr, excludeId = null) {
+  const local = LEADS.find((l) => l.org_nr === orgNr && l.id !== excludeId);
+  if (local) return local;
 
-  if (existing) return { error: "En handlare med detta org.nr finns redan." };
+  let query = sb.from("leads").select("id, company_name").eq("org_nr", orgNr);
+  if (excludeId != null) query = query.neq("id", excludeId);
+  const { data } = await query.maybeSingle();
+  return data;
+}
 
+async function geocodeLeadAddress(address, postal_address, city) {
   const addressTrim = address?.trim() || null;
   const postalTrim = postal_address?.trim() || null;
-  const city = parseCityFromPostalAddress(postalTrim);
+  if (!addressTrim && !postalTrim) return { lat: null, lng: null, geocoded: false };
 
-  let lat = null;
-  let lng = null;
-  if (addressTrim || postalTrim) {
-    try {
-      const geo = await callNetlifyFunction("geocode", {
-        address: addressTrim,
-        postal_address: postalTrim,
-        city,
-      });
-      if (geo.success && geo.lat != null) {
-        lat = geo.lat;
-        lng = geo.lng;
-      }
-    } catch (err) {
-      console.warn("Geocoding misslyckades:", err);
+  try {
+    const geo = await callNetlifyFunction("geocode", {
+      address: addressTrim,
+      postal_address: postalTrim,
+      city,
+    });
+    if (geo.success && geo.lat != null) {
+      return { lat: geo.lat, lng: geo.lng, geocoded: true };
     }
+  } catch (err) {
+    console.warn("Geocoding misslyckades:", err);
   }
+  return { lat: null, lng: null, geocoded: false };
+}
+
+function parseLeadFormInput(fields) {
+  const orgNr = normalizeOrgNr(fields.org_nr);
+  if (!fields.company_name?.trim()) return { error: "Ange företagsnamn." };
+  if (!orgNr) return { error: "Organisationsnummer måste vara 10 siffror." };
+
+  const addressTrim = fields.address?.trim() || null;
+  const postalTrim = fields.postal_address?.trim() || null;
+
+  return {
+    row: {
+      company_name: fields.company_name.trim(),
+      org_nr: orgNr,
+      revenue: msekToSek(fields.revenue),
+      result_after_fin: msekToSek(fields.result_after_fin),
+      equity: msekToSek(fields.equity),
+      solidity: fields.solidity !== "" && fields.solidity != null ? Number(fields.solidity) : null,
+      employees: parseEmployees(fields.employees),
+      address: addressTrim,
+      postal_address: postalTrim,
+      city: parseCityFromPostalAddress(postalTrim),
+    },
+    addressTrim,
+    postalTrim,
+  };
+}
+
+function upsertLeadInStore(data, isNew) {
+  const lead = { ...data, is_dnb: data.is_dnb ?? false, score: scoreBreakdown(data).total };
+  if (isNew) {
+    setLeads([...LEADS, lead]);
+  } else {
+    setLeads(
+      LEADS.map((l) =>
+        l.id === lead.id ? { ...lead, is_dnb: l.is_dnb, score: scoreBreakdown(data).total } : l
+      )
+    );
+  }
+  return lead;
+}
+
+export async function createLead(fields) {
+  const parsed = parseLeadFormInput(fields);
+  if (parsed.error) return { error: parsed.error };
+
+  const duplicate = await findDuplicateOrgNr(parsed.row.org_nr);
+  if (duplicate) {
+    return { error: `En handlare med detta org.nr finns redan (${duplicate.company_name}).` };
+  }
+
+  const { lat, lng, geocoded } = await geocodeLeadAddress(
+    parsed.addressTrim,
+    parsed.postalTrim,
+    parsed.row.city
+  );
 
   const now = new Date().toISOString();
   const row = {
-    company_name: company_name.trim(),
-    org_nr: orgNr,
-    revenue: msekToSek(revenue),
-    result_after_fin: msekToSek(result_after_fin),
-    equity: msekToSek(equity),
-    solidity: solidity !== "" && solidity != null ? Number(solidity) : null,
-    address: addressTrim,
-    postal_address: postalTrim,
-    city,
+    ...parsed.row,
     lat,
     lng,
     status: "ny",
@@ -198,12 +235,64 @@ export async function createLead({
   const { data, error } = await sb.from("leads").insert(row).select().single();
   if (error) {
     console.error(error);
+    if (isUniqueViolation(error)) {
+      return { error: "En handlare med detta org.nr finns redan." };
+    }
     return { error: "Kunde inte skapa handlare. Kontrollera att SQL-migrationen körts." };
   }
 
-  const lead = { ...data, is_dnb: false, score: scoreBreakdown(data).total };
-  setLeads([...LEADS, lead]);
-  return { data: lead, geocoded: lat != null };
+  const lead = upsertLeadInStore(data, true);
+  return { data: lead, geocoded };
+}
+
+export async function updateLead(id, fields) {
+  const existing = LEADS.find((l) => l.id === id);
+  if (!existing) return { error: "Handlaren hittades inte." };
+
+  const parsed = parseLeadFormInput(fields);
+  if (parsed.error) return { error: parsed.error };
+
+  const duplicate = await findDuplicateOrgNr(parsed.row.org_nr, id);
+  if (duplicate) {
+    return { error: `En handlare med detta org.nr finns redan (${duplicate.company_name}).` };
+  }
+
+  const addressChanged =
+    parsed.addressTrim !== (existing.address || null) ||
+    parsed.postalTrim !== (existing.postal_address || null);
+
+  let lat = existing.lat;
+  let lng = existing.lng;
+  let geocoded = false;
+
+  if (!parsed.addressTrim && !parsed.postalTrim) {
+    lat = null;
+    lng = null;
+  } else if (addressChanged || lat == null || lng == null) {
+    const geo = await geocodeLeadAddress(parsed.addressTrim, parsed.postalTrim, parsed.row.city);
+    lat = geo.lat;
+    lng = geo.lng;
+    geocoded = geo.geocoded;
+  }
+
+  const row = {
+    ...parsed.row,
+    lat,
+    lng,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await sb.from("leads").update(row).eq("id", id).select().single();
+  if (error) {
+    console.error(error);
+    if (isUniqueViolation(error)) {
+      return { error: "En handlare med detta org.nr finns redan." };
+    }
+    return { error: "Kunde inte uppdatera handlare." };
+  }
+
+  const lead = upsertLeadInStore({ ...data, is_dnb: existing.is_dnb }, false);
+  return { data: lead, geocoded, addressChanged: addressChanged || (!parsed.addressTrim && !parsed.postalTrim) };
 }
 
 // --- Contacts & notes ---
