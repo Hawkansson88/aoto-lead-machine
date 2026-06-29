@@ -91,12 +91,10 @@
         </div>
         <div class="search">
           <span class="ic">⌕</span>
-          <input id="search" placeholder="Sök företag, stad, org.nr…" autocomplete="off" />
+          <input id="search" placeholder="Sök företag, adress, org.nr…" autocomplete="off" />
         </div>
         <button class="btn btn-ghost" id="mapBtn" style="font-size:12px;padding:7px 13px">🗺 Karta</button>
-        <button class="btn btn-ghost" id="geocodeBtn" style="display:none;font-size:12px;padding:7px 13px">📍 Geocoda</button>
-        <button class="btn btn-ghost" id="importBtn" style="display:none;font-size:12px;padding:7px 13px">⬇ Importera</button>
-        <button class="btn btn-ghost" id="enrichBtn" style="display:none;font-size:12px;padding:7px 13px">⚙ Anrika 20</button>
+        <button class="btn btn-acc" id="newCustomerBtn" style="font-size:12px;padding:7px 13px">+ Ny kund</button>
         <span class="conn-pill live"><span class="d"></span>Live · Supabase</span>
       </header>
 
@@ -171,6 +169,58 @@
     </div>
   </div>
 
+  <!-- Ny kund -->
+  <div class="modal-scrim" id="customerModalScrim"></div>
+  <div class="modal customer-modal" id="customerModal">
+    <div class="modal-head">
+      <h2>Ny kund</h2>
+      <button class="p-close" id="customerModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="newCustomerName">Namn</label>
+        <input id="newCustomerName" type="text" placeholder="Företagsnamn" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="newCustomerOrgNr">Organisationsnummer</label>
+        <input id="newCustomerOrgNr" type="text" placeholder="556123-4567" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="newCustomerAddress">Adress</label>
+        <input id="newCustomerAddress" type="text" placeholder="Storgatan 1" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="newCustomerPostal">Postadress</label>
+        <input id="newCustomerPostal" type="text" placeholder="412 34 Göteborg" autocomplete="off" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="newCustomerRevenue">Omsättning (MSEK)</label>
+          <input id="newCustomerRevenue" type="number" min="0" step="0.1" placeholder="t.ex. 45" />
+        </div>
+        <div class="field">
+          <label for="newCustomerResult">Resultat (MSEK)</label>
+          <input id="newCustomerResult" type="number" step="0.1" placeholder="t.ex. 2.1" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="newCustomerEquity">Eget kapital (MSEK)</label>
+          <input id="newCustomerEquity" type="number" min="0" step="0.1" placeholder="t.ex. 8" />
+        </div>
+        <div class="field">
+          <label for="newCustomerSolidity">Soliditet (%)</label>
+          <input id="newCustomerSolidity" type="number" min="0" max="100" step="0.1" placeholder="t.ex. 35" />
+        </div>
+      </div>
+      <div class="auth-err" id="newCustomerErr"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="customerModalCancel">Avbryt</button>
+      <button class="btn btn-prim" id="customerModalSave">Skapa handlare</button>
+    </div>
+  </div>
+
   <!-- Map -->
   <div class="modal-scrim" id="mapScrim"></div>
   <div class="map-modal" id="mapModal">
@@ -182,7 +232,7 @@
       <button class="p-close" id="mapClose">✕</button>
     </div>
     <div class="map-no-coords" id="mapNoCoords">
-      Inga bolag med koordinater hittades. Kör "📍 Geocoda" för att hämta positioner.
+      Inga bolag med koordinater hittades. Lägg till adress och postadress på handlaren.
     </div>
     <div id="mapContainer"></div>
   </div>

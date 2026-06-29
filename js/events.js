@@ -4,6 +4,7 @@ import { renderAll, renderStatusFilter, renderDnbFilter, renderTable } from "./r
 import { closePanel } from "./panel.js";
 import { openMap, closeMap, handleMapPopupClick } from "./map.js";
 import { closeSettings } from "./settings-modal.js";
+import { closeCustomerModal } from "./customer-modal.js";
 import { $, toast } from "./utils.js";
 
 export function bindEvents() {
@@ -101,6 +102,7 @@ export function bindEvents() {
     if (e.key === "Escape") {
       closePanel();
       closeSettings();
+      closeCustomerModal();
       closeMap();
     }
   });

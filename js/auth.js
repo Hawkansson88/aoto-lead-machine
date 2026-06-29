@@ -2,7 +2,6 @@ import {
   loadUserSettings,
   loadLeads,
   saveUserSettings,
-  callNetlifyFunction,
 } from "./data.js";
 import { renderAll } from "./render.js";
 import { closePanel } from "./panel.js";
@@ -77,26 +76,6 @@ export async function doLogin() {
   if (error) err.textContent = "Fel e-post eller lösenord.";
 }
 
-export async function runNetlifyAction(name, button, loadingLabel, defaultLabel) {
-  button.disabled = true;
-  button.textContent = loadingLabel;
-  try {
-    const body = await callNetlifyFunction(name);
-    if (body.success) {
-      toast(body.message);
-      await loadLeads();
-      renderAll();
-    } else {
-      toast(`${defaultLabel} misslyckades: ` + (body.error || ""));
-    }
-  } catch (err) {
-    toast(`${defaultLabel}-fel: ` + err.message);
-  } finally {
-    button.disabled = false;
-    button.textContent = defaultLabel;
-  }
-}
-
 export async function saveFilters() {
   if (!currentUserId) return;
 
@@ -128,21 +107,6 @@ export function bindAuthEvents({ onSettingsOpen, onSettingsSave }) {
   $("#settingsBtn").onclick = onSettingsOpen;
   $("#saveFiltersBtn").onclick = saveFilters;
   $("#modalSave").onclick = onSettingsSave;
-
-  const importBtn = $("#importBtn");
-  importBtn.style.display = "";
-  importBtn.onclick = () =>
-    runNetlifyAction("roaring-import", importBtn, "Importerar…", "⬇ Importera");
-
-  const enrichBtn = $("#enrichBtn");
-  enrichBtn.style.display = "";
-  enrichBtn.onclick = () =>
-    runNetlifyAction("roaring-enrich", enrichBtn, "Anrikar…", "⚙ Anrika 20");
-
-  const geocodeBtn = $("#geocodeBtn");
-  geocodeBtn.style.display = "";
-  geocodeBtn.onclick = () =>
-    runNetlifyAction("geocode", geocodeBtn, "Geocodar…", "📍 Geocoda");
 }
 
 export async function initAuth() {
