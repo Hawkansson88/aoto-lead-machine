@@ -126,14 +126,21 @@ export async function openPanel(id) {
   setSelectedLead(LEADS.find((l) => l.id === id));
   if (!selectedLead) return;
 
+  const isKreditView = currentView === "kredit";
   const breakdown = scoreBreakdown(selectedLead);
 
-  $("#pRing").textContent = selectedLead.score == null ? "–" : selectedLead.score;
-  $("#pRing").style.background =
-    selectedLead.score == null
-      ? "#cfd6e2"
-      : `conic-gradient(${scoreColor(selectedLead.score)} ${selectedLead.score * 3.6}deg, #eef1f5 0deg)`;
-  $("#pRing").style.boxShadow = "inset 0 0 0 6px #fff";
+  const ring = $("#pRing");
+  if (ring) {
+    ring.style.display = isKreditView ? "none" : "";
+    if (!isKreditView) {
+      ring.textContent = selectedLead.score == null ? "–" : selectedLead.score;
+      ring.style.background =
+        selectedLead.score == null
+          ? "#cfd6e2"
+          : `conic-gradient(${scoreColor(selectedLead.score)} ${selectedLead.score * 3.6}deg, #eef1f5 0deg)`;
+      ring.style.boxShadow = "inset 0 0 0 6px #fff";
+    }
+  }
   $("#pName").innerHTML =
     `${selectedLead.company_name}${selectedLead.is_dnb ? '<span class="badge-dnb">DNB</span>' : ""}`;
   $("#pMeta").textContent = `${formatOrgNr(selectedLead.org_nr) || "–"} · ${selectedLead.city || "–"}`;
@@ -148,25 +155,30 @@ export async function openPanel(id) {
     </div>`
     : "";
 
-  const breakdownHtml = breakdown.notEnriched
-    ? `<div class="notenriched">Nyckeltal saknas — fyll i org.nr och finansiell data för att beräkna score.</div>`
-    : breakdown.parts
-        .map(
-          (p) => `
+  const scoreSectionHtml = isKreditView
+    ? ""
+    : (() => {
+        const breakdownHtml = breakdown.notEnriched
+          ? `<div class="notenriched">Nyckeltal saknas — fyll i org.nr och finansiell data för att beräkna score.</div>`
+          : breakdown.parts
+              .map(
+                (p) => `
         <div class="bd-row">
           <span class="lab">${p.lab}</span>
           <span class="track"><span class="fill" style="width:${(p.pts / p.max) * 100}%;background:${scoreBarColor(p.pts, p.max)}"></span></span>
           <span class="pts">${p.pts}/${p.max}</span>
         </div>`
-        )
-        .join("");
+              )
+              .join("");
+        return `<div class="p-sec"><h4>Varför den här poängen</h4>${breakdownHtml}</div>`;
+      })();
 
   const showCreditFlags =
-    currentView === "kredit" ||
+    isKreditView ||
     ["skickad_kredit", "invantar_aterkoppling", "kund_aktiv"].includes(selectedLead.status);
 
   $("#pBody").innerHTML = `
-    <div class="p-sec"><h4>Varför den här poängen</h4>${breakdownHtml}</div>
+    ${scoreSectionHtml}
     <div class="p-sec">
       <div class="p-sec-head">
         <h4>Nyckeltal</h4>
@@ -296,6 +308,8 @@ export async function openPanel(id) {
         b.classList.toggle("on", b.dataset.s === newStatus)
       );
       renderAll();
+    } else {
+      toast("Kunde inte byta status — kör supabase/lead_statuses.sql i Supabase");
     }
   };
 

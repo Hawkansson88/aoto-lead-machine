@@ -65,8 +65,9 @@ COMMENT ON COLUMN public.leads.kyc_approved IS 'KYC beviljad';
 COMMENT ON COLUMN public.leads.kredit_pm_klart IS 'Kredit-PM klart';
 COMMENT ON COLUMN public.leads.kredit_beviljad IS 'Kredit beviljad (kräver KYC + Kredit-PM)';
 
--- Nya statusvärden (textkolumn, ingen CHECK idag):
+-- Nya statusvärden:
 -- skickad_kredit, invantar_aterkoppling, kund_aktiv
+-- Se även supabase/lead_statuses.sql för CHECK-constraint.
 
 -- ── Noteringsförfattare ──────────────────────────────────────────────────
 

@@ -54,6 +54,14 @@ function renderRows() {
 }
 
 function readForm() {
+  // Läs alltid från DOM så sparning funkar även om state blivit osynkad
+  const rows = [...document.querySelectorAll("#quoteRows .quote-row")].map((row) => ({
+    label: row.querySelector(".quote-row-label")?.value || "",
+    value: row.querySelector(".quote-row-value")?.value || "",
+  }));
+  if (rows.length) {
+    lineItems = rows;
+  }
   return {
     introText: $("#quoteIntro").value,
     lineItems: lineItems.map((row) => ({
@@ -107,7 +115,7 @@ async function renderExistingQuotes(leadId) {
     .map((q) => {
       const link =
         q.public_token && q.status !== "draft"
-          ? `<button type="button" class="btn-link quote-open-link" data-token="${q.public_token}">Öppna länk</button>`
+          ? `<span class="btn-link quote-open-link" data-token="${q.public_token}" role="link" tabindex="0">Öppna länk</span>`
           : "";
       const active = q.offer_id === currentOfferId && q.id === currentQuoteId ? " active" : "";
       return `<button type="button" class="quote-history-item${active}" data-offer="${q.offer_id}" data-id="${q.id}">
@@ -122,7 +130,9 @@ async function renderExistingQuotes(leadId) {
   el.querySelectorAll(".quote-history-item").forEach((btn) => {
     btn.onclick = (e) => {
       if (e.target.closest(".quote-open-link")) return;
-      loadQuoteById(+btn.dataset.id);
+      const id = Number(btn.dataset.id);
+      if (!Number.isFinite(id)) return;
+      loadQuoteById(id);
     };
   });
 
@@ -252,13 +262,16 @@ async function saveDraft() {
 
   if (result.error) {
     $("#quoteErr").textContent = result.error;
+    toast(result.error);
     return;
   }
 
+  $("#quoteErr").textContent = "";
   currentOfferId = result.data.offer_id;
   currentQuoteId = result.data.id;
   setQuoteMeta(result.data);
-  toast(result.data.version > 1 ? "Ny version sparad" : "Offert sparad");
+  updatePublishSection(result.data);
+  toast(result.data.version > 1 ? `Ny version sparad (v${result.data.version})` : "Offert sparad");
   await renderExistingQuotes(lead.id);
   if (selectedLead?.id === lead.id) renderPanelQuotes(lead.id);
 }

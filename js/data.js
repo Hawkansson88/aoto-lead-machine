@@ -403,11 +403,13 @@ export async function getLatestQuoteVersion(offerId) {
     .select("*")
     .eq("offer_id", offerId)
     .order("version", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
 
-  if (error) console.error(error);
-  return data;
+  if (error) {
+    console.error(error);
+    return null;
+  }
+  return data?.[0] || null;
 }
 
 export async function getNextQuoteVersion(offerId) {
@@ -436,7 +438,7 @@ export async function saveQuoteVersion({ leadId, offerId, companyName, orgNr, in
     created_by: currentUserId,
     creator_email: currentUserEmail,
     company_name: companyName,
-    org_nr: orgNr,
+    org_nr: orgNr || "",
     intro_text: introText?.trim() || QUOTE_TEMPLATE.intro,
     line_items: cleanedItems,
     valid_until: addValidityDays(),
@@ -446,7 +448,14 @@ export async function saveQuoteVersion({ leadId, offerId, companyName, orgNr, in
   const { data, error } = await sb.from("quotes").insert(row).select().single();
   if (error) {
     console.error(error);
-    return { error: "Kunde inte spara offert. Kör supabase/quotes.sql i Supabase." };
+    if (isUniqueViolation(error)) {
+      return { error: "Versionen finns redan — försök spara igen." };
+    }
+    return {
+      error: error.message
+        ? `Kunde inte spara offert: ${error.message}`
+        : "Kunde inte spara offert. Kör supabase/quotes.sql i Supabase.",
+    };
   }
   return { data };
 }

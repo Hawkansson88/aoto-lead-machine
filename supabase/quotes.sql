@@ -35,8 +35,8 @@ CREATE POLICY "Users manage own quotes"
   ON public.quotes
   FOR ALL
   TO authenticated
-  USING (created_by = auth.uid())
-  WITH CHECK (created_by = auth.uid());
+  USING (true)
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Public read published quotes" ON public.quotes;
 CREATE POLICY "Public read published quotes"
