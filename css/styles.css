@@ -24,6 +24,9 @@
   --st-kontaktad: #cf8a12;
   --st-mote: #0f9d6f;
   --st-ej: #9aa6b8;
+  --st-kredit: #3b6fd9;
+  --st-invantar: #b06a00;
+  --st-aktiv: #0a7d5a;
   --sc-low: #e0556b;
   --sc-mid: #e0a23a;
   --sc-high: #11a37a;
@@ -636,6 +639,12 @@ td.right {
 .b-mote .dot { background: var(--st-mote); }
 .b-ejaktuell { background: #f1f3f6; color: var(--st-ej); }
 .b-ejaktuell .dot { background: var(--st-ej); }
+.b-kredit { background: #e8effc; color: var(--st-kredit); }
+.b-kredit .dot { background: var(--st-kredit); }
+.b-invantar { background: #fbf0dd; color: var(--st-invantar); }
+.b-invantar .dot { background: var(--st-invantar); }
+.b-aktiv { background: #dff5ec; color: var(--st-aktiv); }
+.b-aktiv .dot { background: var(--st-aktiv); }
 
 .fu-late { color: var(--sc-low); font-weight: 600; }
 .fu-today { color: var(--hot); font-weight: 600; }
@@ -969,6 +978,9 @@ td.right {
 .ss-btn.on[data-s="kontaktad"] { background: var(--st-kontaktad); }
 .ss-btn.on[data-s="mote"] { background: var(--st-mote); }
 .ss-btn.on[data-s="ejaktuell"] { background: var(--st-ej); }
+.ss-btn.on[data-s="skickad_kredit"] { background: var(--st-kredit); }
+.ss-btn.on[data-s="invantar_aterkoppling"] { background: var(--st-invantar); }
+.ss-btn.on[data-s="kund_aktiv"] { background: var(--st-aktiv); }
 
 .ss-btn .dot {
   width: 7px;
@@ -1669,3 +1681,400 @@ tbody tr.row-checked {
 .p-name .badge-dnb {
   margin-left: 10px;
 }
+
+/* --- Quote modal -------------------------------------------------------- */
+
+.quote-modal {
+  max-width: 580px;
+}
+
+.quote-modal-foot {
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.quote-company-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.quote-company-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--faint);
+  margin-bottom: 4px;
+}
+
+.quote-company-name {
+  font-family: "Archivo", sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.quote-company-org {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.quote-meta-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  font-size: 12px;
+}
+
+.quote-meta-id {
+  font-weight: 600;
+  color: var(--navy-700);
+}
+
+.quote-meta-ver,
+.quote-meta-status {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.quote-meta-new {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.quote-intro-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 72px;
+}
+
+.quote-rows-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.quote-rows-head h3,
+.quote-history-head h3 {
+  font-family: "Archivo", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+}
+
+.quote-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.quote-history-wrap h3 {
+  font-family: "Archivo", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+}
+
+.quote-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.quote-rows-empty {
+  font-size: 12.5px;
+  color: var(--faint);
+  font-style: italic;
+  padding: 12px 0;
+}
+
+.quote-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.quote-row-remove {
+  color: var(--faint);
+}
+
+.quote-row-remove:hover {
+  color: var(--sc-low);
+}
+
+.quote-link-section {
+  margin-bottom: 18px;
+}
+
+.quote-link-section label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--faint);
+  margin-bottom: 6px;
+}
+
+.quote-link-row {
+  display: flex;
+  gap: 8px;
+}
+
+.quote-link-row input {
+  flex: 1;
+  font-size: 12px;
+}
+
+.quote-history-wrap {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.quote-history {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.quote-history-empty {
+  font-size: 12.5px;
+  color: var(--faint);
+  font-style: italic;
+}
+
+.quote-history-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+}
+
+.quote-history-item:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.quote-history-item.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px rgba(0, 179, 136, 0.25);
+}
+
+.quote-hist-status {
+  text-transform: capitalize;
+  color: var(--muted);
+}
+
+.panel-quotes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.panel-quotes-empty {
+  font-size: 12.5px;
+  color: var(--faint);
+  font-style: italic;
+}
+
+.panel-quote-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.panel-quote-status {
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+/* --- View nav (Sälj / Kredit) ------------------------------------------- */
+
+.view-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 4px 0 18px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.view-nav-btn {
+  border: none;
+  background: transparent;
+  color: #9fb0cc;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.view-nav-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.view-nav-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.show-active-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: #9fb0cc;
+  cursor: pointer;
+  user-select: none;
+}
+
+.show-active-toggle input {
+  accent-color: var(--accent);
+}
+
+/* --- Credit flags ------------------------------------------------------- */
+
+.flag-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.flag-ok {
+  background: #e3f6ee;
+  color: var(--st-mote);
+}
+
+.flag-no {
+  background: #f1f3f6;
+  color: var(--faint);
+}
+
+.credit-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.credit-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.credit-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.credit-check.is-locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.credit-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+/* --- Profile modal ------------------------------------------------------ */
+
+.profile-modal .modal-body {
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+}
+
+.profile-info {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.profile-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 8px 0 4px;
+}
+
+.profile-section-title {
+  font-family: "Archivo", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 22px 0 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+#adminCreateSection .profile-section-title {
+  margin-top: 28px;
+}
+
+#createUserBtn {
+  margin-top: 8px;
+}
+

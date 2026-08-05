@@ -2,6 +2,7 @@ import {
   loadUserSettings,
   loadLeads,
   saveUserSettings,
+  loadUserProfile,
 } from "./data.js";
 import { renderAll } from "./render.js";
 import { closePanel } from "./panel.js";
@@ -10,11 +11,14 @@ import {
   setLeads,
   setAppReady,
   setCurrentUserId,
+  setCurrentUserEmail,
   appReady,
   currentUserId,
   filterState,
   clearSelection,
 } from "./store.js";
+import { switchToHomeView } from "./views.js";
+import { refreshUserChrome } from "./profile-modal.js";
 import { $, toast } from "./utils.js";
 
 const appEl = $("#app");
@@ -38,16 +42,21 @@ export async function enterApp(session) {
   setCurrentUserId(session.user.id);
 
   const email = session?.user?.email || "";
-  $("#userEmail").textContent = email;
-  $("#userAv").textContent = email[0] || "–";
+  setCurrentUserEmail(email);
 
-  if (appReady) return;
+  await loadUserProfile(session.user.id, email);
+  refreshUserChrome();
+
+  if (appReady) {
+    switchToHomeView();
+    return;
+  }
 
   setAppReady(true);
   try {
     await loadUserSettings(currentUserId);
     await loadLeads();
-    renderAll();
+    switchToHomeView();
   } catch (err) {
     console.error(err);
     toast("Kunde inte hämta leads – kontrollera RLS-policy");

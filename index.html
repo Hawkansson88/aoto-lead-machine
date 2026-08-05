@@ -47,37 +47,57 @@
         <div class="wm">Lead Machine<small>CRM · Lagerfinansiering</small></div>
       </div>
 
+      <div class="view-nav" id="viewNav">
+        <button type="button" class="view-nav-btn active" data-view="salj">Sälj</button>
+        <button type="button" class="view-nav-btn" data-view="kredit">Kredit</button>
+      </div>
+
       <div class="stat-grid" id="stats"></div>
 
       <p class="section-label">Status</p>
       <div class="status-list" id="statusList"></div>
 
-      <p class="section-label">DNB</p>
-      <div class="status-list" id="dnbFilterList"></div>
-
-      <div class="slider-wrap">
-        <div class="slider-head">
-          <p class="section-label" style="margin:0">Min. score</p>
-          <b class="num" id="scoreVal">0</b>
-        </div>
-        <input type="range" id="scoreSlider" min="0" max="100" value="0" step="5" />
+      <div data-salj-only>
+        <p class="section-label">DNB</p>
+        <div class="status-list" id="dnbFilterList"></div>
       </div>
 
-      <div class="rev-filter">
-        <p class="section-label" style="margin-bottom:8px">Omsättning (MSEK)</p>
-        <div class="rev-inputs">
-          <input type="number" id="revMin" placeholder="Min" min="0" />
-          <span>–</span>
-          <input type="number" id="revMax" placeholder="Max" min="0" />
-        </div>
+      <div data-kredit-only style="display:none">
+        <p class="section-label">Kreditflaggor</p>
+        <div class="status-list" id="creditFlagList"></div>
+        <label class="show-active-toggle">
+          <input type="checkbox" id="showActiveToggle" />
+          <span>Visa aktiva kunder</span>
+        </label>
       </div>
 
-      <button class="save-filters-btn" id="saveFiltersBtn">Spara filter</button>
-      <div class="filter-saved" id="filterSavedMsg">✓ Filter sparat</div>
+      <div data-salj-only>
+        <div class="slider-wrap">
+          <div class="slider-head">
+            <p class="section-label" style="margin:0">Min. score</p>
+            <b class="num" id="scoreVal">0</b>
+          </div>
+          <input type="range" id="scoreSlider" min="0" max="100" value="0" step="5" />
+        </div>
+
+        <div class="rev-filter">
+          <p class="section-label" style="margin-bottom:8px">Omsättning (MSEK)</p>
+          <div class="rev-inputs">
+            <input type="number" id="revMin" placeholder="Min" min="0" />
+            <span>–</span>
+            <input type="number" id="revMax" placeholder="Max" min="0" />
+          </div>
+        </div>
+
+        <button class="save-filters-btn" id="saveFiltersBtn">Spara filter</button>
+        <div class="filter-saved" id="filterSavedMsg">✓ Filter sparat</div>
+      </div>
 
       <div class="user-foot">
         <div class="av" id="userAv">–</div>
         <div class="em" id="userEmail">–</div>
+        <button class="settings-btn" id="adminCreateBtn" title="Skapa användare" style="display:none">+</button>
+        <button class="settings-btn" id="profileBtn" title="Profil">👤</button>
         <button class="settings-btn" id="settingsBtn" title="Scoring-inställningar">⚙</button>
         <button class="lo" id="logoutBtn">Logga ut</button>
       </div>
@@ -86,8 +106,8 @@
     <main class="main">
       <header class="topbar">
         <div>
-          <h1>Bilhandlare</h1>
-          <div class="sub"><span id="resultCount">0</span> leads · sorterade efter potential</div>
+          <h1 id="pageTitle">Bilhandlare</h1>
+          <div class="sub" id="pageSub"><span id="resultCount">0</span> leads · sorterade efter potential</div>
         </div>
         <div class="search">
           <span class="ic">⌕</span>
@@ -133,6 +153,7 @@
   <aside class="panel" id="panel">
     <div class="p-head">
       <div class="p-head-actions">
+        <button class="btn-icon" id="quoteBtn" title="Skapa offert">📄</button>
         <button class="btn-icon" id="editLeadBtn" title="Redigera handlare">✎</button>
         <button class="btn-icon" id="mailBtn" title="Skicka kontaktmail">✉</button>
         <input type="date" id="followup" class="dateinput dateinput-sm" />
@@ -243,6 +264,132 @@
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <!-- Offert -->
+  <div class="modal-scrim" id="quoteModalScrim"></div>
+  <div class="modal quote-modal" id="quoteModal">
+    <div class="modal-head">
+      <h2>Skapa offert</h2>
+      <button class="p-close" id="quoteModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="quote-company-bar">
+        <div>
+          <div class="quote-company-label">Företag</div>
+          <div class="quote-company-name" id="quoteCompanyName">—</div>
+        </div>
+        <div>
+          <div class="quote-company-label">Org.nr</div>
+          <div class="quote-company-org num" id="quoteOrgNr">—</div>
+        </div>
+      </div>
+      <div id="quoteMeta" class="quote-meta-bar"></div>
+      <div class="field">
+        <label for="quoteIntro">Inledning (mall)</label>
+        <textarea id="quoteIntro" rows="3" class="quote-intro-input"></textarea>
+      </div>
+      <div class="quote-rows-head">
+        <h3>Villkor</h3>
+        <button type="button" class="btn btn-ghost btn-sm" id="quoteAddRow">+ Lägg till rad</button>
+      </div>
+      <div id="quoteRows" class="quote-rows"></div>
+      <div class="quote-link-section" id="quoteLinkSection" style="display:none">
+        <label for="quotePublicLink">Delningslänk</label>
+        <div class="quote-link-row">
+          <input type="text" id="quotePublicLink" class="dateinput" readonly />
+          <button type="button" class="btn btn-ghost btn-sm" id="quoteCopyLink">Kopiera</button>
+        </div>
+      </div>
+      <div class="quote-history-wrap">
+        <div class="quote-history-head">
+          <h3>Versioner</h3>
+          <button type="button" class="btn btn-ghost btn-sm" id="quoteNewOfferBtn">+ Ny offert</button>
+        </div>
+        <div id="quoteHistory" class="quote-history"></div>
+      </div>
+      <div class="auth-err" id="quoteErr"></div>
+    </div>
+    <div class="modal-foot quote-modal-foot">
+      <button class="btn btn-ghost" id="quoteModalCancel">Avbryt</button>
+      <button class="btn btn-prim" id="quoteSaveBtn">Spara offert</button>
+      <button class="btn btn-acc" id="quotePublishBtn">Skapa offert</button>
+    </div>
+  </div>
+
+  <!-- Profil -->
+  <div class="modal-scrim" id="profileModalScrim"></div>
+  <div class="modal profile-modal" id="profileModal">
+    <div class="modal-head">
+      <h2>Profil</h2>
+      <button class="p-close" id="profileModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="profile-info">
+        <div class="field">
+          <label>Namn</label>
+          <div class="profile-value" id="profileName">–</div>
+        </div>
+        <div class="field">
+          <label>E-post</label>
+          <div class="profile-value" id="profileEmail">–</div>
+        </div>
+        <div class="field">
+          <label>Roll</label>
+          <div class="profile-value" id="profileRole">–</div>
+        </div>
+      </div>
+
+      <h3 class="profile-section-title">Byt lösenord</h3>
+      <div class="field">
+        <label for="profileNewPw">Nytt lösenord</label>
+        <input id="profileNewPw" type="password" autocomplete="new-password" />
+      </div>
+      <div class="field">
+        <label for="profileNewPw2">Upprepa lösenord</label>
+        <input id="profileNewPw2" type="password" autocomplete="new-password" />
+      </div>
+      <div class="auth-err" id="profileErr"></div>
+      <div class="notes-foot">
+        <button class="btn btn-prim" id="profileChangePw">Spara lösenord</button>
+        <span class="saved" id="profilePwMsg">✓ Sparat</span>
+      </div>
+
+      <div id="adminCreateSection" style="display:none">
+        <h3 class="profile-section-title">Skapa användare</h3>
+        <div class="field-row">
+          <div class="field">
+            <label for="createFirstName">Förnamn</label>
+            <input id="createFirstName" type="text" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="createLastName">Efternamn</label>
+            <input id="createLastName" type="text" autocomplete="off" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="createEmail">E-post</label>
+          <input id="createEmail" type="email" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="createPassword">Lösenord</label>
+          <input id="createPassword" type="password" autocomplete="new-password" />
+        </div>
+        <div class="field">
+          <label for="createRole">Roll</label>
+          <select id="createRole" class="dateinput">
+            <option value="saljare">Säljare</option>
+            <option value="kredit">Kredit</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="auth-err" id="createUserErr"></div>
+        <button class="btn btn-acc" id="createUserBtn">Skapa användare</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="profileCancel">Stäng</button>
+    </div>
+  </div>
 
   <script type="module" src="js/main.js"></script>
 </body>

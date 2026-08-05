@@ -109,3 +109,10 @@ export function fmtDateTime(iso) {
 export function escapeHtml(text) {
   return text.replace(/</g, "&lt;");
 }
+
+export function escapeAttr(text) {
+  return String(text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+}

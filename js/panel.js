@@ -1,7 +1,16 @@
 import { STATUS } from "./constants.js";
 import { scoreBreakdown } from "./scoring.js";
-import { LEADS, selectedLead, setSelectedLead, sb } from "./store.js";
-import { patchLead, loadContacts } from "./data.js";
+import {
+  LEADS,
+  selectedLead,
+  setSelectedLead,
+  sb,
+  currentUserId,
+  currentUserFirstName,
+  currentView,
+} from "./store.js";
+import { patchLead, loadContacts, loadQuotesForLead } from "./data.js";
+import { formatOfferId, quotePublicUrl } from "./quote-constants.js";
 import { renderAll, renderTable } from "./render.js";
 import {
   $,
@@ -15,8 +24,9 @@ import {
 } from "./utils.js";
 
 function noteHtml(note) {
+  const author = note.author_name || "Okänd";
   return `<div class="note-item">
-    <div class="meta">${fmtDateTime(note.created_at)}</div>
+    <div class="meta">${escapeHtml(author)} · ${fmtDateTime(note.created_at)}</div>
     <div class="txt">${escapeHtml(note.note)}</div>
   </div>`;
 }
@@ -35,6 +45,81 @@ function renderNotesList(notes) {
   el.innerHTML = notes.length
     ? notes.map(noteHtml).join("")
     : `<div class="notes-empty">Inga anteckningar ännu.</div>`;
+}
+
+function creditFlagsHtml(lead) {
+  const canApprove = !!(lead.kyc_approved && lead.kredit_pm_klart);
+  return `
+    <div class="p-sec">
+      <h4>Kreditkontroll</h4>
+      <div class="credit-checks">
+        <label class="credit-check">
+          <input type="checkbox" id="flagKyc" ${lead.kyc_approved ? "checked" : ""} />
+          <span>KYC Beviljad</span>
+        </label>
+        <label class="credit-check">
+          <input type="checkbox" id="flagPm" ${lead.kredit_pm_klart ? "checked" : ""} />
+          <span>Kredit-PM klart</span>
+        </label>
+        <label class="credit-check ${canApprove ? "" : "is-locked"}" title="${canApprove ? "" : "Kräver att KYC och Kredit-PM är klara"}">
+          <input type="checkbox" id="flagBeviljad" ${lead.kredit_beviljad ? "checked" : ""} ${canApprove ? "" : "disabled"} />
+          <span>Kredit beviljad</span>
+        </label>
+      </div>
+      <p class="credit-hint" id="creditHint">${
+        canApprove
+          ? "Alla förkrav är uppfyllda — kredit kan beviljas."
+          : "Kredit beviljad kan markeras först när KYC och Kredit-PM är i-bockade."
+      }</p>
+    </div>`;
+}
+
+async function saveCreditFlags() {
+  if (!selectedLead) return;
+
+  const kyc = document.getElementById("flagKyc")?.checked || false;
+  const pm = document.getElementById("flagPm")?.checked || false;
+  let beviljad = document.getElementById("flagBeviljad")?.checked || false;
+  if (!(kyc && pm)) beviljad = false;
+
+  const ok = await patchLead(selectedLead.id, {
+    kyc_approved: kyc,
+    kredit_pm_klart: pm,
+    kredit_beviljad: beviljad,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (!ok) {
+    toast("Kunde inte spara kreditflaggor");
+    return;
+  }
+
+  selectedLead.kyc_approved = kyc;
+  selectedLead.kredit_pm_klart = pm;
+  selectedLead.kredit_beviljad = beviljad;
+  const lead = LEADS.find((l) => l.id === selectedLead.id);
+  if (lead) {
+    lead.kyc_approved = kyc;
+    lead.kredit_pm_klart = pm;
+    lead.kredit_beviljad = beviljad;
+  }
+
+  const beviljadEl = document.getElementById("flagBeviljad");
+  const label = beviljadEl?.closest(".credit-check");
+  const hint = document.getElementById("creditHint");
+  const canApprove = kyc && pm;
+  if (beviljadEl) {
+    beviljadEl.disabled = !canApprove;
+    beviljadEl.checked = beviljad;
+  }
+  if (label) label.classList.toggle("is-locked", !canApprove);
+  if (hint) {
+    hint.textContent = canApprove
+      ? "Alla förkrav är uppfyllda — kredit kan beviljas."
+      : "Kredit beviljad kan markeras först när KYC och Kredit-PM är i-bockade.";
+  }
+
+  renderAll();
 }
 
 export async function openPanel(id) {
@@ -76,6 +161,10 @@ export async function openPanel(id) {
         )
         .join("");
 
+  const showCreditFlags =
+    currentView === "kredit" ||
+    ["skickad_kredit", "invantar_aterkoppling", "kund_aktiv"].includes(selectedLead.status);
+
   $("#pBody").innerHTML = `
     <div class="p-sec"><h4>Varför den här poängen</h4>${breakdownHtml}</div>
     <div class="p-sec">
@@ -92,6 +181,14 @@ export async function openPanel(id) {
       </div>
     </div>
     ${addressHtml}
+    ${showCreditFlags ? creditFlagsHtml(selectedLead) : ""}
+    <div class="p-sec">
+      <div class="p-sec-head">
+        <h4>Offerter</h4>
+        <button class="btn-link" id="openQuoteBtn">Skapa offert</button>
+      </div>
+      <div id="panelQuotesList" class="panel-quotes-list">Laddar offerter…</div>
+    </div>
     <div class="p-sec">
       <h4>Kontaktpersoner</h4>
       <div id="contactsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
@@ -114,7 +211,7 @@ export async function openPanel(id) {
         ${Object.entries(STATUS)
           .map(
             ([key, val]) =>
-              `<button class="ss-btn ${selectedLead.status === key ? "on" : ""}" data-s="${key}"><span class="dot"></span>${val.label}</button>`
+              `<button class="ss-btn ${selectedLead.status === key ? "on" : ""}" data-s="${key}"><span class="dot"></span>${val.switchLabel || val.label}</button>`
           )
           .join("")}
       </div>
@@ -133,6 +230,17 @@ export async function openPanel(id) {
   document.getElementById("editLeadBtnInline").onclick = () => {
     import("./customer-modal.js").then(({ openEditModal }) => openEditModal(selectedLead.id));
   };
+
+  document.getElementById("openQuoteBtn").onclick = () => {
+    import("./quote-modal.js").then(({ openQuoteModal }) => openQuoteModal(selectedLead.id));
+  };
+
+  renderPanelQuotes(id);
+
+  ["flagKyc", "flagPm", "flagBeviljad"].forEach((flagId) => {
+    const el = document.getElementById(flagId);
+    if (el) el.onchange = saveCreditFlags;
+  });
 
   document.getElementById("saveContact").onclick = async () => {
     const name = document.getElementById("contactName").value.trim();
@@ -154,7 +262,7 @@ export async function openPanel(id) {
       setTimeout(() => msg.classList.remove("show"), 2000);
       loadContacts(selectedLead.id);
       ["contactName", "contactPhone", "contactEmail"].forEach(
-        (id) => (document.getElementById(id).value = "")
+        (cid) => (document.getElementById(cid).value = "")
       );
     } else {
       toast("Kunde inte spara kontakt");
@@ -195,7 +303,13 @@ export async function openPanel(id) {
     const text = document.getElementById("newNote").value.trim();
     if (!text) return;
 
-    const note = { lead_id: selectedLead.id, note: text, created_at: new Date().toISOString() };
+    const note = {
+      lead_id: selectedLead.id,
+      note: text,
+      author_id: currentUserId,
+      author_name: currentUserFirstName || "Okänd",
+      created_at: new Date().toISOString(),
+    };
     const { data, error } = await sb.from("lead_notes").insert(note).select().single();
 
     if (!error) {
@@ -235,6 +349,47 @@ export async function openPanel(id) {
   }
 
   loadContacts(id);
+}
+
+export async function renderPanelQuotes(leadId) {
+  const el = document.getElementById("panelQuotesList");
+  if (!el) return;
+
+  const quotes = await loadQuotesForLead(leadId);
+  if (!selectedLead || selectedLead.id !== leadId) return;
+
+  if (!quotes.length) {
+    el.innerHTML = `<div class="panel-quotes-empty">Inga offerter ännu.</div>`;
+    return;
+  }
+
+  const byOffer = new Map();
+  for (const q of quotes) {
+    const existing = byOffer.get(q.offer_id);
+    if (!existing || q.version > existing.version) byOffer.set(q.offer_id, q);
+  }
+
+  const latest = [...byOffer.values()].sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at)
+  );
+
+  el.innerHTML = latest
+    .slice(0, 5)
+    .map((q) => {
+      const versionCount = quotes.filter((x) => x.offer_id === q.offer_id).length;
+      const versionLabel = versionCount > 1 ? `v${q.version} (${versionCount} versioner)` : `v${q.version}`;
+      const link =
+        q.public_token && q.status !== "draft"
+          ? `<a href="${quotePublicUrl(q.public_token)}" target="_blank" rel="noopener" class="btn-link">Öppna</a>`
+          : "";
+      return `<div class="panel-quote-item">
+        <span class="num">${formatOfferId(q.offer_id)}</span>
+        <span>${versionLabel}</span>
+        <span class="panel-quote-status">${q.status}</span>
+        ${link}
+      </div>`;
+    })
+    .join("");
 }
 
 export function closePanel() {

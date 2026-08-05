@@ -23,6 +23,11 @@ export function setSelectedLead(lead) {
 
 export let appReady = false;
 export let currentUserId = null;
+export let currentUserEmail = "";
+export let currentUserRole = "saljare";
+export let currentUserFirstName = "";
+export let currentUserLastName = "";
+export let currentView = "salj";
 
 export function setAppReady(ready) {
   appReady = ready;
@@ -32,10 +37,26 @@ export function setCurrentUserId(id) {
   currentUserId = id;
 }
 
+export function setCurrentUserEmail(email) {
+  currentUserEmail = email || "";
+}
+
+export function setCurrentUserProfile({ role, firstName, lastName }) {
+  if (role) currentUserRole = role;
+  if (firstName != null) currentUserFirstName = firstName;
+  if (lastName != null) currentUserLastName = lastName;
+}
+
+export function setCurrentView(view) {
+  currentView = view === "kredit" ? "kredit" : "salj";
+}
+
 /** UI filter and sort state */
 export const filterState = {
   status: "alla",
   dnb: "alla",
+  creditFlag: "alla",
+  showActive: false,
   minScore: 0,
   revMin: null,
   revMax: null,

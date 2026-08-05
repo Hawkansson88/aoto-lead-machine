@@ -104,5 +104,9 @@ export function bindSelectionEvents() {
   $("#bulkNotInterested").onclick = bulkMarkNotInterested;
   $("#bulkDnb").onclick = bulkToggleDnb;
   $("#bulkClear").onclick = clearBulkSelection;
-  $("#selectAll").onclick = handleSelectAllClick;
+
+  // selectAll återskapas när tabellhuvudet byts (sälj/kredit)
+  document.querySelector(".table-scroll")?.addEventListener("click", (e) => {
+    if (e.target.id === "selectAll") handleSelectAllClick(e);
+  });
 }

@@ -1,0 +1,471 @@
+/* ==========================================================================
+   AOTO — Publik offertsida
+   ========================================================================== */
+
+:root {
+  --navy-900: #0d1424;
+  --navy-800: #131e35;
+  --navy-700: #1b2945;
+  --accent: #00b388;
+  --accent-2: #06caa0;
+  --ink: #e8edf5;
+  --muted: #9aa6b8;
+  --card: rgba(255, 255, 255, 0.06);
+  --card-border: rgba(255, 255, 255, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--navy-900);
+  -webkit-font-smoothing: antialiased;
+}
+
+.num {
+  font-family: "IBM Plex Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Animated background --- */
+
+.offert-bg {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  background: radial-gradient(ellipse 120% 80% at 50% -20%, #1a3d4a 0%, var(--navy-900) 55%);
+}
+
+.offert-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.45;
+  animation: float 12s ease-in-out infinite;
+}
+
+.offert-glow-1 {
+  width: 420px;
+  height: 420px;
+  background: var(--accent);
+  top: -120px;
+  right: -80px;
+}
+
+.offert-glow-2 {
+  width: 320px;
+  height: 320px;
+  background: #3d5a80;
+  bottom: 10%;
+  left: -100px;
+  animation-delay: -4s;
+}
+
+.offert-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black, transparent);
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(20px, 30px) scale(1.05);
+  }
+}
+
+/* --- Page layout --- */
+
+.offert-page {
+  position: relative;
+  z-index: 1;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.offert-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 36px;
+  animation: fadeUp 0.6s ease both;
+}
+
+.offert-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.offert-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  font-family: "Archivo", sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  color: #06241c;
+  box-shadow: 0 8px 28px -8px var(--accent);
+}
+
+.offert-brand-name {
+  font-family: "Archivo", sans-serif;
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.3px;
+}
+
+.offert-brand-tag {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--accent-2);
+  margin-top: 2px;
+}
+
+.offert-badge {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(0, 179, 136, 0.15);
+  border: 1px solid rgba(0, 179, 136, 0.35);
+  color: var(--accent-2);
+}
+
+.offert-badge.accepted {
+  background: rgba(17, 163, 122, 0.2);
+  border-color: rgba(17, 163, 122, 0.5);
+}
+
+/* --- States --- */
+
+.offert-loading,
+.offert-error {
+  text-align: center;
+  padding: 80px 20px;
+  animation: fadeUp 0.5s ease both;
+}
+
+.offert-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 16px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.offert-error h1 {
+  font-family: "Archivo", sans-serif;
+  font-size: 22px;
+  margin: 0 0 8px;
+}
+
+.offert-error p {
+  color: var(--muted);
+  margin: 0;
+}
+
+/* --- Hero --- */
+
+.offert-hero {
+  margin-bottom: 28px;
+  animation: fadeUp 0.7s ease 0.1s both;
+}
+
+.offert-eyebrow {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  color: var(--accent-2);
+  margin: 0 0 10px;
+}
+
+.offert-hero h1 {
+  font-family: "Archivo", sans-serif;
+  font-weight: 800;
+  font-size: clamp(28px, 6vw, 38px);
+  letter-spacing: -0.8px;
+  line-height: 1.1;
+  margin: 0 0 8px;
+}
+
+.offert-org {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0 0 18px;
+}
+
+.offert-intro {
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgba(232, 237, 245, 0.85);
+  margin: 0;
+}
+
+/* --- Card --- */
+
+.offert-card {
+  background: var(--card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.5);
+  animation: fadeUp 0.8s ease 0.2s both;
+}
+
+.offert-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.offert-card-head h2 {
+  font-family: "Archivo", sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.offert-valid .lbl {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+
+.offert-valid .val {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-2);
+}
+
+.offert-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.offert-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  animation: fadeUp 0.5s ease calc(var(--delay, 0s) + 0.3s) both;
+}
+
+.offert-line:last-child {
+  border-bottom: none;
+}
+
+.offert-line-label {
+  font-size: 14px;
+  color: var(--muted);
+  flex: 1;
+}
+
+.offert-line-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  text-align: right;
+}
+
+.offert-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--card-border);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* --- Accept --- */
+
+.offert-accepted {
+  text-align: center;
+  padding: 32px 20px;
+  background: rgba(17, 163, 122, 0.12);
+  border: 1px solid rgba(17, 163, 122, 0.3);
+  border-radius: 16px;
+  margin-bottom: 24px;
+  animation: fadeUp 0.5s ease both;
+}
+
+.offert-accepted-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #06241c;
+  font-size: 26px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+.offert-accepted h2 {
+  font-family: "Archivo", sans-serif;
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.offert-accepted p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.offert-actions {
+  animation: fadeUp 0.9s ease 0.35s both;
+}
+
+.offert-actions-lead {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0 0 14px;
+  text-align: center;
+}
+
+.offert-sign {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.offert-sign input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.offert-sign input:focus {
+  border-color: var(--accent);
+}
+
+.offert-sign input::placeholder {
+  color: rgba(154, 166, 184, 0.6);
+}
+
+.offert-btn {
+  width: 100%;
+  padding: 16px 24px;
+  border: none;
+  border-radius: 12px;
+  font-family: "Archivo", sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  color: #06241c;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 12px 32px -8px rgba(0, 179, 136, 0.55);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.offert-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 40px -8px rgba(0, 179, 136, 0.65);
+}
+
+.offert-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.offert-sign-err {
+  color: #ff8a8a;
+  font-size: 13px;
+  text-align: center;
+  margin: 8px 0 0;
+  min-height: 18px;
+}
+
+.offert-foot {
+  margin-top: auto;
+  padding-top: 32px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  animation: fadeUp 1s ease 0.5s both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 520px) {
+  .offert-sign {
+    flex-direction: row;
+  }
+
+  .offert-sign input {
+    flex: 1;
+  }
+
+  .offert-btn {
+    width: auto;
+    min-width: 180px;
+  }
+}

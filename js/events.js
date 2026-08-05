@@ -1,10 +1,18 @@
 import { filterState, selectedLead, sb } from "./store.js";
 import { patchLead } from "./data.js";
-import { renderAll, renderStatusFilter, renderDnbFilter, renderTable } from "./render.js";
+import {
+  renderAll,
+  renderStatusFilter,
+  renderDnbFilter,
+  renderCreditFlagFilter,
+  renderTable,
+} from "./render.js";
 import { closePanel } from "./panel.js";
 import { openMap, closeMap, handleMapPopupClick } from "./map.js";
 import { closeSettings } from "./settings-modal.js";
 import { closeCustomerModal } from "./customer-modal.js";
+import { closeQuoteModal } from "./quote-modal.js";
+import { closeProfileModal } from "./profile-modal.js";
 import { $, toast } from "./utils.js";
 
 export function bindEvents() {
@@ -23,6 +31,17 @@ export function bindEvents() {
     renderDnbFilter();
     renderTable();
   };
+
+  const creditFlagList = $("#creditFlagList");
+  if (creditFlagList) {
+    creditFlagList.onclick = (e) => {
+      const item = e.target.closest(".status-item");
+      if (!item) return;
+      filterState.creditFlag = item.dataset.cflag;
+      renderCreditFlagFilter();
+      renderTable();
+    };
+  }
 
   $("#scoreSlider").oninput = (e) => {
     filterState.minScore = +e.target.value;
@@ -103,29 +122,9 @@ export function bindEvents() {
       closePanel();
       closeSettings();
       closeCustomerModal();
+      closeQuoteModal();
+      closeProfileModal();
       closeMap();
     }
-  });
-
-  document.querySelectorAll("thead th[data-sort]").forEach((th) => {
-    th.onclick = () => {
-      const key = th.dataset.sort;
-      if (filterState.sortKey === key) {
-        filterState.sortDir *= -1;
-      } else {
-        filterState.sortKey = key;
-        filterState.sortDir =
-          key === "company_name" || key === "city" || key === "status" || key === "follow_up_date"
-            ? 1
-            : -1;
-      }
-
-      document.querySelectorAll("thead th .ar").forEach((a) => a.remove());
-      const arrow = document.createElement("span");
-      arrow.className = "ar";
-      arrow.textContent = filterState.sortDir > 0 ? "▲" : "▼";
-      th.appendChild(arrow);
-      renderTable();
-    };
   });
 }

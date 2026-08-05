@@ -1,7 +1,54 @@
 import { DEFAULT_SCORING } from "./constants.js";
 import { scoreBreakdown } from "./scoring.js";
-import { filterState, sb, LEADS, setLeads, setScoringConfig } from "./store.js";
+import {
+  filterState,
+  sb,
+  LEADS,
+  setLeads,
+  setScoringConfig,
+  currentUserId,
+  currentUserEmail,
+  setCurrentUserProfile,
+} from "./store.js";
+import { QUOTE_TEMPLATE } from "./quote-constants.js";
 import { $, msekToSek, normalizeOrgNr, parseCityFromPostalAddress, parseEmployees } from "./utils.js";
+
+// --- Profiles ---
+
+export async function loadUserProfile(userId, email) {
+  const { data, error } = await sb.from("profiles").select("*").eq("id", userId).maybeSingle();
+
+  if (error) {
+    console.warn("Kunde inte läsa profil — kör supabase/roles_credit.sql", error);
+  }
+
+  if (data) {
+    setCurrentUserProfile({
+      role: data.role || "saljare",
+      firstName: data.first_name || "",
+      lastName: data.last_name || "",
+    });
+    return data;
+  }
+
+  // Skapa profil om den saknas (t.ex. innan migration körts klart)
+  const firstName = (email || "").split("@")[0] || "Användare";
+  const row = {
+    id: userId,
+    email: email || "",
+    first_name: firstName,
+    last_name: "",
+    role: "saljare",
+    updated_at: new Date().toISOString(),
+  };
+  const { data: created } = await sb.from("profiles").upsert(row).select().maybeSingle();
+  setCurrentUserProfile({
+    role: created?.role || "saljare",
+    firstName: created?.first_name || firstName,
+    lastName: created?.last_name || "",
+  });
+  return created || row;
+}
 
 // --- User settings ---
 
@@ -326,6 +373,143 @@ export async function loadContacts(leadId) {
     </div>`
     )
     .join("");
+}
+
+// --- Quotes ---
+
+function addValidityDays(fromDate = new Date()) {
+  const d = new Date(fromDate);
+  d.setDate(d.getDate() + QUOTE_TEMPLATE.validityDays);
+  return d.toISOString().slice(0, 10);
+}
+
+export async function loadQuotesForLead(leadId) {
+  const { data, error } = await sb
+    .from("quotes")
+    .select("*")
+    .eq("lead_id", leadId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error(error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function getLatestQuoteVersion(offerId) {
+  const { data, error } = await sb
+    .from("quotes")
+    .select("*")
+    .eq("offer_id", offerId)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) console.error(error);
+  return data;
+}
+
+export async function getNextQuoteVersion(offerId) {
+  const latest = await getLatestQuoteVersion(offerId);
+  return latest ? latest.version + 1 : 1;
+}
+
+export async function saveQuoteVersion({ leadId, offerId, companyName, orgNr, introText, lineItems }) {
+  if (!currentUserId || !currentUserEmail) {
+    return { error: "Du måste vara inloggad." };
+  }
+
+  const cleanedItems = lineItems
+    .map((row) => ({ label: row.label?.trim() || "", value: row.value?.trim() || "" }))
+    .filter((row) => row.label || row.value);
+
+  if (!cleanedItems.length) {
+    return { error: "Lägg till minst en rad med villkor." };
+  }
+
+  const version = offerId ? await getNextQuoteVersion(offerId) : 1;
+  const row = {
+    offer_id: offerId || crypto.randomUUID(),
+    version,
+    lead_id: leadId,
+    created_by: currentUserId,
+    creator_email: currentUserEmail,
+    company_name: companyName,
+    org_nr: orgNr,
+    intro_text: introText?.trim() || QUOTE_TEMPLATE.intro,
+    line_items: cleanedItems,
+    valid_until: addValidityDays(),
+    status: "draft",
+  };
+
+  const { data, error } = await sb.from("quotes").insert(row).select().single();
+  if (error) {
+    console.error(error);
+    return { error: "Kunde inte spara offert. Kör supabase/quotes.sql i Supabase." };
+  }
+  return { data };
+}
+
+export async function publishQuote(quoteId) {
+  const { data: quote, error: fetchErr } = await sb
+    .from("quotes")
+    .select("*")
+    .eq("id", quoteId)
+    .maybeSingle();
+
+  if (fetchErr || !quote) {
+    return { error: "Offerten hittades inte." };
+  }
+  if (quote.status === "accepted") {
+    return { error: "Offerten är redan accepterad." };
+  }
+
+  const publicToken = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  await sb
+    .from("quotes")
+    .update({ status: "superseded" })
+    .eq("offer_id", quote.offer_id)
+    .eq("status", "published");
+
+  const { data, error } = await sb
+    .from("quotes")
+    .update({
+      status: "published",
+      public_token: publicToken,
+      published_at: now,
+    })
+    .eq("id", quoteId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error(error);
+    return { error: "Kunde inte publicera offert." };
+  }
+  return { data };
+}
+
+export async function loadPublicQuote(publicToken) {
+  const { data, error } = await sb
+    .from("quotes")
+    .select("*")
+    .eq("public_token", publicToken)
+    .maybeSingle();
+
+  if (error) console.error(error);
+  return data;
+}
+
+export async function acceptQuote(publicToken, email) {
+  const res = await fetch("/.netlify/functions/accept-quote", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ public_token: publicToken, email }),
+  });
+  return res.json();
 }
 
 // --- Netlify serverless functions ---
