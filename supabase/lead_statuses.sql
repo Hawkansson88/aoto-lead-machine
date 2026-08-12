@@ -1,5 +1,14 @@
--- Utöka tillåtna lead-statusar (kör i Supabase SQL Editor)
--- Fixar: statusbyte till Behöver Kredit m.fl. sparas inte
+-- Uppdatera tillåtna lead-statusar
+-- Tar bort: mote, invantar_aterkoppling
+-- Behåller skickad_kredit (= "Kredit önskas" i UI)
+-- Kör i Supabase SQL Editor
+
+-- Migrera borttagna statusar till närmaste giltiga
+UPDATE public.leads SET status = 'kontaktad', updated_at = now()
+WHERE status = 'mote';
+
+UPDATE public.leads SET status = 'skickad_kredit', updated_at = now()
+WHERE status = 'invantar_aterkoppling';
 
 DO $$
 DECLARE
@@ -27,9 +36,7 @@ ALTER TABLE public.leads
   CHECK (status IN (
     'ny',
     'kontaktad',
-    'mote',
     'ejaktuell',
     'skickad_kredit',
-    'invantar_aterkoppling',
     'kund_aktiv'
   ));

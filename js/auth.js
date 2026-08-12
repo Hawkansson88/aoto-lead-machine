@@ -3,9 +3,10 @@ import {
   loadLeads,
   saveUserSettings,
   loadUserProfile,
+  loadProfiles,
+  loadShowAllPreference,
 } from "./data.js";
-import { renderAll } from "./render.js";
-import { closePanel } from "./panel.js";
+import { closePanel, openPanel } from "./panel.js";
 import {
   sb,
   setLeads,
@@ -14,12 +15,14 @@ import {
   setCurrentUserEmail,
   appReady,
   currentUserId,
+  currentUserRole,
   filterState,
   clearSelection,
+  LEADS,
 } from "./store.js";
-import { switchToHomeView } from "./views.js";
+import { applyView, homeViewForRole } from "./views.js";
 import { refreshUserChrome } from "./profile-modal.js";
-import { $, toast } from "./utils.js";
+import { $, toast, normalizeOrgNr } from "./utils.js";
 
 const appEl = $("#app");
 
@@ -37,6 +40,20 @@ export function showGate() {
   closePanel();
 }
 
+function initialViewFromUrl() {
+  const view = new URLSearchParams(window.location.search).get("view");
+  if (view === "kredit" || view === "salj") return view;
+  return homeViewForRole(currentUserRole);
+}
+
+function openLeadFromUrl() {
+  const orgNr = normalizeOrgNr(new URLSearchParams(window.location.search).get("org_nr"));
+  if (!orgNr) return;
+  const lead = LEADS.find((l) => l.org_nr === orgNr);
+  if (lead) openPanel(lead.id);
+  else toast("Ingen handlare med det org.nr hittades i CRM");
+}
+
 export async function enterApp(session) {
   showApp();
   setCurrentUserId(session.user.id);
@@ -47,16 +64,16 @@ export async function enterApp(session) {
   await loadUserProfile(session.user.id, email);
   refreshUserChrome();
 
-  if (appReady) {
-    switchToHomeView();
-    return;
-  }
+  // Token refresh / tab focus also emits SIGNED_IN — don't reset view or close panel
+  if (appReady) return;
 
   setAppReady(true);
   try {
+    loadShowAllPreference();
     await loadUserSettings(currentUserId);
-    await loadLeads();
-    switchToHomeView();
+    await Promise.all([loadLeads(), loadProfiles()]);
+    applyView(initialViewFromUrl());
+    openLeadFromUrl();
   } catch (err) {
     console.error(err);
     toast("Kunde inte hämta leads – kontrollera RLS-policy");
@@ -89,22 +106,21 @@ export async function saveFilters() {
   if (!currentUserId) return;
 
   const ok = await saveUserSettings(currentUserId, {
-    minScore: filterState.minScore,
-    revMin: filterState.revMin,
-    revMax: filterState.revMax,
     dnb: filterState.dnb,
   });
 
   if (ok) {
     const msg = $("#filterSavedMsg");
-    msg.classList.add("show");
-    setTimeout(() => msg.classList.remove("show"), 2000);
+    if (msg) {
+      msg.classList.add("show");
+      setTimeout(() => msg.classList.remove("show"), 2000);
+    }
   } else {
     toast("Kunde inte spara filter");
   }
 }
 
-export function bindAuthEvents({ onSettingsOpen, onSettingsSave }) {
+export function bindAuthEvents() {
   $("#authBtn").onclick = doLogin;
   $("#authPw").addEventListener("keydown", (e) => {
     if (e.key === "Enter") doLogin();
@@ -113,9 +129,7 @@ export function bindAuthEvents({ onSettingsOpen, onSettingsSave }) {
     if (e.key === "Enter") $("#authPw").focus();
   });
   $("#logoutBtn").onclick = () => sb.auth.signOut();
-  $("#settingsBtn").onclick = onSettingsOpen;
-  $("#saveFiltersBtn").onclick = saveFilters;
-  $("#modalSave").onclick = onSettingsSave;
+  $("#saveFiltersBtn")?.addEventListener("click", saveFilters);
 }
 
 export async function initAuth() {

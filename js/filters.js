@@ -1,9 +1,25 @@
 import { CREDIT_FLAG_FILTERS, CREDIT_STATUSES } from "./constants.js";
-import { LEADS, filterState, currentView } from "./store.js";
+import { LEADS, filterState, currentView, currentUserId } from "./store.js";
+
+function sameUserId(a, b) {
+  if (a == null || b == null) return false;
+  return String(a).toLowerCase().replace(/-/g, "") === String(b).toLowerCase().replace(/-/g, "");
+}
+
+/** Leads in current view scope.
+ *  Sälj: dina tilldelade leads — alla statusar, inkl. "Kredit önskas" / "Kund aktiv".
+ *  Kredit: hela kreditkön (alla leads i kreditstatus, oavsett säljare). */
+export function getScopedLeads() {
+  if (currentView === "kredit") {
+    return LEADS.filter((lead) => CREDIT_STATUSES.includes(lead.status));
+  }
+  if (!currentUserId) return [];
+  return LEADS.filter((lead) => sameUserId(lead.assigned_to, currentUserId));
+}
 
 /** Return leads matching current filters, sorted by active column. */
 export function getVisibleLeads() {
-  const filtered = LEADS.filter((lead) => {
+  const filtered = getScopedLeads().filter((lead) => {
     if (currentView === "kredit") {
       if (!CREDIT_STATUSES.includes(lead.status)) return false;
       if (!filterState.showActive && lead.status === "kund_aktiv") return false;
@@ -18,20 +34,16 @@ export function getVisibleLeads() {
         if (val !== flag.value) return false;
       }
     } else {
-      if (filterState.status === "alla") {
+      // Sälj: visa alla mina leads (inkl. Kredit önskas). Endast "Ej intressant" döljs under Alla.
+      const statusFilter = filterState.status || "alla";
+      if (statusFilter === "alla") {
         if (lead.status === "ejaktuell") return false;
-      } else if (lead.status !== filterState.status) {
+      } else if (lead.status !== statusFilter) {
         return false;
       }
-      if (filterState.dnb === "dnb" && !lead.is_dnb) return false;
-      if (filterState.dnb === "ej_dnb" && lead.is_dnb) return false;
-      if ((lead.score || 0) < filterState.minScore) return false;
-      if (filterState.revMin != null && lead.revenue != null && lead.revenue / 1e6 < filterState.revMin) {
-        return false;
-      }
-      if (filterState.revMax != null && lead.revenue != null && lead.revenue / 1e6 > filterState.revMax) {
-        return false;
-      }
+      const dnbFilter = filterState.dnb || "alla";
+      if (dnbFilter === "dnb" && !lead.is_dnb) return false;
+      if (dnbFilter === "ej_dnb" && lead.is_dnb) return false;
     }
 
     if (filterState.q) {
@@ -59,9 +71,9 @@ export function getVisibleLeads() {
       return ((x ? 1 : 0) - (y ? 1 : 0)) * sortDir;
     }
 
-    if (typeof x === "string") {
-      x = (x || "").toLowerCase();
-      y = (y || "").toLowerCase();
+    if (typeof x === "string" || typeof y === "string") {
+      x = (x || "").toString().toLowerCase();
+      y = (y || "").toString().toLowerCase();
       return x < y ? -sortDir : x > y ? sortDir : 0;
     }
 
@@ -71,7 +83,7 @@ export function getVisibleLeads() {
 
 /** Credit leads for stats (ignores UI flag filters except active toggle). */
 export function getCreditPool() {
-  return LEADS.filter((lead) => {
+  return getScopedLeads().filter((lead) => {
     if (!CREDIT_STATUSES.includes(lead.status)) return false;
     if (!filterState.showActive && lead.status === "kund_aktiv") return false;
     return true;

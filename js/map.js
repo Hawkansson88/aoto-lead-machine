@@ -1,4 +1,4 @@
-import { STATUS } from "./constants.js";
+import { statusMeta } from "./constants.js";
 import { getVisibleLeads } from "./filters.js";
 import {
   leafletMap,
@@ -55,7 +55,7 @@ export function openMap() {
     });
 
     const marker = L.marker([lead.lat, lead.lng], { icon });
-    const st = STATUS[lead.status] || STATUS.ny;
+    const st = statusMeta(lead.status);
 
     marker.bindPopup(`
       <div class="map-popup">

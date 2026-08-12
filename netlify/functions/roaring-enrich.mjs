@@ -1,5 +1,5 @@
 /**
- * AOTO Lead Machine — Roaring-enrich
+ * AOTO CRM — Roaring-enrich
  * Netlify Function (ESM)
  *
  * Tar en batch leads där enriched_at är null (exkl. status "ejaktuell"),

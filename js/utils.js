@@ -1,12 +1,45 @@
 /** Shorthand for document.querySelector */
 export const $ = (selector) => document.querySelector(selector);
 
-export function toast(message) {
+export function toast(message, opts = {}) {
   const el = $("#toast");
-  el.textContent = message;
+  if (!el) return;
+
+  const isError = !!opts.error;
+  const duration = opts.duration ?? (isError ? 14000 : 3500);
+  const text = String(message ?? "");
+
+  el.classList.toggle("toast-error", isError);
+  el.innerHTML = `
+    <span class="toast-msg"></span>
+    <button type="button" class="toast-copy" title="Kopiera meddelandet">Kopiera</button>
+  `;
+  el.querySelector(".toast-msg").textContent = text;
   el.classList.add("show");
+  el.style.pointerEvents = "auto";
+
+  const copyBtn = el.querySelector(".toast-copy");
+  copyBtn.onclick = async (e) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(text);
+      copyBtn.textContent = "Kopierat";
+      window.setTimeout(() => {
+        if (copyBtn.isConnected) copyBtn.textContent = "Kopiera";
+      }, 1600);
+    } catch {
+      copyBtn.textContent = "Fel";
+      window.setTimeout(() => {
+        if (copyBtn.isConnected) copyBtn.textContent = "Kopiera";
+      }, 1600);
+    }
+  };
+
   clearTimeout(el._timer);
-  el._timer = setTimeout(() => el.classList.remove("show"), 2200);
+  el._timer = setTimeout(() => {
+    el.classList.remove("show");
+    el.style.pointerEvents = "none";
+  }, duration);
 }
 
 export function todayStr() {

@@ -9,10 +9,9 @@ import {
 } from "./render.js";
 import { closePanel } from "./panel.js";
 import { openMap, closeMap, handleMapPopupClick } from "./map.js";
-import { closeSettings } from "./settings-modal.js";
 import { closeCustomerModal } from "./customer-modal.js";
-import { closeQuoteModal } from "./quote-modal.js";
 import { closeProfileModal } from "./profile-modal.js";
+import { closeAssignModal } from "./assign.js";
 import { $, toast } from "./utils.js";
 
 export function bindEvents() {
@@ -43,37 +42,46 @@ export function bindEvents() {
     };
   }
 
-  $("#scoreSlider").oninput = (e) => {
-    filterState.minScore = +e.target.value;
-    $("#scoreVal").textContent = e.target.value;
-    e.target.style.setProperty("--p", e.target.value + "%");
-    renderTable();
-  };
-
-  $("#revMin").oninput = (e) => {
+  $("#revMin")?.addEventListener("input", (e) => {
     filterState.revMin = e.target.value ? +e.target.value : null;
     renderTable();
-  };
+  });
 
-  $("#revMax").oninput = (e) => {
+  $("#revMax")?.addEventListener("input", (e) => {
     filterState.revMax = e.target.value ? +e.target.value : null;
     renderTable();
-  };
+  });
 
   $("#search").oninput = (e) => {
     filterState.q = e.target.value.trim();
     renderTable();
   };
 
-  $("#pClose").onclick = closePanel;
-  $("#scrim").onclick = closePanel;
-  $("#mapBtn").onclick = openMap;
-  $("#mapClose").onclick = closeMap;
-  $("#mapScrim").onclick = closeMap;
+  $("#mapBtn")?.addEventListener("click", openMap);
+  $("#mapClose")?.addEventListener("click", closeMap);
+  $("#mapScrim")?.addEventListener("click", closeMap);
   document.addEventListener("click", handleMapPopupClick);
 
-  $("#saveFollowup").onclick = async () => {
-    if (!selectedLead) return;
+  bindPanelChrome();
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closePanel();
+      closeCustomerModal();
+      closeProfileModal();
+      closeAssignModal();
+      closeMap();
+    }
+  });
+}
+
+/** Panel chrome used on both Sälj and Marknadsanalys. */
+export function bindPanelChrome() {
+  $("#pClose")?.addEventListener("click", closePanel);
+  $("#scrim")?.addEventListener("click", closePanel);
+
+  $("#saveFollowup")?.addEventListener("click", async () => {
+    if (!selectedLead?.id) return;
     const date = $("#followup").value || null;
     const ok = await patchLead(selectedLead.id, {
       follow_up_date: date,
@@ -86,10 +94,10 @@ export function bindEvents() {
     } else {
       toast("Kunde inte spara uppföljning");
     }
-  };
+  });
 
-  $("#mailBtn").onclick = async () => {
-    if (!selectedLead) return;
+  $("#mailBtn")?.addEventListener("click", async () => {
+    if (!selectedLead?.id) return;
 
     const { data } = await sb
       .from("lead_contacts")
@@ -115,16 +123,5 @@ export function bindEvents() {
     window.location.href =
       `mailto:${email}?subject=${encodeURIComponent(`AOTO – lagerfinansiering för ${selectedLead.company_name}`)}` +
       `&body=${encodeURIComponent(body)}`;
-  };
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closePanel();
-      closeSettings();
-      closeCustomerModal();
-      closeQuoteModal();
-      closeProfileModal();
-      closeMap();
-    }
   });
 }

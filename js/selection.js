@@ -1,12 +1,14 @@
 import { getVisibleLeads } from "./filters.js";
-import { bulkUpdateStatus, bulkFlagDnb, bulkUnflagDnb } from "./data.js";
+import { bulkUpdateStatus, bulkFlagDnb, bulkUnflagDnb, bulkUnassignLeads } from "./data.js";
 import { renderAll, renderTable, renderBulkBar } from "./render.js";
 import {
   LEADS,
   selectedIds,
+  selectedLead,
   clearSelection,
   currentUserId,
 } from "./store.js";
+import { closePanel } from "./panel.js";
 import { $, toast } from "./utils.js";
 
 function getSelectedLeads() {
@@ -100,9 +102,52 @@ export async function bulkToggleDnb() {
   toast(`${ids.length} flaggade som DNB-kund`);
 }
 
+export async function bulkUnassignSelectedLeads() {
+  const ids = [...selectedIds];
+  if (!ids.length) return;
+
+  const n = ids.length;
+  const okConfirm = window.confirm(
+    n === 1
+      ? "Ta bort tilldelningen?\n\nLeaden försvinner från Sälj men anteckningar och data sparas. Den syns som otilldelad i Marknadsanalys."
+      : `Ta bort tilldelning för ${n} leads?\n\nDe försvinner från Sälj men anteckningar och data sparas. De syns som otilldelade i Marknadsanalys.`
+  );
+  if (!okConfirm) return;
+
+  const btn = $("#bulkUnassign");
+  if (btn) btn.disabled = true;
+  try {
+    const ok = await bulkUnassignLeads(ids);
+    if (!ok) {
+      toast("Kunde inte ta bort tilldelning");
+      return;
+    }
+
+    ids.forEach((id) => {
+      const lead = LEADS.find((l) => l.id === id);
+      if (lead) lead.assigned_to = null;
+    });
+
+    if (selectedLead && ids.some((id) => String(id) === String(selectedLead.id))) {
+      closePanel();
+    }
+
+    clearSelection();
+    renderBulkBar();
+    renderAll();
+    window.dispatchEvent(
+      new CustomEvent("crm-lead-changed", { detail: { ids, assigned_to: null } })
+    );
+    toast(n === 1 ? "Tilldelning borttagen" : `Tilldelning borttagen för ${n} leads`);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 export function bindSelectionEvents() {
   $("#bulkNotInterested").onclick = bulkMarkNotInterested;
   $("#bulkDnb").onclick = bulkToggleDnb;
+  $("#bulkUnassign").onclick = bulkUnassignSelectedLeads;
   $("#bulkClear").onclick = clearBulkSelection;
 
   // selectAll återskapas när tabellhuvudet byts (sälj/kredit)

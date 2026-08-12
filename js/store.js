@@ -57,13 +57,22 @@ export const filterState = {
   dnb: "alla",
   creditFlag: "alla",
   showActive: false,
+  /** false = only leads assigned to current user (default) */
+  showAllLeads: false,
   minScore: 0,
   revMin: null,
   revMax: null,
   q: "",
-  sortKey: "score",
-  sortDir: -1,
+  sortKey: "follow_up_date",
+  sortDir: 1,
 };
+
+/** Team profiles for assignee badges / picker */
+export let PROFILES = [];
+
+export function setProfiles(profiles) {
+  PROFILES = profiles || [];
+}
 
 /** Selected lead ids for bulk actions */
 export const selectedIds = new Set();

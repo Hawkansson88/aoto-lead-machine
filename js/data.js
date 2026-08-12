@@ -1,19 +1,57 @@
-import { DEFAULT_SCORING } from "./constants.js";
-import { scoreBreakdown } from "./scoring.js";
+import { scoreBreakdown, normalizeScoringConfig } from "./scoring.js";
 import {
   filterState,
   sb,
   LEADS,
   setLeads,
   setScoringConfig,
+  setProfiles,
   currentUserId,
-  currentUserEmail,
   setCurrentUserProfile,
 } from "./store.js";
-import { QUOTE_TEMPLATE } from "./quote-constants.js";
 import { $, msekToSek, normalizeOrgNr, parseCityFromPostalAddress, parseEmployees } from "./utils.js";
 
+const SHOW_ALL_KEY = "aoto_show_all_leads";
+
+export function loadShowAllPreference() {
+  filterState.showAllLeads = false;
+  try {
+    sessionStorage.removeItem(SHOW_ALL_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function setShowAllLeads() {
+  filterState.showAllLeads = false;
+}
+
 // --- Profiles ---
+
+export async function loadProfiles() {
+  const { data, error } = await sb
+    .from("profiles")
+    .select("id, email, first_name, last_name, full_name, role")
+    .order("first_name", { ascending: true });
+
+  if (error) {
+    // full_name may not exist — retry without it
+    const fallback = await sb
+      .from("profiles")
+      .select("id, email, first_name, last_name, role")
+      .order("first_name", { ascending: true });
+    if (fallback.error) {
+      console.warn("Kunde inte läsa profiles", fallback.error);
+      setProfiles([]);
+      return [];
+    }
+    setProfiles(fallback.data || []);
+    return fallback.data || [];
+  }
+
+  setProfiles(data || []);
+  return data || [];
+}
 
 export async function loadUserProfile(userId, email) {
   const { data, error } = await sb.from("profiles").select("*").eq("id", userId).maybeSingle();
@@ -54,28 +92,21 @@ export async function loadUserProfile(userId, email) {
 
 export async function loadUserSettings(userId) {
   const { data } = await sb.from("user_settings").select("filters").eq("user_id", userId).maybeSingle();
-  if (!data) return;
+  if (!data) return {};
 
   const filters = data.filters || {};
 
-  if (filters.minScore != null) {
-    filterState.minScore = filters.minScore;
-    $("#scoreSlider").value = filters.minScore;
-    $("#scoreVal").textContent = filters.minScore;
-    $("#scoreSlider").style.setProperty("--p", filters.minScore + "%");
-  }
-  if (filters.revMin != null) {
-    filterState.revMin = filters.revMin;
-    $("#revMin").value = filters.revMin;
-  }
-  if (filters.revMax != null) {
-    filterState.revMax = filters.revMax;
-    $("#revMax").value = filters.revMax;
-  }
-  if (filters.dnb) filterState.dnb = filters.dnb;
+  // DNB/score-filter sparas inte längre i UI — nollställ ev. gamla sparade värden
+  filterState.dnb = "alla";
+  filterState.minScore = 0;
+  filterState.revMin = null;
+  filterState.revMax = null;
+
   if (filters.scoring) {
-    setScoringConfig({ ...DEFAULT_SCORING, ...filters.scoring });
+    setScoringConfig(normalizeScoringConfig(filters.scoring));
   }
+
+  return filters;
 }
 
 export async function saveUserSettings(userId, patch) {
@@ -116,6 +147,54 @@ export async function loadLeads() {
       score: scoreBreakdown(row).total,
     }))
   );
+}
+
+/** Note/contact counts per lead_id for Marknadsanalys historik-badges. */
+export let leadActivity = {
+  /** @type {Map<string, number>} */
+  noteCountByLeadId: new Map(),
+  /** @type {Map<string, number>} */
+  contactCountByLeadId: new Map(),
+};
+
+function countByLeadId(rows) {
+  const map = new Map();
+  for (const row of rows || []) {
+    const id = String(row.lead_id);
+    map.set(id, (map.get(id) || 0) + 1);
+  }
+  return map;
+}
+
+export async function loadLeadActivity() {
+  const [notesRes, contactsRes] = await Promise.all([
+    sb.from("lead_notes").select("lead_id"),
+    sb.from("lead_contacts").select("lead_id"),
+  ]);
+
+  if (notesRes.error) {
+    console.warn("Kunde inte läsa lead_notes för historik", notesRes.error);
+    leadActivity.noteCountByLeadId = new Map();
+  } else {
+    leadActivity.noteCountByLeadId = countByLeadId(notesRes.data);
+  }
+
+  if (contactsRes.error) {
+    console.warn("Kunde inte läsa lead_contacts för historik", contactsRes.error);
+    leadActivity.contactCountByLeadId = new Map();
+  } else {
+    leadActivity.contactCountByLeadId = countByLeadId(contactsRes.data);
+  }
+
+  return leadActivity;
+}
+
+export function bumpLeadNoteCount(leadId, delta = 1) {
+  if (leadId == null) return;
+  const key = String(leadId);
+  const next = (leadActivity.noteCountByLeadId.get(key) || 0) + delta;
+  if (next <= 0) leadActivity.noteCountByLeadId.delete(key);
+  else leadActivity.noteCountByLeadId.set(key, next);
 }
 
 export async function bulkUpdateStatus(ids, status) {
@@ -163,6 +242,24 @@ export async function bulkUnflagDnb(ids) {
   const { error } = await sb.from("dnb_customers").delete().in("lead_id", ids);
   if (error) console.error(error);
   return !error;
+}
+
+export async function assignLeads(ids, assignedTo) {
+  if (!ids.length) return true;
+  const { error } = await sb
+    .from("leads")
+    .update({
+      assigned_to: assignedTo,
+      updated_at: new Date().toISOString(),
+    })
+    .in("id", ids);
+  if (error) console.error(error);
+  return !error;
+}
+
+/** Remove from sales pipeline (keep lead + notes). Last-wins when reclaiming. */
+export async function bulkUnassignLeads(ids) {
+  return assignLeads(ids, null);
 }
 
 export async function patchLead(id, fields) {
@@ -254,7 +351,7 @@ function upsertLeadInStore(data, isNew) {
   return lead;
 }
 
-export async function createLead(fields) {
+export async function createLead(fields, { assignedTo } = {}) {
   const parsed = parseLeadFormInput(fields);
   if (parsed.error) return { error: parsed.error };
 
@@ -270,6 +367,8 @@ export async function createLead(fields) {
   );
 
   const now = new Date().toISOString();
+  const assignee =
+    assignedTo !== undefined ? assignedTo : currentUserId || null;
   const row = {
     ...parsed.row,
     lat,
@@ -277,7 +376,13 @@ export async function createLead(fields) {
     status: "ny",
     enriched_at: now,
     updated_at: now,
+    assigned_to: assignee,
   };
+
+  // Prefer explicit city from market data when provided
+  if (fields.city?.trim()) {
+    row.city = fields.city.trim();
+  }
 
   const { data, error } = await sb.from("leads").insert(row).select().single();
   if (error) {
@@ -290,6 +395,80 @@ export async function createLead(fields) {
 
   const lead = upsertLeadInStore(data, true);
   return { data: lead, geocoded };
+}
+
+/** Bilstatistik tkr → MSEK string for createLead form parser */
+function tkrToMsekInput(tkr) {
+  if (tkr == null || tkr === "") return "";
+  const n = Number(tkr);
+  if (!Number.isFinite(n)) return "";
+  // 1 tkr = 1 000 SEK = 0.001 MSEK
+  const msek = n / 1000;
+  return String(Number(msek.toFixed(3)));
+}
+
+/** Create a CRM lead from a dealer_market_stats row (Marknadsanalys). */
+export async function createLeadFromMarket(stats, assignedTo) {
+  if (!stats) return { error: "Saknar marknadsdata." };
+  const orgNr = normalizeOrgNr(stats.org_nr);
+  if (!orgNr) return { error: "Saknar giltigt organisationsnummer." };
+  if (!stats.company_name?.trim()) return { error: "Saknar företagsnamn." };
+
+  const postal = [stats.postcode, stats.city].filter(Boolean).join(" ").trim();
+
+  return createLead(
+    {
+      company_name: String(stats.company_name).trim(),
+      org_nr: orgNr,
+      address: stats.address ? String(stats.address) : "",
+      postal_address: postal,
+      city: stats.city ? String(stats.city) : "",
+      revenue: tkrToMsekInput(stats.turnover_tkr),
+      result_after_fin: tkrToMsekInput(stats.profit_tkr),
+      equity: tkrToMsekInput(stats.equity_tkr),
+      solidity: "",
+      employees: stats.employees ?? "",
+    },
+    { assignedTo: assignedTo !== undefined ? assignedTo : currentUserId }
+  );
+}
+
+/**
+ * Claim existing lead / create new, then assign to assigneeId (säljare).
+ * Last-wins when taking over an existing assignment.
+ */
+export async function claimOrCreateLeadFromMarket(stats, assigneeId) {
+  if (!stats) return { error: "Saknar marknadsdata." };
+  const orgNr = normalizeOrgNr(stats.org_nr);
+  if (!orgNr) return { error: "Saknar giltigt organisationsnummer." };
+  const assignee = assigneeId || currentUserId;
+  if (!assignee) return { error: "Du måste vara inloggad." };
+
+  const existing =
+    LEADS.find((l) => normalizeOrgNr(l.org_nr) === orgNr) ||
+    (await findLeadByOrgNr(orgNr));
+
+  if (existing?.id) {
+    const ok = await assignLeads([existing.id], assignee);
+    if (!ok) return { error: "Kunde inte tilldela lead." };
+    const updated = { ...existing, assigned_to: assignee };
+    const inStore = LEADS.some((l) => String(l.id) === String(existing.id));
+    upsertLeadInStore(updated, !inStore);
+    return { data: updated, claimed: true };
+  }
+
+  return createLeadFromMarket(stats, assignee);
+}
+
+async function findLeadByOrgNr(orgNr) {
+  const digits = normalizeOrgNr(orgNr);
+  if (!digits) return null;
+  const { data, error } = await sb.from("leads").select("*").eq("org_nr", digits).maybeSingle();
+  if (error) {
+    console.warn(error);
+    return null;
+  }
+  return data;
 }
 
 export async function updateLead(id, fields) {
@@ -375,150 +554,30 @@ export async function loadContacts(leadId) {
     .join("");
 }
 
-// --- Quotes ---
+// --- Bilstatistik / fordonsdata ---
 
-function addValidityDays(fromDate = new Date()) {
-  const d = new Date(fromDate);
-  d.setDate(d.getDate() + QUOTE_TEMPLATE.validityDays);
-  return d.toISOString().slice(0, 10);
-}
-
-export async function loadQuotesForLead(leadId) {
+export async function loadDealerMarketStats(orgNr) {
+  const digits = normalizeOrgNr(orgNr);
+  if (!digits) return null;
   const { data, error } = await sb
-    .from("quotes")
-    .select("*")
-    .eq("lead_id", leadId)
-    .order("created_at", { ascending: false });
-
+    .from("dealer_market_stats")
+    .select(
+      "org_nr, company_name, address, postcode, city, industry, employees, turnover_tkr, equity_tkr, profit_tkr, lagerantal, saljvolym_12m, salj_privat_12m, salj_foretag_12m, lager_finansierat_antal, lager_finansierat_andel, lager_finansbolag, leasing_andel, updated_at, bulk_updated_at"
+    )
+    .eq("org_nr", digits)
+    .maybeSingle();
   if (error) {
-    console.error(error);
-    return [];
-  }
-  return data || [];
-}
-
-export async function getLatestQuoteVersion(offerId) {
-  const { data, error } = await sb
-    .from("quotes")
-    .select("*")
-    .eq("offer_id", offerId)
-    .order("version", { ascending: false })
-    .limit(1);
-
-  if (error) {
-    console.error(error);
+    console.warn("Kunde inte läsa dealer_market_stats", error);
     return null;
   }
-  return data?.[0] || null;
-}
-
-export async function getNextQuoteVersion(offerId) {
-  const latest = await getLatestQuoteVersion(offerId);
-  return latest ? latest.version + 1 : 1;
-}
-
-export async function saveQuoteVersion({ leadId, offerId, companyName, orgNr, introText, lineItems }) {
-  if (!currentUserId || !currentUserEmail) {
-    return { error: "Du måste vara inloggad." };
-  }
-
-  const cleanedItems = lineItems
-    .map((row) => ({ label: row.label?.trim() || "", value: row.value?.trim() || "" }))
-    .filter((row) => row.label || row.value);
-
-  if (!cleanedItems.length) {
-    return { error: "Lägg till minst en rad med villkor." };
-  }
-
-  const version = offerId ? await getNextQuoteVersion(offerId) : 1;
-  const row = {
-    offer_id: offerId || crypto.randomUUID(),
-    version,
-    lead_id: leadId,
-    created_by: currentUserId,
-    creator_email: currentUserEmail,
-    company_name: companyName,
-    org_nr: orgNr || "",
-    intro_text: introText?.trim() || QUOTE_TEMPLATE.intro,
-    line_items: cleanedItems,
-    valid_until: addValidityDays(),
-    status: "draft",
-  };
-
-  const { data, error } = await sb.from("quotes").insert(row).select().single();
-  if (error) {
-    console.error(error);
-    if (isUniqueViolation(error)) {
-      return { error: "Versionen finns redan — försök spara igen." };
-    }
-    return {
-      error: error.message
-        ? `Kunde inte spara offert: ${error.message}`
-        : "Kunde inte spara offert. Kör supabase/quotes.sql i Supabase.",
-    };
-  }
-  return { data };
-}
-
-export async function publishQuote(quoteId) {
-  const { data: quote, error: fetchErr } = await sb
-    .from("quotes")
-    .select("*")
-    .eq("id", quoteId)
-    .maybeSingle();
-
-  if (fetchErr || !quote) {
-    return { error: "Offerten hittades inte." };
-  }
-  if (quote.status === "accepted") {
-    return { error: "Offerten är redan accepterad." };
-  }
-
-  const publicToken = crypto.randomUUID();
-  const now = new Date().toISOString();
-
-  await sb
-    .from("quotes")
-    .update({ status: "superseded" })
-    .eq("offer_id", quote.offer_id)
-    .eq("status", "published");
-
-  const { data, error } = await sb
-    .from("quotes")
-    .update({
-      status: "published",
-      public_token: publicToken,
-      published_at: now,
-    })
-    .eq("id", quoteId)
-    .select()
-    .single();
-
-  if (error) {
-    console.error(error);
-    return { error: "Kunde inte publicera offert." };
-  }
-  return { data };
-}
-
-export async function loadPublicQuote(publicToken) {
-  const { data, error } = await sb
-    .from("quotes")
-    .select("*")
-    .eq("public_token", publicToken)
-    .maybeSingle();
-
-  if (error) console.error(error);
   return data;
 }
 
-export async function acceptQuote(publicToken, email) {
-  const res = await fetch("/.netlify/functions/accept-quote", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ public_token: publicToken, email }),
+export async function fetchBilstatistikInventory(orgNr, companyName) {
+  return callNetlifyFunction("bilstatistik-inventory", {
+    org_nr: orgNr,
+    company_name: companyName || null,
   });
-  return res.json();
 }
 
 // --- Netlify serverless functions ---

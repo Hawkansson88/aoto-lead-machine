@@ -134,17 +134,17 @@ export async function saveCustomer() {
 }
 
 export function bindCustomerModal() {
-  $("#newCustomerBtn").onclick = openCustomerModal;
-  $("#customerModalClose").onclick = closeCustomerModal;
-  $("#customerModalCancel").onclick = closeCustomerModal;
-  $("#customerModalScrim").onclick = closeCustomerModal;
-  $("#customerModalSave").onclick = saveCustomer;
-  $("#editLeadBtn").onclick = () => {
+  $("#newCustomerBtn")?.addEventListener("click", openCustomerModal);
+  $("#customerModalClose")?.addEventListener("click", closeCustomerModal);
+  $("#customerModalCancel")?.addEventListener("click", closeCustomerModal);
+  $("#customerModalScrim")?.addEventListener("click", closeCustomerModal);
+  $("#customerModalSave")?.addEventListener("click", saveCustomer);
+  $("#editLeadBtn")?.addEventListener("click", () => {
     if (selectedLead) openEditModal(selectedLead.id);
-  };
+  });
 
   ["newCustomerName", "newCustomerOrgNr"].forEach((id) => {
-    $(`#${id}`).addEventListener("keydown", (e) => {
+    $(`#${id}`)?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") saveCustomer();
     });
   });

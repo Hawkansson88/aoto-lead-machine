@@ -22,6 +22,7 @@ export function applyView(view, { resetFilters = true } = {}) {
   if (resetFilters) {
     filterState.status = "alla";
     filterState.creditFlag = "alla";
+    filterState.dnb = "alla";
     filterState.q = "";
     const search = $("#search");
     if (search) search.value = "";
@@ -33,8 +34,8 @@ export function applyView(view, { resetFilters = true } = {}) {
       const showActive = $("#showActiveToggle");
       if (showActive) showActive.checked = false;
     } else {
-      filterState.sortKey = "score";
-      filterState.sortDir = -1;
+      filterState.sortKey = "follow_up_date";
+      filterState.sortDir = 1;
     }
   }
 
@@ -54,9 +55,11 @@ export function updateViewChrome() {
   const sub = $("#pageSub");
   if (title) title.textContent = isKredit ? "Kredit" : "Bilhandlare";
   if (sub) {
-    sub.innerHTML = isKredit
-      ? `<span id="resultCount">0</span> handlare i kreditprocess`
-      : `<span id="resultCount">0</span> leads · sorterade efter potential`;
+    if (isKredit) {
+      sub.innerHTML = `<span id="resultCount">0</span> handlare i kreditprocess`;
+    } else {
+      sub.innerHTML = `<span id="resultCount">0</span> leads · mina kunder`;
+    }
   }
 
   const saljOnly = document.querySelectorAll("[data-salj-only]");
@@ -84,7 +87,7 @@ export function bindViewNav() {
   if (!nav) return;
 
   nav.onclick = (e) => {
-    const btn = e.target.closest(".view-nav-btn");
+    const btn = e.target.closest(".view-nav-btn[data-view]");
     if (!btn || btn.dataset.view === currentView) return;
     applyView(btn.dataset.view);
   };

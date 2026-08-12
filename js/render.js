@@ -1,5 +1,5 @@
-import { STATUS, DNB_FILTERS, CREDIT_STATUSES, CREDIT_FLAG_FILTERS } from "./constants.js";
-import { getVisibleLeads, getCreditPool } from "./filters.js";
+import { STATUS, DNB_FILTERS, CREDIT_STATUSES, CREDIT_FLAG_FILTERS, statusMeta } from "./constants.js";
+import { getVisibleLeads, getCreditPool, getScopedLeads } from "./filters.js";
 import {
   LEADS,
   filterState,
@@ -12,10 +12,10 @@ import {
   $,
   todayStr,
   fmtMSEK,
-  scoreColor,
   followupInfo,
   formatOrgNr,
 } from "./utils.js";
+import { assigneeBadgeHtml } from "./assignees.js";
 
 let onRowClick = () => {};
 
@@ -48,48 +48,54 @@ export function renderBulkBar() {
   dnbBtn.classList.toggle("bulk-dnb-remove", allDnb);
 }
 
+export function renderOwnerToggle() {
+  /* Ownership scope toggle removed — Sälj shows only mina leads. */
+}
+
 export function renderStats() {
   const el = $("#stats");
   if (!el) return;
+  const scoped = getScopedLeads();
 
   if (currentView === "kredit") {
     const pool = getCreditPool();
     const pending = pool.filter((l) => l.status !== "kund_aktiv").length;
-    const waiting = LEADS.filter((l) => l.status === "invantar_aterkoppling").length;
+    const active = scoped.filter((l) => l.status === "kund_aktiv").length;
     const kycDone = pool.filter((l) => l.kyc_approved).length;
     const approved = pool.filter((l) => l.kredit_beviljad).length;
 
     el.innerHTML = `
       <div class="stat mote"><span class="spark">⏳</span><div class="v num">${pending}</div><div class="l">I kreditprocess</div></div>
-      <div class="stat followup"><span class="spark">↩</span><div class="v num">${waiting}</div><div class="l">Inväntar återkoppling</div></div>
+      <div class="stat followup"><span class="spark">★</span><div class="v num">${active}</div><div class="l">Kund aktiv</div></div>
       <div class="stat hot"><span class="spark">✓</span><div class="v num">${kycDone}</div><div class="l">KYC beviljad</div></div>
       <div class="stat untouched"><span class="spark">★</span><div class="v num">${approved}</div><div class="l">Kredit beviljad</div></div>`;
     return;
   }
 
-  const meetings = LEADS.filter((l) => l.status === "mote").length;
-  const hot = LEADS.filter((l) => l.score >= 80 && l.status !== "ejaktuell").length;
-  const followups = LEADS.filter(
+  const contacted = scoped.filter((l) => l.status === "kontaktad").length;
+  const followups = scoped.filter(
     (l) => l.follow_up_date && l.follow_up_date <= todayStr() && l.status !== "ejaktuell"
   ).length;
-  const untouched = LEADS.filter((l) => l.status === "ny" && l.score >= 80).length;
+  const neu = scoped.filter((l) => l.status === "ny").length;
+  const kredit = scoped.filter((l) => l.status === "skickad_kredit").length;
 
   el.innerHTML = `
-    <div class="stat mote"><span class="spark">📅</span><div class="v num">${meetings}</div><div class="l">Möten bokade</div></div>
-    <div class="stat hot"><span class="spark">🔥</span><div class="v num">${hot}</div><div class="l">Heta leads (80+)</div></div>
+    <div class="stat untouched"><span class="spark">✦</span><div class="v num">${neu}</div><div class="l">Ej kontaktade</div></div>
+    <div class="stat mote"><span class="spark">📞</span><div class="v num">${contacted}</div><div class="l">Kontaktade</div></div>
     <div class="stat followup"><span class="spark">⏰</span><div class="v num">${followups}</div><div class="l">Uppföljning idag/försenad</div></div>
-    <div class="stat untouched"><span class="spark">✦</span><div class="v num">${untouched}</div><div class="l">Orörda · score 80+</div></div>`;
+    <div class="stat hot"><span class="spark">★</span><div class="v num">${kredit}</div><div class="l">Kredit önskas</div></div>`;
 }
 
 export function renderStatusFilter() {
   const el = $("#statusList");
   if (!el) return;
+  const scoped = getScopedLeads();
 
   if (currentView === "kredit") {
     const pool = getCreditPool();
     const counts = { alla: pool.length };
     CREDIT_STATUSES.forEach((key) => {
-      counts[key] = LEADS.filter((l) => {
+      counts[key] = scoped.filter((l) => {
         if (l.status !== key) return false;
         if (!filterState.showActive && key === "kund_aktiv") return false;
         return true;
@@ -111,9 +117,9 @@ export function renderStatusFilter() {
     return;
   }
 
-  const counts = { alla: LEADS.filter((l) => l.status !== "ejaktuell").length };
+  const counts = { alla: scoped.filter((l) => l.status !== "ejaktuell").length };
   Object.keys(STATUS).forEach((key) => {
-    counts[key] = LEADS.filter((l) => l.status === key).length;
+    counts[key] = scoped.filter((l) => l.status === key).length;
   });
 
   const item = (key, label, col) =>
@@ -138,10 +144,11 @@ export function renderDnbFilter() {
     return;
   }
 
+  const scoped = getScopedLeads();
   const counts = {
-    alla: LEADS.length,
-    dnb: LEADS.filter((l) => l.is_dnb).length,
-    ej_dnb: LEADS.filter((l) => !l.is_dnb).length,
+    alla: scoped.length,
+    dnb: scoped.filter((l) => l.is_dnb).length,
+    ej_dnb: scoped.filter((l) => !l.is_dnb).length,
   };
 
   el.innerHTML = Object.entries(DNB_FILTERS)
@@ -186,13 +193,24 @@ function flagCell(ok) {
 }
 
 export function renderTable() {
-  const rows = getVisibleLeads();
-  $("#resultCount").textContent = rows.length;
-
   const tbody = $("#rows");
-  const empty = $("#empty");
+  // Marknadsanalys (and other pages) reuse shared panel code but have no lead table.
   if (!tbody) return;
-  if (empty) empty.style.display = rows.length ? "none" : "block";
+
+  const rows = getVisibleLeads();
+  const resultCount = $("#resultCount");
+  if (resultCount) resultCount.textContent = rows.length;
+
+  const empty = $("#empty");
+  if (empty) {
+    empty.style.display = rows.length ? "none" : "block";
+    if (!rows.length) {
+      empty.textContent =
+        currentView === "kredit"
+          ? "Inga leads matchar filtren."
+          : "Inga kunder tilldelade dig ännu. Hitta återförsäljare under Marknadsanalys och tilldela dem.";
+    }
+  }
 
   const allVisibleSelected = rows.length > 0 && rows.every((l) => selectedIds.has(l.id));
   const someVisibleSelected = rows.some((l) => selectedIds.has(l.id));
@@ -205,13 +223,13 @@ export function renderTable() {
   if (currentView === "kredit") {
     tbody.innerHTML = rows
       .map((lead) => {
-        const st = STATUS[lead.status] || STATUS.skickad_kredit;
-        const checked = selectedIds.has(lead.id) ? "checked" : "";
+        const st = statusMeta(lead.status);
         const dnbBadge = lead.is_dnb ? `<span class="badge-dnb">DNB</span>` : "";
+        const owner = assigneeBadgeHtml(lead.assigned_to);
 
-        return `<tr data-id="${lead.id}" class="${selectedLead && selectedLead.id === lead.id ? "sel" : ""}${checked ? " row-checked" : ""}">
+        return `<tr data-id="${lead.id}" class="${selectedLead && selectedLead.id === lead.id ? "sel" : ""}">
           <td>
-            <div class="co-name">${lead.company_name}${dnbBadge}</div>
+            <div class="co-name">${lead.company_name}${dnbBadge}${owner}</div>
             <div class="co-org num">${formatOrgNr(lead.org_nr) || "–"}</div>
           </td>
           <td>${lead.city || "–"}</td>
@@ -225,27 +243,18 @@ export function renderTable() {
   } else {
     tbody.innerHTML = rows
       .map((lead) => {
-        const st = STATUS[lead.status] || STATUS.ny;
+        const st = statusMeta(lead.status);
         const fu = followupInfo(lead.follow_up_date);
         const checked = selectedIds.has(lead.id) ? "checked" : "";
-        const scoreCell =
-          lead.score == null
-            ? `<div class="score-cell"><span class="score-num" style="color:var(--faint)">–</span><span class="score-bar"></span></div>`
-            : `<div class="score-cell">
-                <span class="score-num" style="color:${scoreColor(lead.score)}">${lead.score}</span>
-                <span class="score-bar">
-                  <span class="score-fill" style="width:${lead.score}%;background:${scoreColor(lead.score)}"></span>
-                </span>
-              </div>`;
         const dnbBadge = lead.is_dnb ? `<span class="badge-dnb">DNB</span>` : "";
+        const owner = assigneeBadgeHtml(lead.assigned_to);
 
         return `<tr data-id="${lead.id}" class="${selectedLead && selectedLead.id === lead.id ? "sel" : ""}${checked ? " row-checked" : ""}">
           <td class="check-cell">
             <input type="checkbox" class="row-check" data-id="${lead.id}" ${checked} aria-label="Välj ${lead.company_name}">
           </td>
-          <td class="right">${scoreCell}</td>
           <td>
-            <div class="co-name">${lead.company_name}${dnbBadge}</div>
+            <div class="co-name">${lead.company_name}${dnbBadge}${owner}</div>
             <div class="co-org num">${formatOrgNr(lead.org_nr) || "–"}</div>
           </td>
           <td>${lead.city || "–"}</td>
@@ -292,7 +301,6 @@ export function renderTableHeader() {
       <th class="check-col">
         <input type="checkbox" id="selectAll" aria-label="Välj alla synliga">
       </th>
-      <th data-sort="score" class="right">Score</th>
       <th data-sort="company_name">Företag</th>
       <th data-sort="city">Stad</th>
       <th data-sort="revenue" class="right">Omsättning</th>
@@ -329,6 +337,11 @@ function bindHeaderSort() {
 }
 
 export function renderAll() {
+  renderOwnerToggle();
+  const sub = $("#pageSub");
+  if (sub && currentView !== "kredit") {
+    sub.innerHTML = `<span id="resultCount">0</span> leads · mina kunder`;
+  }
   renderStats();
   renderStatusFilter();
   renderDnbFilter();

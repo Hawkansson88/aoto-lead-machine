@@ -1,4 +1,4 @@
--- AOTO Lead Machine — Offerter (quotes)
+-- AOTO CRM — Offerter (quotes)
 -- Kör i Supabase SQL Editor
 
 CREATE TABLE IF NOT EXISTS public.quotes (

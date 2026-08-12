@@ -2,18 +2,11 @@
 export const STATUS = {
   ny: { label: "Ej kontaktad", switchLabel: "Ej kontaktad", cls: "b-ny", col: "var(--st-ny)" },
   kontaktad: { label: "Kontaktad", switchLabel: "Kontaktad", cls: "b-kontaktad", col: "var(--st-kontaktad)" },
-  mote: { label: "Möte bokat", switchLabel: "Möte bokat", cls: "b-mote", col: "var(--st-mote)" },
   skickad_kredit: {
-    label: "Skickad för Kredit-PM",
-    switchLabel: "Behöver Kredit",
+    label: "Kredit önskas",
+    switchLabel: "Kredit önskas",
     cls: "b-kredit",
     col: "var(--st-kredit)",
-  },
-  invantar_aterkoppling: {
-    label: "Inväntar återkoppling",
-    switchLabel: "Inväntar återkoppling",
-    cls: "b-invantar",
-    col: "var(--st-invantar)",
   },
   kund_aktiv: {
     label: "Kund aktiv",
@@ -24,8 +17,23 @@ export const STATUS = {
   ejaktuell: { label: "Ej intressant", switchLabel: "Ej intressant", cls: "b-ejaktuell", col: "var(--st-ej)" },
 };
 
+/** Legacy statuses still present in DB until migrated — display only. */
+export const LEGACY_STATUS = {
+  mote: { label: "Möte bokat", switchLabel: "Möte bokat", cls: "b-mote", col: "var(--st-mote)" },
+  invantar_aterkoppling: {
+    label: "Inväntar återkoppling",
+    switchLabel: "Inväntar återkoppling",
+    cls: "b-invantar",
+    col: "var(--st-invantar)",
+  },
+};
+
+export function statusMeta(key) {
+  return STATUS[key] || LEGACY_STATUS[key] || STATUS.ny;
+}
+
 /** Statuses that belong on the credit page. */
-export const CREDIT_STATUSES = ["skickad_kredit", "invantar_aterkoppling", "kund_aktiv"];
+export const CREDIT_STATUSES = ["skickad_kredit", "kund_aktiv"];
 
 /** DNB customer filter options in sidebar. */
 export const DNB_FILTERS = {
@@ -51,10 +59,17 @@ export const ROLES = {
   kredit: { label: "Kredit", homeView: "kredit" },
 };
 
-/** Default scoring weights and thresholds (overridable per user). */
+/**
+ * Default scoring for Marknadsanalys (0–100, överstyrbart per användare).
+ * Enheter: omsättning i Mkr, andelar i %, lager/sälj i antal, ålder i år.
+ */
 export const DEFAULT_SCORING = {
-  revenue: { weight: 35, sweet_low: 10, sweet_high: 120, max: 200 },
-  employees: { weight: 25, min: 5, max: 50 },
-  solidity: { weight: 25, breaks: [15, 30, 45], points: [25, 18, 11, 4] },
-  result: { weight: 10, breaks: [-5, 0, 5], points: [0, 4, 8, 10] },
+  turnover: { weight: 18, sweet_low: 10, sweet_high: 150, max: 400 },
+  profit: { weight: 10, breaks: [-5, 0, 5], points: [0, 3, 7, 10] },
+  employees: { weight: 10, min: 3, max: 80 },
+  lager: { weight: 18, sweet_low: 20, sweet_high: 250, max: 1000 },
+  sales: { weight: 14, sweet_low: 30, sweet_high: 400, max: 1500 },
+  finance: { weight: 12, sweet_low: 5, sweet_high: 55, max: 100 },
+  b2b: { weight: 10, sweet_low: 25, sweet_high: 75, max: 100 },
+  age: { weight: 8, sweet_low: 5, sweet_high: 35, max: 80 },
 };

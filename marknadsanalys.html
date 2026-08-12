@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Marknadsanalys — AOTO CRM</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- Auth gate -->
+  <div id="authGate">
+    <div class="auth-card">
+      <div class="brand"><div class="mark">A</div></div>
+      <h2>AOTO CRM</h2>
+      <p class="lead">Logga in för att fortsätta</p>
+      <div class="field">
+        <label for="authEmail">E-post</label>
+        <input id="authEmail" type="email" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label for="authPw">Lösenord</label>
+        <input id="authPw" type="password" autocomplete="current-password" />
+      </div>
+      <div class="auth-err" id="authErr"></div>
+      <button class="btn btn-acc" id="authBtn">Logga in</button>
+    </div>
+  </div>
+
+  <div class="app" id="app">
+    <aside class="sidebar">
+      <a href="index.html" class="brand" title="Startsida">
+        <div class="mark">A</div>
+        <div class="wm">AOTO CRM<small>Lagerfinansiering</small></div>
+      </a>
+
+      <div class="view-nav" id="viewNav">
+        <a href="index.html" class="view-nav-btn">Sälj</a>
+        <a href="index.html?view=kredit" class="view-nav-btn">Kredit</a>
+        <a href="marknadsanalys.html" class="view-nav-btn active">Marknadsanalys</a>
+      </div>
+
+      <p class="section-label">Om sidan</p>
+      <p class="market-about">
+        Marknadsöversikt från Bilstatistik. Badges: Lead = tilldelad nu, Tidigare = funnits i CRM, 📝 = noteringar.
+      </p>
+
+      <p class="section-label">Lead / historik</p>
+      <div class="status-list" id="marketLeadFilter">
+        <div class="status-item active" data-lead="alla"><span>Alla</span></div>
+        <div class="status-item" data-lead="lead"><span>Tilldelade nu</span></div>
+        <div class="status-item" data-lead="historik"><span>Med historik</span></div>
+        <div class="status-item" data-lead="notes"><span>Med noteringar</span></div>
+        <div class="status-item" data-lead="ej_lead"><span>Orörda</span></div>
+      </div>
+
+      <div class="slider-wrap">
+        <div class="slider-head">
+          <p class="section-label" style="margin:0">Min. score</p>
+          <b class="num" id="scoreVal">0</b>
+        </div>
+        <input type="range" id="scoreSlider" min="0" max="100" value="0" step="5" />
+      </div>
+
+      <div class="market-filters" id="marketFilters">
+        <div class="rev-filter">
+          <p class="section-label" style="margin-bottom:8px">Omsättning (Mkr)</p>
+          <div class="rev-inputs">
+            <input type="number" id="mfTurnoverMin" data-filter="turnover" data-bound="min" placeholder="Min" />
+            <span>–</span>
+            <input type="number" id="mfTurnoverMax" data-filter="turnover" data-bound="max" placeholder="Max" />
+          </div>
+        </div>
+        <div class="rev-filter">
+          <p class="section-label" style="margin-bottom:8px">Årets resultat (Mkr)</p>
+          <div class="rev-inputs">
+            <input type="number" id="mfProfitMin" data-filter="profit" data-bound="min" placeholder="Min" />
+            <span>–</span>
+            <input type="number" id="mfProfitMax" data-filter="profit" data-bound="max" placeholder="Max" />
+          </div>
+        </div>
+        <div class="rev-filter">
+          <p class="section-label" style="margin-bottom:8px">Etableringsår</p>
+          <div class="rev-inputs">
+            <input type="number" id="mfYearMin" data-filter="year" data-bound="min" placeholder="Min" />
+            <span>–</span>
+            <input type="number" id="mfYearMax" data-filter="year" data-bound="max" placeholder="Max" />
+          </div>
+        </div>
+        <div class="rev-filter">
+          <p class="section-label" style="margin-bottom:8px">Anställda</p>
+          <div class="rev-inputs">
+            <input type="number" id="mfEmployeesMin" data-filter="employees" data-bound="min" placeholder="Min" min="0" />
+            <span>–</span>
+            <input type="number" id="mfEmployeesMax" data-filter="employees" data-bound="max" placeholder="Max" min="0" />
+          </div>
+        </div>
+        <div class="rev-filter">
+          <p class="section-label" style="margin-bottom:8px">I lager</p>
+          <div class="rev-inputs">
+            <input type="number" id="mfLagerMin" data-filter="lager" data-bound="min" placeholder="Min" min="0" />
+            <span>–</span>
+            <input type="number" id="mfLagerMax" data-filter="lager" data-bound="max" placeholder="Max" min="0" />
+          </div>
+        </div>
+        <div class="rev-filter">
+          <p class="section-label" style="margin-bottom:8px">% lagerfinans</p>
+          <div class="rev-inputs">
+            <input type="number" id="mfFinanceMin" data-filter="finance" data-bound="min" placeholder="Min" min="0" max="100" />
+            <span>–</span>
+            <input type="number" id="mfFinanceMax" data-filter="finance" data-bound="max" placeholder="Max" min="0" max="100" />
+          </div>
+        </div>
+        <div class="rev-filter">
+          <p class="section-label" style="margin-bottom:8px">Sålda 12 mån</p>
+          <div class="rev-inputs">
+            <input type="number" id="mfSalesMin" data-filter="sales" data-bound="min" placeholder="Min" min="0" />
+            <span>–</span>
+            <input type="number" id="mfSalesMax" data-filter="sales" data-bound="max" placeholder="Max" min="0" />
+          </div>
+        </div>
+        <div class="rev-filter">
+          <p class="section-label" style="margin-bottom:8px">Företagsandel (%)</p>
+          <div class="rev-inputs">
+            <input type="number" id="mfForetagMin" data-filter="foretag" data-bound="min" placeholder="Min" min="0" max="100" />
+            <span>–</span>
+            <input type="number" id="mfForetagMax" data-filter="foretag" data-bound="max" placeholder="Max" min="0" max="100" />
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="save-filters-btn" id="saveMarketFiltersBtn">Spara filter till profil</button>
+      <button type="button" class="save-filters-btn market-clear-filters-btn" id="clearMarketFiltersBtn">Rensa filter</button>
+      <div class="filter-saved" id="marketFilterSavedMsg">✓ Filter sparat på din profil</div>
+
+      <div class="user-foot">
+        <div class="av" id="userAv">–</div>
+        <div class="em" id="userEmail">–</div>
+        <button class="settings-btn" id="settingsBtn" title="Scoring-inställningar">⚙</button>
+        <button class="lo" id="logoutBtn">Logga ut</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1>Marknadsanalys</h1>
+          <div class="sub" id="pageSub">
+            <span id="resultCount">0</span> återförsäljare · sorterade efter score
+            <span id="dataUpdated" style="color:var(--faint)"> · Data uppdaterad: –</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="search">
+            <span class="ic">⌕</span>
+            <input id="search" placeholder="Sök namn, ort eller org.nr…" autocomplete="off" />
+          </div>
+          <button type="button" class="btn btn-prim" id="refreshMarketBtn">Uppdatera marknadsdata</button>
+          <span class="conn-pill live"><span class="d"></span>Live · Supabase</span>
+        </div>
+      </header>
+
+      <div class="market-table" data-market-table>
+        <div class="market-table-head">
+          <table class="market-cols">
+            <colgroup>
+              <col style="width:10%" />
+              <col style="width:19%" />
+              <col style="width:9%" />
+              <col style="width:10%" />
+              <col style="width:8%" />
+              <col style="width:7%" />
+              <col style="width:7%" />
+              <col style="width:9%" />
+              <col style="width:10%" />
+              <col style="width:11%" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th data-sort="score">Score</th>
+                <th>Företag</th>
+                <th data-sort="turnover_tkr" class="right">Omsättning (Mkr)</th>
+                <th data-sort="profit_tkr" class="right">Årets resultat (Mkr)</th>
+                <th data-sort="established_year" class="right">Etableringsår</th>
+                <th data-sort="employees" class="right">Anställda</th>
+                <th data-sort="lagerantal" class="right">I lager</th>
+                <th data-sort="lager_finansierat_andel" class="right">% lagerfinans</th>
+                <th data-sort="saljvolym_12m" class="right">Sålda 12 mån</th>
+                <th data-sort="foretagsandel" class="right">Företagsandel</th>
+              </tr>
+            </thead>
+          </table>
+          <div class="market-table-scrollpad" aria-hidden="true"></div>
+        </div>
+        <div class="table-scroll market-table-body">
+          <table class="market-cols">
+            <colgroup>
+              <col style="width:10%" />
+              <col style="width:19%" />
+              <col style="width:9%" />
+              <col style="width:10%" />
+              <col style="width:8%" />
+              <col style="width:7%" />
+              <col style="width:7%" />
+              <col style="width:9%" />
+              <col style="width:10%" />
+              <col style="width:11%" />
+            </colgroup>
+            <tbody id="marketRows"></tbody>
+          </table>
+          <div class="empty" id="empty" style="display:none">Ingen data ännu</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Same lead panel as Sälj -->
+  <div class="scrim" id="scrim"></div>
+  <aside class="panel" id="panel">
+    <div class="p-head">
+      <div class="p-head-actions">
+        <button class="btn-icon" id="editLeadBtn" title="Redigera handlare">✎</button>
+        <button class="btn btn-ghost btn-sm" id="panelAssignBtn" title="Tilldela kollega">Tilldela</button>
+        <button class="btn btn-acc btn-sm" id="createLeadBtn" style="display:none" title="Tilldela säljare">Tilldela</button>
+        <button class="btn-icon" id="mailBtn" title="Skicka kontaktmail">✉</button>
+        <input type="date" id="followup" class="dateinput dateinput-sm" />
+        <button class="btn btn-prim btn-sm" id="saveFollowup">Spara</button>
+        <button class="p-close" id="pClose">✕</button>
+      </div>
+      <div class="p-score">
+        <div class="ring" id="pRing">0</div>
+        <div>
+          <div class="p-name" id="pName">—</div>
+          <div class="p-meta num" id="pMeta">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="p-body" id="pBody"></div>
+  </aside>
+
+  <!-- Redigera handlare -->
+  <div class="modal-scrim" id="customerModalScrim"></div>
+  <div class="modal customer-modal" id="customerModal">
+    <div class="modal-head">
+      <h2 id="customerModalTitle">Ny kund</h2>
+      <button class="p-close" id="customerModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="newCustomerName">Namn</label>
+        <input id="newCustomerName" type="text" placeholder="Företagsnamn" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="newCustomerOrgNr">Organisationsnummer</label>
+        <input id="newCustomerOrgNr" type="text" placeholder="556123-4567" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="newCustomerAddress">Adress</label>
+        <input id="newCustomerAddress" type="text" placeholder="Storgatan 1" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="newCustomerPostal">Postadress</label>
+        <input id="newCustomerPostal" type="text" placeholder="412 34 Göteborg" autocomplete="off" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="newCustomerRevenue">Omsättning (MSEK)</label>
+          <input id="newCustomerRevenue" type="number" min="0" step="0.1" placeholder="t.ex. 45" />
+        </div>
+        <div class="field">
+          <label for="newCustomerResult">Resultat (MSEK)</label>
+          <input id="newCustomerResult" type="number" step="0.1" placeholder="t.ex. 2.1" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="newCustomerEquity">Eget kapital (MSEK)</label>
+          <input id="newCustomerEquity" type="number" min="0" step="0.1" placeholder="t.ex. 8" />
+        </div>
+        <div class="field">
+          <label for="newCustomerSolidity">Soliditet (%)</label>
+          <input id="newCustomerSolidity" type="number" min="0" max="100" step="0.1" placeholder="t.ex. 35" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="newCustomerEmployees">Antal anställda</label>
+        <input id="newCustomerEmployees" type="number" min="0" step="1" placeholder="t.ex. 12" />
+      </div>
+      <div class="auth-err" id="newCustomerErr"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="customerModalCancel">Avbryt</button>
+      <button class="btn btn-prim" id="customerModalSave">Skapa handlare</button>
+    </div>
+  </div>
+
+  <!-- Tilldela kollega -->
+  <div class="modal-scrim" id="assignModalScrim"></div>
+  <div class="modal assign-modal" id="assignModal">
+    <div class="modal-head">
+      <h2 id="assignModalTitle">Tilldela säljare</h2>
+      <button class="p-close" id="assignModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="assign-user-list" id="assignUserList"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="assignModalCancel">Avbryt</button>
+    </div>
+  </div>
+
+  <!-- Scoring settings -->
+  <div class="modal-scrim" id="modalScrim"></div>
+  <div class="modal" id="settingsModal">
+    <div class="modal-head">
+      <h2>Scoring-inställningar</h2>
+      <button class="p-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0 0 14px;font-size:13px;color:var(--muted);line-height:1.45">
+        Vikta datapunkter från Bilstatistik. Totalvikten normaliseras till 0–100. Sparas till din profil.
+      </p>
+      <div class="total-bar">
+        <span class="lbl">Total vikt (normaliseras till 0–100)</span>
+        <span class="val" id="totalWeight">0p</span>
+      </div>
+      <div id="scoringParams"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="modalCancel">Avbryt</button>
+      <button class="btn btn-prim" id="modalSave">Spara inställningar</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="market-loading" id="marketLoading" aria-hidden="true" hidden>
+    <div class="market-loading-bg" aria-hidden="true"></div>
+    <div class="market-loading-card">
+      <div class="market-loading-road" aria-hidden="true">
+        <div class="market-loading-car">
+          <svg width="56" height="28" viewBox="0 0 56 28" fill="none" aria-hidden="true">
+            <path d="M8 18h40l-3.5-8.5A4 4 0 0 0 40.8 7H16.5a4 4 0 0 0-3.7 2.4L8 18z" fill="currentColor" opacity=".95"/>
+            <path d="M8 18h40v3H8z" fill="currentColor"/>
+            <circle cx="16" cy="21.5" r="3.5" fill="#0d1424" stroke="currentColor" stroke-width="2"/>
+            <circle cx="40" cy="21.5" r="3.5" fill="#0d1424" stroke="currentColor" stroke-width="2"/>
+            <path d="M18 10.5h8.5l1.2 4.5H17.2l.8-4.5zM28.5 10.5H38l1.8 4.5H27.5l1-4.5z" fill="#0d1424" opacity=".35"/>
+          </svg>
+        </div>
+        <div class="market-loading-lane"></div>
+      </div>
+      <p class="market-loading-title" id="marketLoadingTitle">Hämtar marknadsdata…</p>
+      <p class="market-loading-sub">Det här tar en stund — Bilstatistik jobbar i bakgrunden.</p>
+      <div class="market-loading-bar" aria-hidden="true"><span></span></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/marknadsanalys.js"></script>
+</body>
+</html>
