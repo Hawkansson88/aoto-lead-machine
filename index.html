@@ -59,8 +59,8 @@
       <div class="status-list" id="statusList"></div>
 
       <div data-salj-only>
-        <p class="section-label">DNB</p>
-        <div class="status-list" id="dnbFilterList"></div>
+        <p class="section-label">Taggar</p>
+        <div class="status-list" id="tagFilterList"></div>
       </div>
 
       <div data-kredit-only style="display:none">
@@ -89,7 +89,7 @@
         </div>
         <div class="search">
           <span class="ic">⌕</span>
-          <input id="search" placeholder="Sök företag, adress, org.nr…" autocomplete="off" />
+          <input id="search" placeholder="Sök företag, adress, org.nr, tagg…" autocomplete="off" />
         </div>
         <button type="button" class="btn btn-ghost topbar-btn" id="mapBtn">🗺 Karta</button>
         <button type="button" class="btn btn-acc topbar-btn" id="newCustomerBtn">+ Ny kund</button>
@@ -100,7 +100,7 @@
         <span class="bulk-count" id="bulkCount">0 valda</span>
         <button class="btn btn-ghost btn-sm" id="bulkAssign">Tilldela säljare</button>
         <button class="btn btn-ghost btn-sm" id="bulkNotInterested">Markera som Ej intressant</button>
-        <button class="btn btn-ghost btn-sm bulk-dnb" id="bulkDnb">Flagga som DNB-kund</button>
+        <button class="btn btn-ghost btn-sm bulk-tag" id="bulkTag">Tagga…</button>
         <button class="btn btn-ghost btn-sm bulk-danger" id="bulkUnassign">Ta bort tilldelning</button>
         <button class="btn btn-ghost btn-sm bulk-clear" id="bulkClear">Avmarkera</button>
       </div>
@@ -221,6 +221,28 @@
       Inga bolag med koordinater hittades. Lägg till adress och postadress på handlaren.
     </div>
     <div id="mapContainer"></div>
+  </div>
+
+  <!-- Bulk-tagga -->
+  <div class="modal-scrim" id="tagModalScrim"></div>
+  <div class="modal tag-modal" id="tagModal">
+    <div class="modal-head">
+      <h2 id="tagModalTitle">Tagga valda</h2>
+      <button class="p-close" id="tagModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="tag-modal-sub" id="tagModalSub">Lägg till eller ta bort taggar för valda leads.</p>
+      <div class="field">
+        <label for="bulkTagInput">Lägg till tagg</label>
+        <input id="bulkTagInput" type="text" list="tagSuggestions" placeholder="t.ex. DNB" autocomplete="off" />
+        <datalist id="tagSuggestions"></datalist>
+      </div>
+      <div class="tag-modal-shared" id="tagModalShared"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="tagModalCancel">Avbryt</button>
+      <button class="btn btn-prim" id="tagModalAdd">Lägg till</button>
+    </div>
   </div>
 
   <div class="toast" id="toast"></div>

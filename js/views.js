@@ -22,7 +22,7 @@ export function applyView(view, { resetFilters = true } = {}) {
   if (resetFilters) {
     filterState.status = "alla";
     filterState.creditFlag = "alla";
-    filterState.dnb = "alla";
+    filterState.tag = "alla";
     filterState.q = "";
     const search = $("#search");
     if (search) search.value = "";

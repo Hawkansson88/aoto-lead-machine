@@ -9,6 +9,7 @@ import { bindProfileModal } from "./profile-modal.js";
 import { bindViewNav } from "./views.js";
 import { bindSelectionEvents } from "./selection.js";
 import { bindAssignModal } from "./assign.js";
+import { bindFloatingTips } from "./floating-tip.js";
 
 async function boot() {
   setSupabaseClient(window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON));
@@ -23,6 +24,7 @@ async function boot() {
   bindCustomerModal();
   bindProfileModal();
   bindViewNav();
+  bindFloatingTips();
   await initAuth();
 }
 

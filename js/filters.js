@@ -41,14 +41,17 @@ export function getVisibleLeads() {
       } else if (lead.status !== statusFilter) {
         return false;
       }
-      const dnbFilter = filterState.dnb || "alla";
-      if (dnbFilter === "dnb" && !lead.is_dnb) return false;
-      if (dnbFilter === "ej_dnb" && lead.is_dnb) return false;
+      const tagFilter = filterState.tag;
+      if (tagFilter && tagFilter !== "alla") {
+        const has = (lead.tags || []).some((t) => String(t.id) === String(tagFilter));
+        if (!has) return false;
+      }
     }
 
     if (filterState.q) {
+      const tagHay = (lead.tags || []).map((t) => t.name).join(" ");
       const haystack =
-        `${lead.company_name} ${lead.city} ${lead.address || ""} ${lead.postal_address || ""} ${lead.org_nr || ""}`.toLowerCase();
+        `${lead.company_name} ${lead.city} ${lead.address || ""} ${lead.postal_address || ""} ${lead.org_nr || ""} ${tagHay}`.toLowerCase();
       if (!haystack.includes(filterState.q.toLowerCase())) return false;
     }
     return true;

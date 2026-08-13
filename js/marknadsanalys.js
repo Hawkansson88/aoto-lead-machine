@@ -23,6 +23,7 @@ import { bindCustomerModal, closeCustomerModal } from "./customer-modal.js";
 import { bindAssignModal, closeAssignModal } from "./assign.js";
 import { bindSettingsModal, closeSettings } from "./settings-modal.js";
 import { scoreMarketBreakdown } from "./scoring.js";
+import { bindFloatingTips } from "./floating-tip.js";
 import { assigneeBadgeHtml } from "./assignees.js";
 import { $, toast, formatOrgNr, normalizeOrgNr, escapeHtml, escapeAttr, scoreColor } from "./utils.js";
 
@@ -848,6 +849,7 @@ function bindUi() {
 
   bindSort();
   bindFilters();
+  bindFloatingTips();
 }
 
 async function boot() {

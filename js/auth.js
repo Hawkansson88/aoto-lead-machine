@@ -106,7 +106,7 @@ export async function saveFilters() {
   if (!currentUserId) return;
 
   const ok = await saveUserSettings(currentUserId, {
-    dnb: filterState.dnb,
+    tag: filterState.tag,
   });
 
   if (ok) {

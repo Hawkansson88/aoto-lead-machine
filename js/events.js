@@ -3,7 +3,7 @@ import { patchLead } from "./data.js";
 import {
   renderAll,
   renderStatusFilter,
-  renderDnbFilter,
+  renderTagFilter,
   renderCreditFlagFilter,
   renderTable,
 } from "./render.js";
@@ -12,6 +12,7 @@ import { openMap, closeMap, handleMapPopupClick } from "./map.js";
 import { closeCustomerModal } from "./customer-modal.js";
 import { closeProfileModal } from "./profile-modal.js";
 import { closeAssignModal } from "./assign.js";
+import { closeBulkTagModal } from "./selection.js";
 import { $, toast } from "./utils.js";
 
 export function bindEvents() {
@@ -23,13 +24,13 @@ export function bindEvents() {
     renderTable();
   };
 
-  $("#dnbFilterList").onclick = (e) => {
-    const item = e.target.closest(".status-item");
+  $("#tagFilterList")?.addEventListener("click", (e) => {
+    const item = e.target.closest(".status-item[data-tag]");
     if (!item) return;
-    filterState.dnb = item.dataset.dnb;
-    renderDnbFilter();
+    filterState.tag = item.dataset.tag === "alla" ? "alla" : item.dataset.tag;
+    renderTagFilter();
     renderTable();
-  };
+  });
 
   const creditFlagList = $("#creditFlagList");
   if (creditFlagList) {
@@ -70,6 +71,7 @@ export function bindEvents() {
       closeCustomerModal();
       closeProfileModal();
       closeAssignModal();
+      closeBulkTagModal();
       closeMap();
     }
   });

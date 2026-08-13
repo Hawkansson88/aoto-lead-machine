@@ -6,9 +6,12 @@ import {
   setLeads,
   setScoringConfig,
   setProfiles,
+  setTags,
+  TAGS,
   currentUserId,
   setCurrentUserProfile,
 } from "./store.js";
+import { normalizeTagName, cleanTagName } from "./tags.js";
 import { $, msekToSek, normalizeOrgNr, parseCityFromPostalAddress, parseEmployees } from "./utils.js";
 
 const SHOW_ALL_KEY = "aoto_show_all_leads";
@@ -96,8 +99,8 @@ export async function loadUserSettings(userId) {
 
   const filters = data.filters || {};
 
-  // DNB/score-filter sparas inte längre i UI — nollställ ev. gamla sparade värden
-  filterState.dnb = "alla";
+  // Legacy DNB/score-filter — nollställ ev. gamla sparade värden
+  filterState.tag = "alla";
   filterState.minScore = 0;
   filterState.revMin = null;
   filterState.revMax = null;
@@ -128,25 +131,240 @@ export async function saveUserSettings(userId, patch) {
 
 // --- Leads ---
 
+function tagsByLeadId(rows) {
+  /** @type {Map<string, Array<{id:number,name:string}>>} */
+  const map = new Map();
+  for (const row of rows || []) {
+    const tag = row.tags || row.tag;
+    if (!tag?.id) continue;
+    const key = String(row.lead_id);
+    const list = map.get(key) || [];
+    list.push({ id: tag.id, name: tag.name });
+    map.set(key, list);
+  }
+  for (const list of map.values()) {
+    list.sort((a, b) => a.name.localeCompare(b.name, "sv"));
+  }
+  return map;
+}
+
+export async function loadTagsCatalog() {
+  const { data, error } = await sb.from("tags").select("id, name, name_norm").order("name");
+  if (error) {
+    console.warn("Kunde inte läsa tags — kör supabase/tags.sql i Supabase", error);
+    setTags([]);
+    return [];
+  }
+  setTags(data || []);
+  return TAGS;
+}
+
 export async function loadLeads() {
-  const [leadsRes, dnbRes] = await Promise.all([
+  const [leadsRes, leadTagsRes] = await Promise.all([
     sb.from("leads").select("*"),
-    sb.from("dnb_customers").select("lead_id"),
+    sb.from("lead_tags").select("lead_id, tags(id, name)"),
   ]);
 
   if (leadsRes.error) throw leadsRes.error;
-  if (dnbRes.error) {
-    console.warn("Kunde inte läsa dnb_customers — kör supabase/dnb_customers.sql i Supabase", dnbRes.error);
+  if (leadTagsRes.error) {
+    console.warn("Kunde inte läsa lead_tags — kör supabase/tags.sql i Supabase", leadTagsRes.error);
   }
 
-  const dnbIds = new Set((dnbRes.data || []).map((row) => row.lead_id));
+  await loadTagsCatalog();
+
+  const byLead = tagsByLeadId(leadTagsRes.data);
   setLeads(
-    leadsRes.data.map((row) => ({
+    (leadsRes.data || []).map((row) => ({
       ...row,
-      is_dnb: dnbIds.has(row.id),
+      tags: byLead.get(String(row.id)) || [],
       score: scoreBreakdown(row).total,
     }))
   );
+}
+
+/** Ensure a tag row exists; returns { id, name, name_norm }. */
+export async function ensureTag(rawName, userId = currentUserId) {
+  const name = cleanTagName(rawName);
+  const name_norm = normalizeTagName(name);
+  if (!name_norm) return { error: "Tomt taggnamn" };
+
+  const existing = TAGS.find((t) => t.name_norm === name_norm);
+  if (existing) return { tag: existing };
+
+  const { data, error } = await sb
+    .from("tags")
+    .insert({
+      name,
+      name_norm,
+      created_by: userId || null,
+      created_at: new Date().toISOString(),
+    })
+    .select("id, name, name_norm")
+    .single();
+
+  if (error) {
+    // Race: someone else created it
+    if (error.code === "23505") {
+      const { data: again } = await sb
+        .from("tags")
+        .select("id, name, name_norm")
+        .eq("name_norm", name_norm)
+        .maybeSingle();
+      if (again) {
+        if (!TAGS.some((t) => t.id === again.id)) setTags([...TAGS, again].sort((a, b) => a.name.localeCompare(b.name, "sv")));
+        return { tag: again };
+      }
+    }
+    console.error(error);
+    return { error: error.message || "Kunde inte skapa tagg" };
+  }
+
+  setTags([...TAGS, data].sort((a, b) => a.name.localeCompare(b.name, "sv")));
+  return { tag: data };
+}
+
+function attachTagLocally(leadIds, tag) {
+  const idSet = new Set(leadIds.map(String));
+  setLeads(
+    LEADS.map((lead) => {
+      if (!idSet.has(String(lead.id))) return lead;
+      if ((lead.tags || []).some((t) => String(t.id) === String(tag.id))) return lead;
+      const tags = [...(lead.tags || []), { id: tag.id, name: tag.name }].sort((a, b) =>
+        a.name.localeCompare(b.name, "sv")
+      );
+      return { ...lead, tags };
+    })
+  );
+}
+
+function detachTagLocally(leadIds, tagId) {
+  const idSet = new Set(leadIds.map(String));
+  setLeads(
+    LEADS.map((lead) => {
+      if (!idSet.has(String(lead.id))) return lead;
+      return {
+        ...lead,
+        tags: (lead.tags || []).filter((t) => String(t.id) !== String(tagId)),
+      };
+    })
+  );
+}
+
+/** Add tag to one or many leads (by name). */
+export async function addTagToLeads(leadIds, rawName, userId = currentUserId) {
+  if (!leadIds?.length) return { ok: true };
+  const ensured = await ensureTag(rawName, userId);
+  if (ensured.error || !ensured.tag) return { ok: false, error: ensured.error };
+
+  const tag = ensured.tag;
+  const rows = leadIds.map((lead_id) => ({
+    lead_id,
+    tag_id: tag.id,
+    created_by: userId || null,
+    created_at: new Date().toISOString(),
+  }));
+  const { error } = await sb.from("lead_tags").upsert(rows, { onConflict: "lead_id,tag_id" });
+  if (error) {
+    console.error(error);
+    return { ok: false, error: error.message };
+  }
+  attachTagLocally(leadIds, tag);
+  return { ok: true, tag };
+}
+
+export async function removeTagFromLeads(leadIds, tagId) {
+  if (!leadIds?.length || tagId == null) return { ok: true };
+  const { error } = await sb
+    .from("lead_tags")
+    .delete()
+    .in("lead_id", leadIds)
+    .eq("tag_id", tagId);
+  if (error) {
+    console.error(error);
+    return { ok: false, error: error.message };
+  }
+  detachTagLocally(leadIds, tagId);
+  return { ok: true };
+}
+
+/**
+ * Rename a tag globally. If target name exists, merge into that tag.
+ */
+export async function renameTag(tagId, rawNewName) {
+  const name = cleanTagName(rawNewName);
+  const name_norm = normalizeTagName(name);
+  if (!name_norm) return { ok: false, error: "Tomt taggnamn" };
+
+  const current = TAGS.find((t) => String(t.id) === String(tagId));
+  if (!current) return { ok: false, error: "Taggen hittades inte" };
+  if (current.name_norm === name_norm) {
+    if (current.name !== name) {
+      const { error } = await sb.from("tags").update({ name }).eq("id", tagId);
+      if (error) return { ok: false, error: error.message };
+      setTags(TAGS.map((t) => (String(t.id) === String(tagId) ? { ...t, name } : t)));
+      setLeads(
+        LEADS.map((lead) => ({
+          ...lead,
+          tags: (lead.tags || []).map((t) =>
+            String(t.id) === String(tagId) ? { ...t, name } : t
+          ),
+        }))
+      );
+    }
+    return { ok: true, tag: { ...current, name } };
+  }
+
+  const target = TAGS.find((t) => t.name_norm === name_norm && String(t.id) !== String(tagId));
+  if (target) {
+    // Merge: move all lead_tags from current → target, delete current
+    const { data: links } = await sb.from("lead_tags").select("lead_id").eq("tag_id", tagId);
+    const leadIds = (links || []).map((r) => r.lead_id);
+    if (leadIds.length) {
+      const rows = leadIds.map((lead_id) => ({
+        lead_id,
+        tag_id: target.id,
+        created_at: new Date().toISOString(),
+      }));
+      await sb.from("lead_tags").upsert(rows, { onConflict: "lead_id,tag_id" });
+    }
+    await sb.from("lead_tags").delete().eq("tag_id", tagId);
+    const { error: delErr } = await sb.from("tags").delete().eq("id", tagId);
+    if (delErr) return { ok: false, error: delErr.message };
+
+    setTags(TAGS.filter((t) => String(t.id) !== String(tagId)));
+    setLeads(
+      LEADS.map((lead) => {
+        const had = (lead.tags || []).some((t) => String(t.id) === String(tagId));
+        let tags = (lead.tags || []).filter((t) => String(t.id) !== String(tagId));
+        if (had && !tags.some((t) => String(t.id) === String(target.id))) {
+          tags = [...tags, { id: target.id, name: target.name }].sort((a, b) =>
+            a.name.localeCompare(b.name, "sv")
+          );
+        }
+        return { ...lead, tags };
+      })
+    );
+    return { ok: true, tag: target, merged: true };
+  }
+
+  const { data, error } = await sb
+    .from("tags")
+    .update({ name, name_norm })
+    .eq("id", tagId)
+    .select("id, name, name_norm")
+    .single();
+  if (error) return { ok: false, error: error.message };
+
+  setTags(TAGS.map((t) => (String(t.id) === String(tagId) ? data : t)));
+  setLeads(
+    LEADS.map((lead) => ({
+      ...lead,
+      tags: (lead.tags || []).map((t) =>
+        String(t.id) === String(tagId) ? { id: data.id, name: data.name } : t
+      ),
+    }))
+  );
+  return { ok: true, tag: data };
 }
 
 /** Note/contact counts per lead_id for Marknadsanalys historik-badges. */
@@ -223,25 +441,6 @@ export async function bulkUpdateStatus(ids, status) {
   }
 
   return true;
-}
-
-export async function bulkFlagDnb(ids, userId) {
-  if (!ids.length) return true;
-  const rows = ids.map((lead_id) => ({
-    lead_id,
-    created_by: userId,
-    created_at: new Date().toISOString(),
-  }));
-  const { error } = await sb.from("dnb_customers").upsert(rows, { onConflict: "lead_id" });
-  if (error) console.error(error);
-  return !error;
-}
-
-export async function bulkUnflagDnb(ids) {
-  if (!ids.length) return true;
-  const { error } = await sb.from("dnb_customers").delete().in("lead_id", ids);
-  if (error) console.error(error);
-  return !error;
 }
 
 export async function assignLeads(ids, assignedTo) {
@@ -338,13 +537,19 @@ function parseLeadFormInput(fields) {
 }
 
 function upsertLeadInStore(data, isNew) {
-  const lead = { ...data, is_dnb: data.is_dnb ?? false, score: scoreBreakdown(data).total };
+  const lead = {
+    ...data,
+    tags: data.tags || [],
+    score: scoreBreakdown(data).total,
+  };
   if (isNew) {
     setLeads([...LEADS, lead]);
   } else {
     setLeads(
       LEADS.map((l) =>
-        l.id === lead.id ? { ...lead, is_dnb: l.is_dnb, score: scoreBreakdown(data).total } : l
+        l.id === lead.id
+          ? { ...lead, tags: data.tags ?? l.tags ?? [], score: scoreBreakdown(data).total }
+          : l
       )
     );
   }
@@ -517,7 +722,7 @@ export async function updateLead(id, fields) {
     return { error: "Kunde inte uppdatera handlare." };
   }
 
-  const lead = upsertLeadInStore({ ...data, is_dnb: existing.is_dnb }, false);
+  const lead = upsertLeadInStore({ ...data, tags: existing.tags || [] }, false);
   return { data: lead, geocoded, addressChanged: addressChanged || (!parsed.addressTrim && !parsed.postalTrim) };
 }
 

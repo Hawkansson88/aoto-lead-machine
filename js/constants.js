@@ -35,13 +35,6 @@ export function statusMeta(key) {
 /** Statuses that belong on the credit page. */
 export const CREDIT_STATUSES = ["skickad_kredit", "kund_aktiv"];
 
-/** DNB customer filter options in sidebar. */
-export const DNB_FILTERS = {
-  alla: { label: "Alla", col: "#7f8eaa" },
-  dnb: { label: "DNB-kunder", col: "#2b4c7e" },
-  ej_dnb: { label: "Ej DNB", col: "#9aa6b8" },
-};
-
 /** Credit checkbox / flag filters. */
 export const CREDIT_FLAG_FILTERS = {
   alla: { label: "Alla flaggor", col: "#7f8eaa" },

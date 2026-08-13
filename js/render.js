@@ -1,7 +1,8 @@
-import { STATUS, DNB_FILTERS, CREDIT_STATUSES, CREDIT_FLAG_FILTERS, statusMeta } from "./constants.js";
+import { STATUS, CREDIT_STATUSES, CREDIT_FLAG_FILTERS, statusMeta } from "./constants.js";
 import { getVisibleLeads, getCreditPool, getScopedLeads } from "./filters.js";
 import {
   LEADS,
+  TAGS,
   filterState,
   selectedLead,
   selectedIds,
@@ -14,8 +15,10 @@ import {
   fmtMSEK,
   followupInfo,
   formatOrgNr,
+  escapeHtml,
 } from "./utils.js";
 import { assigneeBadgeHtml } from "./assignees.js";
+import { tagsBadgeHtml } from "./tags.js";
 
 let onRowClick = () => {};
 
@@ -35,17 +38,6 @@ export function renderBulkBar() {
   const count = selectedIds.size;
   bar.classList.toggle("show", count > 0);
   $("#bulkCount").textContent = `${count} valda`;
-
-  const dnbBtn = $("#bulkDnb");
-  if (!dnbBtn || count === 0) return;
-
-  const selected = [...selectedIds]
-    .map((id) => LEADS.find((l) => l.id === id))
-    .filter(Boolean);
-  const allDnb = selected.length > 0 && selected.every((l) => l.is_dnb);
-
-  dnbBtn.textContent = allDnb ? "Ta bort DNB-flagga" : "Flagga som DNB-kund";
-  dnbBtn.classList.toggle("bulk-dnb-remove", allDnb);
 }
 
 export function renderOwnerToggle() {
@@ -135,8 +127,8 @@ export function renderStatusFilter() {
       .join("");
 }
 
-export function renderDnbFilter() {
-  const el = $("#dnbFilterList");
+export function renderTagFilter() {
+  const el = $("#tagFilterList");
   if (!el) return;
 
   if (currentView === "kredit") {
@@ -145,21 +137,25 @@ export function renderDnbFilter() {
   }
 
   const scoped = getScopedLeads();
-  const counts = {
-    alla: scoped.length,
-    dnb: scoped.filter((l) => l.is_dnb).length,
-    ej_dnb: scoped.filter((l) => !l.is_dnb).length,
-  };
+  const counts = { alla: scoped.length };
+  for (const tag of TAGS) {
+    counts[tag.id] = scoped.filter((l) =>
+      (l.tags || []).some((t) => String(t.id) === String(tag.id))
+    ).length;
+  }
 
-  el.innerHTML = Object.entries(DNB_FILTERS)
-    .map(
-      ([key, val]) =>
-        `<div class="status-item ${filterState.dnb === key ? "active" : ""}" data-dnb="${key}">
-          <span class="dot" style="background:${val.col}"></span>${val.label}
-          <span class="cnt">${counts[key] || 0}</span>
-        </div>`
-    )
-    .join("");
+  const usedTags = TAGS.filter((t) => (counts[t.id] || 0) > 0);
+  const item = (key, label, col) =>
+    `<div class="status-item ${String(filterState.tag) === String(key) ? "active" : ""}" data-tag="${key}">
+      <span class="dot" style="background:${col}"></span>${escapeHtml(label)}
+      <span class="cnt">${counts[key] || 0}</span>
+    </div>`;
+
+  el.innerHTML =
+    item("alla", "Alla", "#7f8eaa") +
+    usedTags
+      .map((t) => item(t.id, t.name, "#2b4c7e"))
+      .join("");
 }
 
 export function renderCreditFlagFilter() {
@@ -224,12 +220,12 @@ export function renderTable() {
     tbody.innerHTML = rows
       .map((lead) => {
         const st = statusMeta(lead.status);
-        const dnbBadge = lead.is_dnb ? `<span class="badge-dnb">DNB</span>` : "";
+        const tagBadges = tagsBadgeHtml(lead.tags);
         const owner = assigneeBadgeHtml(lead.assigned_to);
 
         return `<tr data-id="${lead.id}" class="${selectedLead && selectedLead.id === lead.id ? "sel" : ""}">
           <td>
-            <div class="co-name">${lead.company_name}${dnbBadge}${owner}</div>
+            <div class="co-name">${escapeHtml(lead.company_name)}${tagBadges}${owner}</div>
             <div class="co-org num">${formatOrgNr(lead.org_nr) || "–"}</div>
           </td>
           <td>${lead.city || "–"}</td>
@@ -246,7 +242,7 @@ export function renderTable() {
         const st = statusMeta(lead.status);
         const fu = followupInfo(lead.follow_up_date);
         const checked = selectedIds.has(lead.id) ? "checked" : "";
-        const dnbBadge = lead.is_dnb ? `<span class="badge-dnb">DNB</span>` : "";
+        const tagBadges = tagsBadgeHtml(lead.tags);
         const owner = assigneeBadgeHtml(lead.assigned_to);
 
         return `<tr data-id="${lead.id}" class="${selectedLead && selectedLead.id === lead.id ? "sel" : ""}${checked ? " row-checked" : ""}">
@@ -254,7 +250,7 @@ export function renderTable() {
             <input type="checkbox" class="row-check" data-id="${lead.id}" ${checked} aria-label="Välj ${lead.company_name}">
           </td>
           <td>
-            <div class="co-name">${lead.company_name}${dnbBadge}${owner}</div>
+            <div class="co-name">${escapeHtml(lead.company_name)}${tagBadges}${owner}</div>
             <div class="co-org num">${formatOrgNr(lead.org_nr) || "–"}</div>
           </td>
           <td>${lead.city || "–"}</td>
@@ -344,7 +340,7 @@ export function renderAll() {
   }
   renderStats();
   renderStatusFilter();
-  renderDnbFilter();
+  renderTagFilter();
   renderCreditFlagFilter();
   renderBulkBar();
   renderTable();

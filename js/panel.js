@@ -2,6 +2,7 @@ import { STATUS } from "./constants.js";
 import { scoreBreakdown } from "./scoring.js";
 import {
   LEADS,
+  TAGS,
   selectedLead,
   setSelectedLead,
   sb,
@@ -16,10 +17,14 @@ import {
   loadDealerMarketStats,
   fetchBilstatistikInventory,
   bumpLeadNoteCount,
+  addTagToLeads,
+  removeTagFromLeads,
+  renameTag,
 } from "./data.js";
 import { renderAll, renderTable } from "./render.js";
 import { assigneeBadgeHtml, getProfile, profileDisplayName } from "./assignees.js";
 import { openAssignModal, openMarketAssignModal } from "./assign.js";
+import { tagChipsHtml, tagsBadgeHtml } from "./tags.js";
 import {
   $,
   toast,
@@ -37,6 +42,101 @@ import {
 let prospectStats = null;
 /** Existing CRM lead without assignee (or takeover candidate) when showing prospect UI. */
 let dormantLead = null;
+
+function syncSelectedLeadTagsFromStore() {
+  if (!selectedLead?.id) return;
+  const lead = LEADS.find((l) => String(l.id) === String(selectedLead.id));
+  if (!lead) return;
+  selectedLead.tags = lead.tags || [];
+  const chipsHost = document.querySelector(".tags-section #leadTagChips") || $("#leadTagChips");
+  if (chipsHost) {
+    chipsHost.outerHTML = tagChipsHtml(selectedLead.tags, { editable: true });
+  }
+  const ownerBadge = assigneeBadgeHtml(selectedLead.assigned_to, { emptyLabel: true });
+  if ($("#pName")) {
+    $("#pName").innerHTML =
+      `${escapeHtml(selectedLead.company_name)}${tagsBadgeHtml(selectedLead.tags)}${ownerBadge}`;
+  }
+}
+
+function fillPanelTagSuggestions() {
+  const list = $("#panelTagSuggestions");
+  if (!list) return;
+  list.innerHTML = TAGS.map((t) => `<option value="${escapeAttr(t.name)}"></option>`).join("");
+}
+
+function bindLeadTagUi() {
+  fillPanelTagSuggestions();
+
+  const addBtn = $("#addTagBtn");
+  const input = $("#newTagInput");
+  if (addBtn && input) {
+    const add = async () => {
+      const name = input.value.trim();
+      if (!name || !selectedLead?.id) return;
+      addBtn.disabled = true;
+      try {
+        const result = await addTagToLeads([selectedLead.id], name);
+        if (!result.ok) {
+          toast(result.error || "Kunde inte lägga till tagg");
+          return;
+        }
+        input.value = "";
+        syncSelectedLeadTagsFromStore();
+        fillPanelTagSuggestions();
+        renderAll();
+      } finally {
+        addBtn.disabled = false;
+      }
+    };
+    addBtn.onclick = add;
+    input.onkeydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        add();
+      }
+    };
+  }
+
+  const section = document.querySelector(".tags-section");
+  if (!section || section.dataset.bound === "1") return;
+  section.dataset.bound = "1";
+
+  section.addEventListener("click", async (e) => {
+    const removeBtn = e.target.closest('[data-act="remove-tag"]');
+    if (!removeBtn) return;
+    e.preventDefault();
+    if (!selectedLead?.id) return;
+    const tagId = removeBtn.dataset.tagId;
+    const result = await removeTagFromLeads([selectedLead.id], tagId);
+    if (!result.ok) {
+      toast(result.error || "Kunde inte ta bort tagg");
+      return;
+    }
+    syncSelectedLeadTagsFromStore();
+    renderAll();
+  });
+
+  section.addEventListener("dblclick", async (e) => {
+    const label = e.target.closest('[data-act="rename-tag"]');
+    if (!label) return;
+    const chip = label.closest(".tag-chip");
+    if (!chip) return;
+    const tagId = chip.dataset.tagId;
+    const current = chip.dataset.tagName || label.textContent || "";
+    const next = window.prompt("Byt namn på taggen (påverkar alla leads):", current);
+    if (next == null) return;
+    const result = await renameTag(tagId, next);
+    if (!result.ok) {
+      toast(result.error || "Kunde inte byta namn");
+      return;
+    }
+    if (result.merged) toast(`Taggen slogs ihop med “${result.tag.name}”`);
+    syncSelectedLeadTagsFromStore();
+    fillPanelTagSuggestions();
+    renderAll();
+  });
+}
 
 function tkrToSek(tkr) {
   if (tkr == null || tkr === "") return null;
@@ -62,7 +162,7 @@ function draftLeadFromMarket(stats) {
     employees: stats?.employees ?? null,
     status: "ny",
     score: null,
-    is_dnb: false,
+    tags: [],
     assigned_to: null,
     follow_up_date: null,
     lat: null,
@@ -426,7 +526,7 @@ async function renderDealerPanel({ isProspect }) {
       : "Otilldelad";
 
   $("#pName").innerHTML =
-    `${escapeHtml(selectedLead.company_name)}${selectedLead.is_dnb ? '<span class="badge-dnb">DNB</span>' : ""}${ownerBadge}`;
+    `${escapeHtml(selectedLead.company_name)}${tagsBadgeHtml(selectedLead.tags)}${ownerBadge}`;
   $("#pMeta").textContent = `${formatOrgNr(selectedLead.org_nr) || "–"} · ${selectedLead.city || "–"} · ${ownerName}`;
   $("#followup").value = selectedLead.follow_up_date || "";
 
@@ -562,6 +662,26 @@ async function renderDealerPanel({ isProspect }) {
       </div>
     </div>`;
 
+  const tagsHtml = isProspect && !dormantLead
+    ? `<div class="p-sec">
+        <h4>Taggar</h4>
+        <div class="notes-empty">Tilldela säljare för att lägga till taggar.</div>
+      </div>`
+    : `<div class="p-sec tags-section">
+        <h4>Taggar</h4>
+        ${tagChipsHtml(selectedLead.tags || [], { editable: !(isProspect && dormantLead) })}
+        ${
+          isProspect && dormantLead
+            ? `<div class="notes-empty" style="margin-top:8px">Tilldela dig för att ändra taggar.</div>`
+            : `<div class="tag-add-row">
+          <input type="text" id="newTagInput" list="panelTagSuggestions" class="dateinput" placeholder="Lägg till tagg…" autocomplete="off" />
+          <datalist id="panelTagSuggestions"></datalist>
+          <button type="button" class="btn btn-prim btn-sm" id="addTagBtn">Lägg till</button>
+        </div>
+        <p class="tag-hint muted">Dubbelklicka på en tagg för att byta namn (påverkar alla leads).</p>`
+        }
+      </div>`;
+
   const notesHtml = isProspect && !dormantLead
     ? `<div class="p-sec notes-section">
         <h4>Anteckningar</h4>
@@ -609,22 +729,35 @@ async function renderDealerPanel({ isProspect }) {
           </svg>
           Fordonsdata
         </h4>
-        <button type="button" class="btn-link" id="fetchBilstatistikBtn">Hämta bilstatistik</button>
+        <button type="button" class="btn-link has-tip" id="fetchBilstatistikBtn"
+          data-tip="Hämtar varje fordon för denna handlare (fordonsnivå).&#10;&#10;Sålda = retail senaste 12 mån — sale-and-leaseback och övriga icke-sälj ingår inte.&#10;&#10;Beräknar även % lagerfinans och privat/företag.&#10;&#10;Skriver över trubbig bulk-data för lager och sälj på denna handlare.">
+          Hämta bilstatistik
+        </button>
       </div>
       <div class="kpis">
-        <div class="kpi"><div class="v num" id="kpiLager">–</div><div class="l">I lager</div></div>
-        <div class="kpi"><div class="v num" id="kpiSaljLeasing">–</div><div class="l">Antal sålda bilar 12 mån</div></div>
+        <div class="kpi">
+          <div class="v num" id="kpiLager">–</div>
+          <div class="l has-tip" data-tip="Operativt lager på fordonsnivå (brukare = handlare), inkl. lagerfinansierade bilar.">I lager</div>
+        </div>
+        <div class="kpi">
+          <div class="v num" id="kpiSaljLeasing">–</div>
+          <div class="l has-tip" data-tip="Retail-sälj senaste 12 mån.&#10;&#10;Sale-and-leaseback (finans äger, handlare brukar) och andra icke-sälj ingår inte.">Antal sålda bilar 12 mån</div>
+        </div>
         <div class="kpi kpi-tip" id="kpiFinansieratCard" data-tip="">
           <div class="v num v-sm" id="kpiFinansierat">–</div>
-          <div class="l">Finansierat lager</div>
+          <div class="l has-tip" data-tip="Andel av lagret där ägaren inte är handlaren. Hover på siffran för fördelning per finansbolag.">Finansierat lager</div>
         </div>
-        <div class="kpi"><div class="v num v-sm" id="kpiSaljSplit">–</div><div class="l">Privat / Företag</div></div>
+        <div class="kpi">
+          <div class="v num v-sm" id="kpiSaljSplit">–</div>
+          <div class="l has-tip" data-tip="Uppdelning av retail-sälj (privat vs företag). Samma underlag som sålda — S&amp;L ingår inte.">Privat / Företag</div>
+        </div>
       </div>
       <div class="fordonsdata-meta muted" id="fordonsdataMeta"></div>
     </div>
     ${addressHtml}
     ${showCreditFlags ? creditFlagsHtml(selectedLead) : ""}
     ${contactsHtml}
+    ${tagsHtml}
     ${statusHtml}
     ${notesHtml}`;
 
@@ -838,6 +971,7 @@ async function renderDealerPanel({ isProspect }) {
     }
 
     bindNotesListActions();
+    bindLeadTagUi();
   }
 
   $("#panel").classList.add("open");

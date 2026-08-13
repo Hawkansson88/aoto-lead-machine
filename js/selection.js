@@ -1,20 +1,32 @@
 import { getVisibleLeads } from "./filters.js";
-import { bulkUpdateStatus, bulkFlagDnb, bulkUnflagDnb, bulkUnassignLeads } from "./data.js";
+import {
+  bulkUpdateStatus,
+  bulkUnassignLeads,
+  addTagToLeads,
+  removeTagFromLeads,
+} from "./data.js";
 import { renderAll, renderTable, renderBulkBar } from "./render.js";
 import {
   LEADS,
+  TAGS,
   selectedIds,
   selectedLead,
   clearSelection,
-  currentUserId,
 } from "./store.js";
 import { closePanel } from "./panel.js";
-import { $, toast } from "./utils.js";
+import { escapeHtml, escapeAttr, $, toast } from "./utils.js";
 
 function getSelectedLeads() {
   return [...selectedIds]
     .map((id) => LEADS.find((l) => l.id === id))
     .filter(Boolean);
+}
+
+function sharedTags(leads) {
+  if (!leads.length) return [];
+  const maps = leads.map((l) => new Map((l.tags || []).map((t) => [String(t.id), t])));
+  const first = [...maps[0].values()];
+  return first.filter((t) => maps.every((m) => m.has(String(t.id))));
 }
 
 export function handleSelectAllClick(e) {
@@ -56,50 +68,97 @@ export async function bulkMarkNotInterested() {
   toast(`${ids.length} markerade som Ej intressant`);
 }
 
-export async function bulkToggleDnb() {
+function fillTagSuggestions() {
+  const list = $("#tagSuggestions");
+  if (!list) return;
+  list.innerHTML = TAGS.map((t) => `<option value="${escapeAttr(t.name)}"></option>`).join("");
+}
+
+function renderSharedTagsInModal(leads) {
+  const el = $("#tagModalShared");
+  if (!el) return;
+  const shared = sharedTags(leads);
+  if (!shared.length) {
+    el.innerHTML = `<p class="muted" style="margin:12px 0 0;font-size:13px">Inga gemensamma taggar på alla valda.</p>`;
+    return;
+  }
+  el.innerHTML = `
+    <p class="section-label" style="margin:16px 0 8px">Gemensamma taggar (klicka för att ta bort från alla)</p>
+    <div class="tag-chips">
+      ${shared
+        .map(
+          (t) =>
+            `<button type="button" class="tag-chip tag-chip-btn" data-remove-tag="${escapeAttr(String(t.id))}">
+              ${escapeHtml(t.name)} <span aria-hidden="true">×</span>
+            </button>`
+        )
+        .join("")}
+    </div>`;
+}
+
+export function openBulkTagModal() {
   const selected = getSelectedLeads();
   if (!selected.length) return;
 
-  const allDnb = selected.every((l) => l.is_dnb);
+  fillTagSuggestions();
+  const title = $("#tagModalTitle");
+  const sub = $("#tagModalSub");
+  if (title) title.textContent = `Tagga ${selected.length} valda`;
+  if (sub) sub.textContent = "Lägg till en tagg på alla valda, eller ta bort en gemensam tagg.";
+  const input = $("#bulkTagInput");
+  if (input) input.value = "";
+  renderSharedTagsInModal(selected);
 
-  if (allDnb) {
-    const ids = selected.map((l) => l.id);
-    const ok = await bulkUnflagDnb(ids);
-    if (!ok) {
-      toast("Kunde inte ta bort DNB-flagga");
+  $("#tagModal")?.classList.add("open");
+  $("#tagModalScrim")?.classList.add("open");
+  input?.focus();
+}
+
+export function closeBulkTagModal() {
+  $("#tagModal")?.classList.remove("open");
+  $("#tagModalScrim")?.classList.remove("open");
+}
+
+export async function bulkAddTagFromModal() {
+  const ids = [...selectedIds];
+  if (!ids.length) return;
+  const input = $("#bulkTagInput");
+  const name = input?.value?.trim() || "";
+  if (!name) {
+    toast("Skriv ett taggnamn");
+    return;
+  }
+
+  const btn = $("#tagModalAdd");
+  if (btn) btn.disabled = true;
+  try {
+    const result = await addTagToLeads(ids, name);
+    if (!result.ok) {
+      toast(result.error || "Kunde inte lägga till tagg");
       return;
     }
-
-    ids.forEach((id) => {
-      const lead = LEADS.find((l) => l.id === id);
-      if (lead) lead.is_dnb = false;
-    });
-
+    toast(`Taggade ${ids.length} med “${result.tag.name}”`);
     clearSelection();
     renderBulkBar();
     renderAll();
-    toast(`${ids.length} DNB-flaggor borttagna`);
+    closeBulkTagModal();
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+export async function bulkRemoveSharedTag(tagId) {
+  const ids = [...selectedIds];
+  if (!ids.length || tagId == null) return;
+  const result = await removeTagFromLeads(ids, tagId);
+  if (!result.ok) {
+    toast(result.error || "Kunde inte ta bort tagg");
     return;
   }
-
-  const ids = selected.filter((l) => !l.is_dnb).map((l) => l.id);
-  if (!ids.length) return;
-
-  const ok = await bulkFlagDnb(ids, currentUserId);
-  if (!ok) {
-    toast("Kunde inte flagga som DNB-kund");
-    return;
-  }
-
-  ids.forEach((id) => {
-    const lead = LEADS.find((l) => l.id === id);
-    if (lead) lead.is_dnb = true;
-  });
-
-  clearSelection();
-  renderBulkBar();
+  toast(`Tog bort tagg från ${ids.length} leads`);
+  renderSharedTagsInModal(getSelectedLeads());
   renderAll();
-  toast(`${ids.length} flaggade som DNB-kund`);
+  renderBulkBar();
 }
 
 export async function bulkUnassignSelectedLeads() {
@@ -146,11 +205,26 @@ export async function bulkUnassignSelectedLeads() {
 
 export function bindSelectionEvents() {
   $("#bulkNotInterested").onclick = bulkMarkNotInterested;
-  $("#bulkDnb").onclick = bulkToggleDnb;
+  $("#bulkTag")?.addEventListener("click", openBulkTagModal);
   $("#bulkUnassign").onclick = bulkUnassignSelectedLeads;
   $("#bulkClear").onclick = clearBulkSelection;
 
-  // selectAll återskapas när tabellhuvudet byts (sälj/kredit)
+  $("#tagModalClose")?.addEventListener("click", closeBulkTagModal);
+  $("#tagModalCancel")?.addEventListener("click", closeBulkTagModal);
+  $("#tagModalScrim")?.addEventListener("click", closeBulkTagModal);
+  $("#tagModalAdd")?.addEventListener("click", bulkAddTagFromModal);
+  $("#bulkTagInput")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      bulkAddTagFromModal();
+    }
+  });
+  $("#tagModalShared")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-remove-tag]");
+    if (!btn) return;
+    bulkRemoveSharedTag(btn.dataset.removeTag);
+  });
+
   document.querySelector(".table-scroll")?.addEventListener("click", (e) => {
     if (e.target.id === "selectAll") handleSelectAllClick(e);
   });

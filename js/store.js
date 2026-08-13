@@ -54,7 +54,8 @@ export function setCurrentView(view) {
 /** UI filter and sort state */
 export const filterState = {
   status: "alla",
-  dnb: "alla",
+  /** null | "alla" | tag id (number/string) */
+  tag: "alla",
   creditFlag: "alla",
   showActive: false,
   /** false = only leads assigned to current user (default) */
@@ -66,6 +67,13 @@ export const filterState = {
   sortKey: "follow_up_date",
   sortDir: 1,
 };
+
+/** Shared tag catalog { id, name, name_norm } */
+export let TAGS = [];
+
+export function setTags(tags) {
+  TAGS = tags || [];
+}
 
 /** Team profiles for assignee badges / picker */
 export let PROFILES = [];

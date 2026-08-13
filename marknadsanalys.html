@@ -161,7 +161,10 @@
             <span class="ic">⌕</span>
             <input id="search" placeholder="Sök namn, ort eller org.nr…" autocomplete="off" />
           </div>
-          <button type="button" class="btn btn-prim" id="refreshMarketBtn">Uppdatera marknadsdata</button>
+          <button type="button" class="btn btn-prim has-tip tip-below" id="refreshMarketBtn"
+            data-tip="Hämtar aggregerad marknadsdata för alla handlare (lager + säljvolym).&#10;&#10;Detta är trubbigare än fordonsnivå: sale-and-leaseback rensas inte bort bil för bil, och % lagerfinans uppdateras inte.&#10;&#10;För mer exakt sälj och finans: öppna handlaren och klicka Hämta bilstatistik.">
+            Uppdatera marknadsdata
+          </button>
           <span class="conn-pill live"><span class="d"></span>Live · Supabase</span>
         </div>
       </header>
@@ -183,16 +186,25 @@
             </colgroup>
             <thead>
               <tr>
-                <th data-sort="score">Score</th>
+                <th data-sort="score" class="has-tip tip-below"
+                  data-tip="Poäng 0–100 utifrån dina scoring-regler och tillgänglig marknadsdata.">Score</th>
                 <th>Företag</th>
-                <th data-sort="turnover_tkr" class="right">Omsättning (Mkr)</th>
-                <th data-sort="profit_tkr" class="right">Årets resultat (Mkr)</th>
-                <th data-sort="established_year" class="right">Etableringsår</th>
-                <th data-sort="employees" class="right">Anställda</th>
-                <th data-sort="lagerantal" class="right">I lager</th>
-                <th data-sort="lager_finansierat_andel" class="right">% lagerfinans</th>
-                <th data-sort="saljvolym_12m" class="right">Sålda 12 mån</th>
-                <th data-sort="foretagsandel" class="right">Företagsandel</th>
+                <th data-sort="turnover_tkr" class="right has-tip tip-below"
+                  data-tip="Omsättning från Bilstatistik firmografi (bulk), visad i Mkr.">Omsättning (Mkr)</th>
+                <th data-sort="profit_tkr" class="right has-tip tip-below"
+                  data-tip="Årets resultat från Bilstatistik firmografi (bulk), visat i Mkr.">Årets resultat (Mkr)</th>
+                <th data-sort="established_year" class="right has-tip tip-below"
+                  data-tip="Etableringsår från Bilstatistik firmografi (bulk).">Etableringsår</th>
+                <th data-sort="employees" class="right has-tip tip-below"
+                  data-tip="Antal anställda från Bilstatistik firmografi (bulk).">Anställda</th>
+                <th data-sort="lagerantal" class="right has-tip tip-below"
+                  data-tip="Antal fordon i operativt lager enligt Bilstatistik bulk (aggregerat per bolag).&#10;&#10;Mer exakt lager + finans får du via Hämta bilstatistik på återförsäljarkortet.">I lager</th>
+                <th data-sort="lager_finansierat_andel" class="right has-tip tip-below"
+                  data-tip="Andel av lagret där ägaren inte är handlaren (lagerfinans).&#10;&#10;Fylls främst via Hämta bilstatistik på kortet. Bulk-uppdatering skriver inte över detta fält.">% lagerfinans</th>
+                <th data-sort="saljvolym_12m" class="right has-tip tip-below"
+                  data-tip="Aggregerad säljvolym senaste 12 mån från Bilstatistik bulk (≥20).&#10;&#10;Räknar inte bort sale-and-leaseback per bil.&#10;&#10;Öppna kortet → Hämta bilstatistik för retail-siffra (exkl. S&amp;L och övriga icke-sälj).">Sålda 12 mån</th>
+                <th data-sort="foretagsandel" class="right has-tip tip-below"
+                  data-tip="Andel sälj till företag vs privat (när uppdelning finns).&#10;&#10;Bulk kan vara trubbig; kort-hämtning ger mer exakt retail-uppdelning.">Företagsandel</th>
               </tr>
             </thead>
           </table>

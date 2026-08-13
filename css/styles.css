@@ -1035,37 +1035,51 @@ td.right {
   font-variant-numeric: tabular-nums;
 }
 
-.kpi-tip {
+.kpi-tip,
+.has-tip {
   position: relative;
   cursor: help;
 }
 
-.kpi-tip::after {
-  content: attr(data-tip);
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 8px);
-  transform: translateX(-50%);
-  min-width: 180px;
-  max-width: 260px;
+/* Tips renderas via js/floating-tip.js (body) så de inte kapas av panel overflow */
+.kpi-tip::after,
+.has-tip::after {
+  content: none !important;
+}
+
+.market-table-head thead th.has-tip {
+  text-decoration: underline dotted color-mix(in srgb, currentColor 40%, transparent);
+  text-underline-offset: 3px;
+}
+
+.btn-link.has-tip,
+.btn.has-tip {
+  text-decoration: underline dotted color-mix(in srgb, currentColor 40%, transparent);
+  text-underline-offset: 3px;
+}
+
+.kpi .l.has-tip {
+  text-decoration: underline dotted color-mix(in srgb, currentColor 40%, transparent);
+  text-underline-offset: 2px;
+}
+
+.floating-tip {
+  position: fixed;
+  z-index: 200;
+  min-width: 200px;
+  max-width: 320px;
   padding: 8px 10px;
   border-radius: 8px;
   background: #1a1f2c;
   color: #fff;
+  font-family: "IBM Plex Sans", sans-serif;
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.45;
   white-space: pre-line;
   text-align: left;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.12s ease;
-  z-index: 20;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-}
-
-.kpi-tip:hover::after {
-  opacity: 1;
+  pointer-events: none;
 }
 
 .kpi .l {
@@ -2116,7 +2130,8 @@ tbody tr.row-checked {
   background: #f7fbfa;
 }
 
-.badge-dnb {
+.badge-dnb,
+.badge-tag {
   display: inline-flex;
   align-items: center;
   font-size: 10px;
@@ -2126,8 +2141,115 @@ tbody tr.row-checked {
   border-radius: 5px;
   background: #e8eef8;
   color: #2b4c7e;
-  margin-left: 8px;
+  margin-left: 6px;
   vertical-align: middle;
+}
+
+.tag-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.tag-badges .badge-tag {
+  margin-left: 0;
+}
+
+.badge-tag-more {
+  background: #eef1f5;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+  min-height: 28px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 4px 10px;
+  border-radius: 7px;
+  background: #e8eef8;
+  color: #2b4c7e;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tag-chip-btn {
+  border: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+.tag-chip-btn:hover {
+  background: #dce6f4;
+}
+
+.tag-chip-x {
+  border: none;
+  background: transparent;
+  color: #2b4c7e;
+  opacity: 0.55;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+  border-radius: 4px;
+}
+
+.tag-chip-x:hover {
+  opacity: 1;
+  background: rgba(43, 76, 126, 0.12);
+}
+
+.tag-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.tag-add-row .dateinput {
+  flex: 1;
+  min-width: 0;
+}
+
+.tag-hint {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+}
+
+.tags-empty {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.p-name .badge-tag,
+.p-name .tag-badges {
+  vertical-align: middle;
+}
+
+.bulk-bar .bulk-tag {
+  border-color: #c5d2e8;
+  color: #2b4c7e;
+}
+
+.bulk-bar .bulk-tag:hover {
+  background: #e8eef8;
+}
+
+.tag-modal .tag-modal-sub {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 .badge-lead {
@@ -2173,7 +2295,8 @@ tbody tr.row-checked {
   vertical-align: middle;
 }
 
-.p-name .badge-dnb {
+.p-name .badge-dnb,
+.p-name .tag-badges {
   margin-left: 10px;
 }
 
