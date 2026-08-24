@@ -17,45 +17,47 @@ export function getScopedLeads() {
   return LEADS.filter((lead) => sameUserId(lead.assigned_to, currentUserId));
 }
 
+function matchesFilters(lead) {
+  if (currentView === "kredit") {
+    if (!CREDIT_STATUSES.includes(lead.status)) return false;
+    if (!filterState.showActive && lead.status === "kund_aktiv") return false;
+    if (filterState.status === "alla") {
+      // already filtered kund_aktiv above when showActive is false
+    } else if (lead.status !== filterState.status) {
+      return false;
+    }
+    const flag = CREDIT_FLAG_FILTERS[filterState.creditFlag];
+    if (flag?.field) {
+      const val = !!lead[flag.field];
+      if (val !== flag.value) return false;
+    }
+  } else {
+    // Sälj: visa alla mina leads (inkl. Kredit önskas). Endast "Ej intressant" döljs under Alla.
+    const statusFilter = filterState.status || "alla";
+    if (statusFilter === "alla") {
+      if (lead.status === "ejaktuell") return false;
+    } else if (lead.status !== statusFilter) {
+      return false;
+    }
+    const tagFilter = filterState.tag;
+    if (tagFilter && tagFilter !== "alla") {
+      const has = (lead.tags || []).some((t) => String(t.id) === String(tagFilter));
+      if (!has) return false;
+    }
+  }
+
+  if (filterState.q) {
+    const tagHay = (lead.tags || []).map((t) => t.name).join(" ");
+    const haystack =
+      `${lead.company_name} ${lead.city} ${lead.address || ""} ${lead.postal_address || ""} ${lead.org_nr || ""} ${tagHay}`.toLowerCase();
+    if (!haystack.includes(filterState.q.toLowerCase())) return false;
+  }
+  return true;
+}
+
 /** Return leads matching current filters, sorted by active column. */
 export function getVisibleLeads() {
-  const filtered = getScopedLeads().filter((lead) => {
-    if (currentView === "kredit") {
-      if (!CREDIT_STATUSES.includes(lead.status)) return false;
-      if (!filterState.showActive && lead.status === "kund_aktiv") return false;
-      if (filterState.status === "alla") {
-        // already filtered kund_aktiv above when showActive is false
-      } else if (lead.status !== filterState.status) {
-        return false;
-      }
-      const flag = CREDIT_FLAG_FILTERS[filterState.creditFlag];
-      if (flag?.field) {
-        const val = !!lead[flag.field];
-        if (val !== flag.value) return false;
-      }
-    } else {
-      // Sälj: visa alla mina leads (inkl. Kredit önskas). Endast "Ej intressant" döljs under Alla.
-      const statusFilter = filterState.status || "alla";
-      if (statusFilter === "alla") {
-        if (lead.status === "ejaktuell") return false;
-      } else if (lead.status !== statusFilter) {
-        return false;
-      }
-      const tagFilter = filterState.tag;
-      if (tagFilter && tagFilter !== "alla") {
-        const has = (lead.tags || []).some((t) => String(t.id) === String(tagFilter));
-        if (!has) return false;
-      }
-    }
-
-    if (filterState.q) {
-      const tagHay = (lead.tags || []).map((t) => t.name).join(" ");
-      const haystack =
-        `${lead.company_name} ${lead.city} ${lead.address || ""} ${lead.postal_address || ""} ${lead.org_nr || ""} ${tagHay}`.toLowerCase();
-      if (!haystack.includes(filterState.q.toLowerCase())) return false;
-    }
-    return true;
-  });
+  const filtered = getScopedLeads().filter(matchesFilters);
 
   const { sortKey, sortDir } = filterState;
 
@@ -82,6 +84,12 @@ export function getVisibleLeads() {
 
     return ((x || 0) - (y || 0)) * sortDir;
   });
+}
+
+/** Leads för kartan: hela CRM:et oavsett tilldelning (Sälj), hela kreditkön (Kredit).
+ *  Så man ser andra kunder/prospekts i närheten även om de inte är tilldelade en själv. */
+export function getMapLeads() {
+  return LEADS.filter(matchesFilters);
 }
 
 /** Credit leads for stats (ignores UI flag filters except active toggle). */

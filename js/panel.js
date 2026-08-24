@@ -179,6 +179,7 @@ function setPanelChromeMode(isProspect) {
   const assignBtn = $("#panelAssignBtn");
   const mailBtn = $("#mailBtn");
   const editBtn = $("#editLeadBtn");
+  const mapBtn = $("#panelMapBtn");
   const followup = $("#followup");
   const saveFollowup = $("#saveFollowup");
 
@@ -193,6 +194,7 @@ function setPanelChromeMode(isProspect) {
   }
   if (assignBtn) assignBtn.style.display = isProspect ? "none" : "";
   if (editBtn) editBtn.style.display = isProspect ? "none" : "";
+  if (mapBtn) mapBtn.style.display = isProspect ? "none" : "";
   if (mailBtn) {
     mailBtn.disabled = !!isProspect;
     mailBtn.style.opacity = isProspect ? "0.4" : "";

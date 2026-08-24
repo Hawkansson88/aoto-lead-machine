@@ -58,7 +58,7 @@ export function bindEvents() {
     renderTable();
   };
 
-  $("#mapBtn")?.addEventListener("click", openMap);
+  $("#mapBtn")?.addEventListener("click", () => openMap());
   $("#mapClose")?.addEventListener("click", closeMap);
   $("#mapScrim")?.addEventListener("click", closeMap);
   document.addEventListener("click", handleMapPopupClick);
@@ -81,6 +81,13 @@ export function bindEvents() {
 export function bindPanelChrome() {
   $("#pClose")?.addEventListener("click", closePanel);
   $("#scrim")?.addEventListener("click", closePanel);
+
+  $("#panelMapBtn")?.addEventListener("click", () => {
+    if (!selectedLead?.id) return;
+    const leadId = selectedLead.id;
+    closePanel();
+    openMap(leadId);
+  });
 
   $("#saveFollowup")?.addEventListener("click", async () => {
     if (!selectedLead?.id) return;
