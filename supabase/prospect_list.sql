@@ -88,7 +88,8 @@ CREATE TABLE IF NOT EXISTS public.prospect_list (
   next_action TEXT,
   next_action_date DATE,
   note TEXT,
-  excluded BOOLEAN NOT NULL DEFAULT false,
+  -- NULL = inget beslut, prospect_exclusions styr. Se prospect_excluded_nullable.sql
+  excluded BOOLEAN,
   excluded_reason TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
