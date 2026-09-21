@@ -115,10 +115,9 @@
             data-tip="Visa återförsäljarna på karta.&#10;Ange en ort för att se vilka som ligger i närheten, eller från och till för att se vilka som ligger på vägen.">
             Karta
           </button>
-          <button type="button" class="btn btn-ghost has-tip tip-below" id="recomputeBtn"
-            data-tip="Bygger om listan från redan sparad rådata i Supabase.&#10;Kostar inget Bilstatistik-uttag.">
-            Räkna om
-          </button>
+          <button type="button" class="info-btn has-tip tip-below" id="infoBtn"
+            aria-label="Om urvalet"
+            data-tip="Vad rapporten filtrerar på just nu — klicka för detaljer.">i</button>
           <span class="conn-pill live"><span class="d"></span>Live · Supabase</span>
         </div>
       </header>
@@ -190,6 +189,16 @@
     </div>
     <div class="p-body" id="pBody"></div>
   </aside>
+
+  <!-- Om urvalet -->
+  <div class="modal-scrim" id="infoScrim"></div>
+  <div class="modal info-modal" id="infoModal">
+    <div class="modal-head">
+      <h2>Om urvalet</h2>
+      <button class="p-close" id="infoClose">✕</button>
+    </div>
+    <div class="modal-body" id="infoBody"></div>
+  </div>
 
   <!-- Karta -->
   <div class="modal-scrim" id="prospectMapScrim"></div>

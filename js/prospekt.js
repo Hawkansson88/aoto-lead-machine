@@ -6,9 +6,9 @@
  * joinar mot dealer_market_stats för firmografi. Rankar på antal
  * leasingaffärer till företagskund.
  *
- * Datan hämtas av netlify/functions/prospect-sync.mjs, som körs separat —
- * Bilstatistik har en frågegräns per dygn, så den ska inte gå att trigga av
- * misstag härifrån. "Räkna om" bygger listan från redan sparad rådata.
+ * Sidan hämtar aldrig något från Bilstatistik. Uttag och omräkning körs från
+ * scripts/, eftersom API:ets kvot räknas i rader per vecka och ett felklick
+ * inte ska kunna bränna den.
  */
 
 import { SUPABASE_URL, SUPABASE_ANON } from "./config.js";
@@ -45,6 +45,8 @@ let statsByOrg = new Map();
 let exclusions = [];
 /** Företagsaffärer per ÅF — nämnaren till leasingandelen. */
 let b2bByOrg = new Map();
+/** Mellanhänder som inte räknas som slutkunder. */
+let buyerExclusions = [];
 /** @type {Array<Record<string, any>>} */
 let profiles = [];
 let syncMeta = null;
@@ -167,7 +169,8 @@ async function selectAll(table, columns, order) {
 }
 
 async function loadAll() {
-  const [dealerRows, listRows, exclusionRows, b2bRows, profileRows, stateRow] = await Promise.all([
+  const [dealerRows, listRows, exclusionRows, b2bRows, buyerRows, profileRows, stateRow] =
+    await Promise.all([
     selectAll(
       "prospect_dealers",
       "org_nr, company_name, deals_total, distinct_customers, deals_recent_90d, deals_prev_90d, floorplan_share, finance_company_count, first_tx, last_tx, finance_companies, makes, months, updated_at",
@@ -179,6 +182,7 @@ async function loadAll() {
     ),
     selectAll("prospect_exclusions", "id, org_nr, name_pattern, kind, note"),
     selectAll("prospect_b2b_counts", "org_nr, period, b2b_deals, leasing_deals"),
+    selectAll("prospect_buyer_exclusions", "org_nr, company_name, sni, note"),
     selectAll("profiles", "id, email, first_name, last_name, role"),
     sb.from("app_state").select("value, updated_at").eq("key", "prospect_sync").maybeSingle(),
   ]);
@@ -187,6 +191,7 @@ async function loadAll() {
   listByOrg = new Map(listRows.map((r) => [r.org_nr, r]));
   exclusions = exclusionRows;
   b2bByOrg = new Map(b2bRows.map((r) => [r.org_nr, r]));
+  buyerExclusions = buyerRows;
   profiles = profileRows.filter((p) => OWNER_EMAILS.includes((p.email || "").toLowerCase()));
   syncMeta = stateRow?.data?.value || null;
 
@@ -463,18 +468,38 @@ function ownerHtml(ownerId) {
  * Företagsaffärer till slutkund, med leasingandelen under.
  *
  * Både täljare och nämnare kommer ur prospect_b2b_counts och avser samma
- * period. Beståndsimportens salj_foretag_12m används medvetet inte: den
- * räknade partihandel mellan bilfirmor och var uppblåst olika mycket för
- * olika handlare, alltså inte jämförbar.
+ * period, med mellanhänder borträknade i båda.
+ *
+ * Tillförlitligheten går att sluta sig till från andelen själv. En okänd
+ * mellanhand kan bara blåsa upp nämnaren, aldrig täljaren — felet drar alltså
+ * andelen nedåt. Ett högt tal kan därför inte vara uppblåst, medan ett lågt
+ * tal antingen är sant eller döljer en auktionskanal vi ännu inte känner till.
+ * Tesla låg på 6 % innan AUTOproff och Handlarbudet plockades bort; rätt
+ * siffra var 86 %.
  */
 function b2bCellHtml(row) {
   const counts = b2bByOrg.get(row.dealer.org_nr);
-  if (!counts || counts.b2b_deals == null) return '<span class="faint">–</span>';
-  const share = counts.b2b_deals > 0 ? Math.round((counts.leasing_deals / counts.b2b_deals) * 100) : null;
-  const cls = share == null ? "" : share >= 60 ? "share-high" : share >= 35 ? "share-mid" : "share-low";
-  return `<span class="num">${fmtNum(counts.b2b_deals)}</span>${
-    share == null ? "" : `<div class="cell-sub ${cls}">${share} % leasing</div>`
-  }`;
+  if (!counts || counts.b2b_deals == null) {
+    const tip =
+      "Nämnaren är inte hämtad för den här handlaren än. Varje bolag kostar en rad ur Bilstatistiks veckokvot.";
+    return `<span class="faint has-tip" data-tip="${escapeAttr(tip)}">–</span>`;
+  }
+
+  const share =
+    counts.b2b_deals > 0 ? Math.round((counts.leasing_deals / counts.b2b_deals) * 100) : null;
+  if (share == null) return `<span class="num">${fmtNum(counts.b2b_deals)}</span>`;
+
+  const cls = share >= 60 ? "share-high" : share >= 35 ? "share-mid" : "share-low";
+  const reliable = share >= 35;
+  const basis = `${counts.leasing_deals} av ${counts.b2b_deals} företagsaffärer gick på leasing.`;
+  const tip = reliable
+    ? `${basis}\n\nSiffran är tillförlitlig. En oupptäckt mellanhand kan bara blåsa upp nämnaren och dra andelen nedåt, aldrig uppåt — så högt kan den inte vara felaktigt uppblåst.`
+    : `${basis}\n\nBör dubbelkollas. Antingen leasar de verkligen sällan, eller så säljer de inbyten via en B2B-auktion som räknas som företagskund.\n\nTesla såg ut att ligga på 6 % tills AUTOproff och Handlarbudet plockades bort. Rätt siffra var 86 %.\n\nKontrollera med:\nnode scripts/prospect-dealer-sample.mjs --org ${row.dealer.org_nr}`;
+
+  return `<span class="num">${fmtNum(counts.b2b_deals)}</span>
+    <div class="cell-sub ${cls} has-tip" data-tip="${escapeAttr(tip)}">${share} % leasing <i class="rel-${
+      reliable ? "ok" : "warn"
+    }">${reliable ? "✓" : "⚠"}</i></div>`;
 }
 
 function renderTable() {
@@ -528,6 +553,94 @@ function renderSubtitle() {
   el.textContent = ` · Period: ${window_start || first_tx} → ${last_tx} · ${fmtNum(
     syncMeta.transactions
   )} affärer`;
+}
+
+// ── Om urvalet ───────────────────────────────────────────────────────────
+
+/**
+ * Vad listan faktiskt visar. Hämtar siffrorna ur datan i stället för att
+ * upprepa dem i text, så beskrivningen inte hinner bli osann.
+ */
+function renderInfo() {
+  const period = syncMeta?.period;
+  const withB2b = indexed.filter((r) => b2bByOrg.has(r.dealer.org_nr)).length;
+
+  const filters = [
+    ["Fordon", "Personbil, lätt lastbil och tung lastbil"],
+    ["Ålder", "Minst 1 månad vid affären — allt utom fabriksnytt"],
+    ["Affärstyp", "Bilen registrerad på ett leasingavtal"],
+    ["Säljare", "Föregående brukare med bilhandel som bransch"],
+    ["Köpare", "Företag. Ej bilhandel, ej finansbolag, ej privatperson"],
+    ["Geografi", "Hela Sverige"],
+  ];
+
+  const data = [
+    ["Period", period ? `${period.window_start} → ${period.last_tx}` : "–"],
+    ["Affärer i perioden", fmtNum(syncMeta?.transactions)],
+    ["Återförsäljare", fmtNum(dealers.length)],
+    ["Senast hämtat", syncMeta?.synced_at ? syncMeta.synced_at.slice(0, 10) : "–"],
+    [
+      "Trendjämförelse",
+      period?.momentum_recent
+        ? `${period.momentum_recent[0]} → ${period.momentum_recent[1]} mot samma period i fjol`
+        : "–",
+    ],
+  ];
+
+  $("#infoBody").innerHTML = `
+    <p class="info-lead">
+      Återförsäljare rankade på antal leasingaffärer till företagskund, hämtade
+      från Bilstatistik. Varje rad i grunddatan är en enskild bil.
+    </p>
+
+    <h4>Urvalet filtrerar på</h4>
+    <div class="info-grid">
+      ${filters.map(([k, v]) => `<span>${escapeHtml(k)}</span><b>${escapeHtml(v)}</b>`).join("")}
+    </div>
+
+    <h4>Datan just nu</h4>
+    <div class="info-grid">
+      ${data.map(([k, v]) => `<span>${escapeHtml(k)}</span><b>${escapeHtml(String(v))}</b>`).join("")}
+    </div>
+
+    <h4>Säljaren identifieras på brukaren, inte ägaren</h4>
+    <p class="info-note">
+      När en bil ligger på lagerfinansiering står finansbolaget som ägare medan
+      handlaren är brukare. Det gäller ungefär var tredje affär, så ett filter på
+      ägaren hade missat dem.
+    </p>
+
+    <h4>Leasingandel</h4>
+    <p class="info-note">
+      Nämnaren är alla företagsaffärer till slutkund under innevarande år, hämtad
+      med samma filter minus leasingvillkoret. Den finns för
+      <b>${withB2b} av ${indexed.length}</b> handlare — övriga visar streck.
+    </p>
+    <p class="info-note">
+      ${buyerExclusions.length} köpare räknas inte som slutkunder, eftersom de är
+      B2B-auktioner eller mellanhänder:
+      ${buyerExclusions.map((b) => escapeHtml(b.company_name)).join(", ") || "inga"}.
+      De är inte registrerade som bilhandel och slipper därför igenom branschfiltret.
+    </p>
+
+    <h4>Uteslutna handlare</h4>
+    <p class="info-note">
+      ${exclusions.length} mönster i blocklistan filtrerar bort koncerner och
+      finansbolag. Ett manuellt beslut på en enskild handlare väger alltid tyngre
+      än mönstret.
+    </p>
+  `;
+}
+
+function openInfo() {
+  renderInfo();
+  $("#infoModal").classList.add("open");
+  $("#infoScrim").classList.add("open");
+}
+
+function closeInfo() {
+  $("#infoModal").classList.remove("open");
+  $("#infoScrim").classList.remove("open");
 }
 
 // ── Detaljpanel ──────────────────────────────────────────────────────────
@@ -734,30 +847,6 @@ async function toggleExcluded() {
   }
 }
 
-/**
- * Bygger om aggregatet från rådatan som redan ligger i Supabase.
- * Kostar inget Bilstatistik-uttag, så den går att köra hur ofta som helst.
- */
-async function runRecompute() {
-  const btn = $("#recomputeBtn");
-  btn.disabled = true;
-  const prevLabel = btn.textContent;
-  btn.textContent = "Räknar om…";
-
-  try {
-    const { data, error } = await sb.rpc("recompute_prospect_dealers");
-    if (error) throw error;
-    toast(`Omräknat: ${fmtNum(data?.dealers)} återförsäljare från ${fmtNum(data?.transactions)} affärer`);
-    await loadAll();
-  } catch (err) {
-    console.error(err);
-    toast(err.message || "Kunde inte räkna om listan", { error: true });
-  } finally {
-    btn.disabled = false;
-    btn.textContent = prevLabel || "Räkna om";
-  }
-}
-
 // ── UI-bindning ──────────────────────────────────────────────────────────
 
 function numOrNull(value) {
@@ -863,8 +952,10 @@ function bindUi() {
     searchTimer = setTimeout(renderTable, SEARCH_DEBOUNCE_MS);
   });
 
-  $("#recomputeBtn").onclick = runRecompute;
   // Kartan får de filtrerade raderna, så sidopanelens filter gäller där också
+  $("#infoBtn").onclick = openInfo;
+  $("#infoClose").onclick = closeInfo;
+  $("#infoScrim").onclick = closeInfo;
   $("#mapBtn").onclick = () => openProspectMap(visibleRows(), openDealer);
   bindProspectMap();
   $("#excludeBtn").onclick = toggleExcluded;
@@ -874,6 +965,7 @@ function bindUi() {
     if (e.key !== "Escape") return;
     closePanel();
     closeProspectMap();
+    closeInfo();
   });
 
   $("#prospectRows").addEventListener("click", (e) => {
