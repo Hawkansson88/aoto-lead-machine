@@ -11,7 +11,12 @@
  *
  * Flaggor:
  *   --period ytd|forra-aret   Vilken period som hämtas (obligatorisk)
+ *   --dataset leasing|b2b     leasing = bara leasingaffärer (default)
+ *                             b2b = alla företagsaffärer till slutkund, som
+ *                             nämnare när leasingandelen ska räknas
  *   --age-from <månader>      Fordonets minimiålder vid affären (default 1)
+ *   --out <fil>               Spara råraderna till fil också
+ *   --load <fil>              Hoppa över API:t, läs in från en tidigare --out
  *   --dry                     Hämta och visa, men skriv inget till Supabase
  *
  * Rullande 12 månader finns inte som periodalternativ hos Bilstatistik. Kör
@@ -22,7 +27,7 @@
  * Läser inloggningsuppgifter ur .env i repo-roten.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
@@ -46,10 +51,13 @@ function loadEnv() {
 }
 
 function parseArgs(argv) {
-  const args = { period: null, ageFrom: 1, dry: false };
+  const args = { period: null, ageFrom: 1, dry: false, dataset: "leasing", out: null, load: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--period") args.period = argv[++i];
+    else if (argv[i] === "--dataset") args.dataset = argv[++i];
     else if (argv[i] === "--age-from") args.ageFrom = Number(argv[++i]);
+    else if (argv[i] === "--out") args.out = argv[++i];
+    else if (argv[i] === "--load") args.load = argv[++i];
     else if (argv[i] === "--dry") args.dry = true;
   }
   return args;
@@ -63,7 +71,17 @@ const PERIODS = {
 const args = parseArgs(process.argv.slice(2));
 const period = PERIODS[args.period];
 
-if (!period) {
+const DATASETS = {
+  leasing: { table: "prospect_leasing_tx", leasingOnly: true, label: "leasingaffärer" },
+  b2b: { table: "prospect_b2b_tx", leasingOnly: false, label: "alla företagsaffärer" },
+};
+const dataset = DATASETS[args.dataset];
+if (!dataset) {
+  console.error("--dataset måste vara leasing eller b2b");
+  process.exit(2);
+}
+
+if (!args.load && !period) {
   console.error("Ange --period ytd eller --period forra-aret");
   process.exit(2);
 }
@@ -87,18 +105,37 @@ if (!serviceKey && !args.dry) {
   process.exit(1);
 }
 
-console.log(`Period: ${period.label} (DateRangeOptionId ${period.id})`);
+console.log(`Dataset: ${dataset.label} → ${dataset.table}`);
+if (period) console.log(`Period: ${period.label} (DateRangeOptionId ${period.id})`);
 console.log(`Ålder från: ${args.ageFrom} mån`);
-console.log(args.dry ? "Torrkörning — inget skrivs\n" : "Skriver till Supabase\n");
+console.log(args.dry ? "Torrkörning — inget skrivs\n" : `Skriver till ${dataset.table}\n`);
 
-const request = buildLeasingSalesRequest({
-  dateRangeOptionId: period.id,
-  ageFromMonths: args.ageFrom,
-});
+let transactions;
+let skipped = 0;
 
-console.log("Hämtar från Bilstatistik…");
-const report = await fetchReportAllRows(request, user, pass);
-const { transactions, skipped } = parseTransactions(report);
+if (args.load) {
+  // Uttaget är redan gjort och sparat — ingen fråga mot Bilstatistik
+  console.log(`Läser från ${args.load}…`);
+  transactions = JSON.parse(readFileSync(args.load, "utf8"));
+} else {
+  const request = buildLeasingSalesRequest({
+    dateRangeOptionId: period.id,
+    ageFromMonths: args.ageFrom,
+    leasingOnly: dataset.leasingOnly,
+  });
+
+  console.log("Hämtar från Bilstatistik…");
+  const report = await fetchReportAllRows(request, user, pass);
+  const parsed = parseTransactions(report);
+  transactions = parsed.transactions;
+  skipped = parsed.skipped;
+
+  // Spara direkt: anropet är förbrukat oavsett vad som händer sedan
+  if (args.out) {
+    writeFileSync(args.out, JSON.stringify(transactions));
+    console.log(`Sparat ${transactions.length} rader till ${args.out}`);
+  }
+}
 
 const dates = transactions.map((t) => t.tx_date).sort();
 console.log(`\nRader: ${transactions.length} (${skipped} utan org.nr)`);
@@ -110,8 +147,16 @@ if (args.dry) {
   process.exit(0);
 }
 
-console.log("\nSkriver till prospect_leasing_tx…");
-await upsertTransactions(sbUrl, serviceKey, transactions);
+console.log(`\nSkriver till ${dataset.table}…`);
+try {
+  await upsertTransactions(sbUrl, serviceKey, transactions, dataset.table);
+} catch (err) {
+  console.error(`\nSkrivningen misslyckades: ${err.message}`);
+  if (args.out) {
+    console.error(`Raderna ligger kvar i ${args.out} — kör om med --load ${args.out} när tabellen finns.`);
+  }
+  process.exit(1);
+}
 
 console.log("Räknar om prospect_dealers…");
 const res = await fetch(`${sbUrl}/rest/v1/rpc/recompute_prospect_dealers`, {

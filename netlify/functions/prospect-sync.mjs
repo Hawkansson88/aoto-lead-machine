@@ -111,17 +111,25 @@ function bilstatistikErrorMessage(data, text, status) {
  * @param {number} [opts.dateRangeOptionId] 1 = år-till-datum, 5 = föregående
  *   kalenderår. Rullande 12 månader finns inte som alternativ — det får man
  *   genom att hämta båda och låta 365-dagarsfönstret i omräkningen skära.
+ * @param {string[]} [opts.dealerOrgNrs] Begränsa till dessa säljande ÅF.
+ *   Med count=1 blir svarets TotalRowCount bolagets hela antal affärer till
+ *   priset av en enda rad ur kvoten — se scripts/prospect-b2b-counts.mjs.
+ * @param {boolean} [opts.leasingOnly] false ger alla företagsaffärer till
+ *   slutkund, oavsett finansiering. Används som nämnare när leasingandelen
+ *   ska räknas: identiskt filter i övrigt, så täljare och nämnare utesluter
+ *   bilhandlare som köpare på exakt samma sätt.
  */
 export function buildLeasingSalesRequest(opts = {}) {
   const ageFromMonths = opts.ageFromMonths ?? AGE_FROM_MONTHS;
   const dateRangeOptionId = opts.dateRangeOptionId ?? DATE_RANGE_YTD;
+  const leasingOnly = opts.leasingOnly !== false;
   return {
     ReportProfile: {
       ReportTypeId: -4,
       Filter: {
         // 1 = personbil, 3 = lätt lastbil, 5 = tung lastbil
         VehicleTypes: { Values: [1, 3, 5] },
-        Leasing: { ExpirationDateRange: {}, Values: [1] },
+        ...(leasingOnly ? { Leasing: { ExpirationDateRange: {}, Values: [1] } } : {}),
         // Fordonets ålder vid affären, i månader
         Age: {
           PredefinedVehicleAgeOptionId: -98,
@@ -146,6 +154,9 @@ export function buildLeasingSalesRequest(opts = {}) {
         PreviousUser: {
           CompanyTrades: { Values: DEALER_TRADES },
           RegistrantClassification: { Values: [CLASS_FORETAG] },
+          ...(opts.dealerOrgNrs?.length
+            ? { CompanyIdentifiers: { Values: opts.dealerOrgNrs } }
+            : {}),
         },
       },
       TransactionDataset: {
@@ -158,6 +169,67 @@ export function buildLeasingSalesRequest(opts = {}) {
     SortAscending: false,
     AreaSetId: 18905,
     OutputColumns: [87, 88, 156, 157, 1, 108, 37, 155, 4],
+  };
+}
+
+/**
+ * Nämnaren till leasingandelen: alla företagsaffärer till slutkund, aggregerat
+ * per återförsäljare i stället för en rad per bil.
+ *
+ * ReportTypeId 394 returnerar ett tal per bolag — omkring 1 400 rader mot
+ * 150 000 för motsvarande fordonsrapport. Bilstatistiks kvot räknas i rader,
+ * så skillnaden är hela skälet att använda den här formen.
+ *
+ * Filtret är identiskt med leasingfrågan så när som på leasingvillkoret, så
+ * bilhandlare utesluts som köpare på samma sätt i täljare och nämnare. Det var
+ * just det beståndsimportens siffra missade: den räknade partihandel mellan
+ * bilfirmor som företagsaffärer.
+ *
+ * OBS: 394 grupperar på föregående ÄGARE, inte föregående brukare. För
+ * lagerfinansierade bilar är det finansbolaget. Kör scripts/prospect-probe.mjs
+ * innan ett skarpt uttag och kontrollera vad som faktiskt kommer tillbaka.
+ */
+export function buildB2bRetailAggregateRequest(opts = {}) {
+  const ageFromMonths = opts.ageFromMonths ?? AGE_FROM_MONTHS;
+  const dateRangeOptionId = opts.dateRangeOptionId ?? DATE_RANGE_YTD;
+  return {
+    ReportProfile: {
+      ReportTypeId: 394,
+      Filter: {
+        VehicleTypes: { Values: [1, 3, 5] },
+        Age: {
+          PredefinedVehicleAgeOptionId: -98,
+          FirstRegistrationDateRange: {},
+          AgeInMonthsRange: { From: ageFromMonths },
+        },
+        Owner: {
+          CompanyTrades: { Negate: true, Values: NON_DEALER_NEGATE },
+          RegistrantClassification: { Values: [CLASS_FORETAG] },
+        },
+        User: {
+          CompanyTrades: { Negate: true, Values: NON_DEALER_NEGATE },
+          RegistrantClassification: { Values: [CLASS_FORETAG] },
+        },
+        PreviousOwner: {
+          RegistrantClassification: { Values: [CLASS_FORETAG] },
+        },
+        PreviousUser: {
+          CompanyTrades: { Values: DEALER_TRADES },
+          RegistrantClassification: { Values: [CLASS_FORETAG] },
+        },
+      },
+      TransactionDataset: {
+        DateRange: {},
+        DateRangeOptionId: dateRangeOptionId,
+        TransactionTypeGroupId: 3,
+      },
+    },
+    SortColumnName: "IAar",
+    SortAscending: false,
+    AreaSetId: 18905,
+    // Försök få org.nr med — 157 fungerar på fordonsrapporten. Gör den
+    // aggregerade rapporten inte det faller vi tillbaka på namn-join.
+    OutputColumns: [156, 157],
   };
 }
 
@@ -175,7 +247,7 @@ async function parseJsonResponse(res) {
   return data;
 }
 
-async function fetchReport(requestBody, user, pass, count = MAX_REPORT_PAGE) {
+export async function fetchReport(requestBody, user, pass, count = MAX_REPORT_PAGE) {
   const capped = Math.min(Math.max(Number(count) || MAX_REPORT_PAGE, 1), MAX_REPORT_PAGE);
   const res = await fetch(
     `${BILSTATISTIK_API_URL}/reports?count=${encodeURIComponent(capped)}`,
@@ -337,7 +409,7 @@ async function sbWrite(sbUrl, serviceKey, path, method, payload, prefer, label) 
   return res;
 }
 
-export async function upsertTransactions(sbUrl, serviceKey, transactions) {
+export async function upsertTransactions(sbUrl, serviceKey, transactions, table = "prospect_leasing_tx") {
   const now = new Date().toISOString();
   for (let i = 0; i < transactions.length; i += INSERT_BATCH) {
     const batch = transactions
@@ -346,7 +418,7 @@ export async function upsertTransactions(sbUrl, serviceKey, transactions) {
     await sbWrite(
       sbUrl,
       serviceKey,
-      "prospect_leasing_tx?on_conflict=reg_nr,tx_date,dealer_org_nr",
+      `${table}?on_conflict=reg_nr,tx_date,dealer_org_nr`,
       "POST",
       batch,
       "resolution=merge-duplicates,return=minimal",

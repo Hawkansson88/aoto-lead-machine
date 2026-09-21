@@ -455,6 +455,7 @@ function ownerHtml(ownerId) {
  * mäter en annan period och saknas för bolag som aldrig kom med där. Låg
  * andel med hög volym = kunderna finns men leasingvanan saknas.
  */
+// Oanvänd medan kolumnen är dold — behålls för när nämnaren är rättad.
 function b2bCellHtml(row) {
   const b2b = row.stats?.salj_foretag_12m;
   if (b2b == null || b2b === "") return '<span class="faint">–</span>';
@@ -494,7 +495,6 @@ function renderTable() {
           <td class="right num"><b>${fmtNum(d.deals_total)}</b></td>
           <td class="right num">${fmtNum(d.distinct_customers)}</td>
           <td class="right">${momentumHtml(row.momentum)}</td>
-          <td class="right">${b2bCellHtml(row)}</td>
           <td class="right num">${fmtNum(d.finance_company_count)}</td>
           <td class="fin">${financeHtml(d)}</td>
           <td>${statusPillHtml(row.list?.status)}</td>

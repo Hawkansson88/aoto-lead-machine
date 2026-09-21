@@ -127,10 +127,10 @@
         <div class="market-table-head">
           <table class="market-cols prospect-cols">
             <colgroup>
-              <col style="width:4%" /><col style="width:18%" /><col style="width:9%" />
-              <col style="width:7%" /><col style="width:7%" /><col style="width:7%" />
-              <col style="width:9%" /><col style="width:7%" /><col style="width:13%" />
-              <col style="width:9%" /><col style="width:10%" />
+              <col style="width:5%" /><col style="width:20%" /><col style="width:11%" />
+              <col style="width:8%" /><col style="width:8%" /><col style="width:8%" />
+              <col style="width:8%" /><col style="width:14%" /><col style="width:9%" />
+              <col style="width:9%" />
             </colgroup>
             <thead>
               <tr>
@@ -143,8 +143,11 @@
                   data-tip="Unika slutkunder. Nära affärssiffran = bred kundbas. Mycket lägre = några få storkunder.">Kunder</th>
                 <th data-sort="momentum" class="right has-tip tip-below"
                   data-tip="Samma tremånadersperiod i år mot samma period förra året. Grönt = växande leasingförsäljning.&#10;&#10;Årsjämförelse för att säsongen annars tar över: maj–augusti rymmer semestern och ser alltid svagt ut mot våren.&#10;&#10;De senaste 30 dagarna räknas inte med — registreringar släpar i Bilstatistik, så färska veckor är alltid underrapporterade.">Trend</th>
-                <th data-sort="b2b" class="right has-tip tip-below"
-                  data-tip="Bilar sålda till företag senaste 12 mån, oavsett finansiering — från beståndsimporten, inte ur leasingdatan.&#10;&#10;Jämför med affärskolumnen: många företagsaffärer men få leasingaffärer betyder att kunderna finns men vanan saknas. Det kan vara ett bättre prospekt än siffran till vänster antyder.&#10;&#10;Saknas för bolag som inte kom med i beståndsimporten.">Ftg-affärer</th>
+                <!-- Dold tills nämnaren är rätt: beståndsimportens siffra räknar in
+                     partihandel mellan bilfirmor, vilket gör andelen olika fel
+                     för olika handlare. Se supabase/prospect_b2b.sql.
+                <th data-sort="b2b" class="right">Ftg-affärer</th>
+                -->
                 <th data-sort="finance_company_count" class="right has-tip tip-below"
                   data-tip="Hur många olika leasinggivare ÅF:en sprider affärerna på.&#10;&#10;1 = allt går genom en part, alltså ett enda avtal att ersätta.&#10;Många = van vid att jobba med flera parallellt, lättare att komma in som ytterligare ett alternativ.">Finansbolag</th>
                 <th class="has-tip tip-below"
@@ -159,10 +162,10 @@
         <div class="table-scroll market-table-body">
           <table class="market-cols prospect-cols">
             <colgroup>
-              <col style="width:4%" /><col style="width:18%" /><col style="width:9%" />
-              <col style="width:7%" /><col style="width:7%" /><col style="width:7%" />
-              <col style="width:9%" /><col style="width:7%" /><col style="width:13%" />
-              <col style="width:9%" /><col style="width:10%" />
+              <col style="width:5%" /><col style="width:20%" /><col style="width:11%" />
+              <col style="width:8%" /><col style="width:8%" /><col style="width:8%" />
+              <col style="width:8%" /><col style="width:14%" /><col style="width:9%" />
+              <col style="width:9%" />
             </colgroup>
             <tbody id="prospectRows"></tbody>
           </table>
