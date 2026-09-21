@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Prospekt — AOTO</title>
+  <title>AOTO Prospekt</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -36,26 +36,20 @@
 
   <div class="app" id="app">
     <aside class="sidebar">
-      <a href="index.html" class="brand" title="Startsida">
+      <div class="brand">
         <div class="mark">A</div>
-        <div class="wm">AOTO<small>Prospekt · slutkundsleasing</small></div>
-      </a>
-
-      <div class="view-nav" id="viewNav">
-        <a href="index.html" class="view-nav-btn">Sälj</a>
-        <a href="marknadsanalys.html" class="view-nav-btn">Marknadsanalys</a>
-        <a href="prospekt.html" class="view-nav-btn active">Prospekt</a>
+        <div class="wm">AOTO Prospekt<small>Slutkundsleasing · t.o.m. dec</small></div>
       </div>
 
-      <p class="section-label">Om sidan</p>
+      <p class="section-label">Om listan</p>
       <p class="market-about">
-        Återförsäljare rankade på antal leasingaffärer till företagskund, från
-        Bilstatistik. Fristående från CRM — inget här påverkar era leads.
+        Återförsäljare rankade på antal leasingaffärer till företagskund,
+        från Bilstatistik. Klassa dem A, B eller C och fördela mellan er.
       </p>
 
       <div class="stat-grid" id="prospectStats"></div>
 
-      <p class="section-label">Status</p>
+      <p class="section-label">Klassning</p>
       <div class="status-list" id="statusFilter"></div>
 
       <p class="section-label">Ansvarig</p>
@@ -90,10 +84,6 @@
         <input type="checkbox" id="pfShowExcluded" />
         <span>Visa uteslutna</span>
       </label>
-      <label class="prospect-check">
-        <input type="checkbox" id="pfOnlyFrozen" />
-        <span>Bara frysta topp-100</span>
-      </label>
 
       <button type="button" class="save-filters-btn market-clear-filters-btn" id="clearFiltersBtn">Rensa filter</button>
 
@@ -122,14 +112,6 @@
             data-tip="Bygger om listan från redan sparad rådata i Supabase.&#10;Kostar inget Bilstatistik-uttag.">
             Räkna om
           </button>
-          <button type="button" class="btn btn-ghost has-tip tip-below" id="freezeBtn"
-            data-tip="Låser nuvarande topp-100 som er arbetslista.&#10;Nya synkar ändrar då inte ordningen ni jobbar efter.">
-            Frys topp 100
-          </button>
-          <button type="button" class="btn btn-prim has-tip tip-below" id="syncBtn"
-            data-tip="Hämtar alla leasingaffärer till företagskund från Bilstatistik och räknar om listan.&#10;&#10;Bilstatistik har en frågegräns per dygn — kör inte i onödan.">
-            Synka Bilstatistik
-          </button>
           <span class="conn-pill live"><span class="d"></span>Live · Supabase</span>
         </div>
       </header>
@@ -153,12 +135,12 @@
                 <th data-sort="distinct_customers" class="right has-tip tip-below"
                   data-tip="Unika slutkunder. Nära affärssiffran = bred kundbas. Mycket lägre = några få storkunder.">Kunder</th>
                 <th data-sort="momentum" class="right has-tip tip-below"
-                  data-tip="Dag 30–120 bakåt mot dag 120–210. Grönt = växande leasingförsäljning.&#10;&#10;De senaste 30 dagarna räknas inte med: registreringar släpar i Bilstatistik, så färska veckor är alltid underrapporterade.">Trend</th>
+                  data-tip="Dag 30–120 bakåt mot dag 120–210. Grönt = växande leasingförsäljning.&#10;&#10;De senaste 30 dagarna räknas inte med: registreringar släpar i Bilstatistik, så färska veckor är alltid underrapporterade.&#10;&#10;Perioderna spänner över olika säsonger, så läs siffran relativt de andra handlarna snarare än absolut.">Trend</th>
                 <th data-sort="finance_company_count" class="right has-tip tip-below"
                   data-tip="Hur många olika leasinggivare ÅF:en sprider affärerna på.&#10;&#10;1 = allt går genom en part, alltså ett enda avtal att ersätta.&#10;Många = van vid att jobba med flera parallellt, lättare att komma in som ytterligare ett alternativ.">Finansbolag</th>
                 <th class="has-tip tip-below"
                   data-tip="Vilka leasinggivare ÅF:en använder idag. Det är dem ni ska ta affären ifrån.">Finansbolag idag</th>
-                <th data-sort="status">Status</th>
+                <th data-sort="status">Klass</th>
                 <th data-sort="owner">Ansvarig</th>
               </tr>
             </thead>
@@ -175,9 +157,7 @@
             </colgroup>
             <tbody id="prospectRows"></tbody>
           </table>
-          <div class="empty" id="empty" style="display:none">
-            Ingen data ännu — klicka <b>Synka Bilstatistik</b> för att hämta listan.
-          </div>
+          <div class="empty" id="empty" style="display:none">Ingen data</div>
         </div>
       </div>
     </main>
@@ -203,26 +183,6 @@
   </aside>
 
   <div class="toast" id="toast"></div>
-
-  <div class="market-loading" id="marketLoading" aria-hidden="true" hidden>
-    <div class="market-loading-bg" aria-hidden="true"></div>
-    <div class="market-loading-card">
-      <div class="market-loading-road" aria-hidden="true">
-        <div class="market-loading-car">
-          <svg width="56" height="28" viewBox="0 0 56 28" fill="none" aria-hidden="true">
-            <path d="M8 18h40l-3.5-8.5A4 4 0 0 0 40.8 7H16.5a4 4 0 0 0-3.7 2.4L8 18z" fill="currentColor" opacity=".95"/>
-            <path d="M8 18h40v3H8z" fill="currentColor"/>
-            <circle cx="16" cy="21.5" r="3.5" fill="#0d1424" stroke="currentColor" stroke-width="2"/>
-            <circle cx="40" cy="21.5" r="3.5" fill="#0d1424" stroke="currentColor" stroke-width="2"/>
-          </svg>
-        </div>
-        <div class="market-loading-lane"></div>
-      </div>
-      <p class="market-loading-title">Hämtar leasingaffärer…</p>
-      <p class="market-loading-sub">13 000 rader från Bilstatistik — det tar en stund.</p>
-      <div class="market-loading-bar" aria-hidden="true"><span></span></div>
-    </div>
-  </div>
 
   <script type="module" src="js/prospekt.js"></script>
 </body>

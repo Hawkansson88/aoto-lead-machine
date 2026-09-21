@@ -1,9 +1,14 @@
 /**
- * AOTO Prospekt — 3-månaders prospektlista för slutkundsleasing.
+ * AOTO Prospekt — prospektlista för slutkundsleasing, hösten fram till jul.
  *
- * Fristående från CRM: läser prospect_dealers (aggregat från Bilstatistik) och
- * prospect_list (status/ansvarig/anteckning), joinar mot dealer_market_stats
- * för firmografi. Rankar på antal leasingaffärer till företagskund.
+ * Fristående sida, inte en del av CRM:et: läser prospect_dealers (aggregat
+ * från Bilstatistik) och prospect_list (klassning/ansvarig/anteckning), och
+ * joinar mot dealer_market_stats för firmografi. Rankar på antal
+ * leasingaffärer till företagskund.
+ *
+ * Datan hämtas av netlify/functions/prospect-sync.mjs, som körs separat —
+ * Bilstatistik har en frågegräns per dygn, så den ska inte gå att trigga av
+ * misstag härifrån. "Räkna om" bygger listan från redan sparad rådata.
  */
 
 import { SUPABASE_URL, SUPABASE_ANON } from "./config.js";
@@ -12,18 +17,19 @@ import { $, toast, formatOrgNr, escapeHtml, escapeAttr } from "./utils.js";
 
 const PAGE_SIZE = 1000;
 const SEARCH_DEBOUNCE_MS = 200;
-const FREEZE_SIZE = 100;
 
+/** Klassningen Anton och Marc jobbar efter. */
 const STATUSES = [
-  { key: "ny", label: "Ny" },
-  { key: "kontaktad", label: "Kontaktad" },
-  { key: "bokat_besok", label: "Bokat besök" },
-  { key: "besokt", label: "Besökt" },
-  { key: "onboardad", label: "Onboardad" },
-  { key: "nej", label: "Nej" },
+  { key: "oklassad", label: "Oklassad" },
+  { key: "a", label: "A-handlare" },
+  { key: "b", label: "B-handlare" },
+  { key: "c", label: "C-handlare" },
 ];
 
 const STATUS_LABEL = Object.fromEntries(STATUSES.map((s) => [s.key, s.label]));
+
+/** Bara de som faktiskt jobbar med listan går att tilldela. */
+const OWNER_EMAILS = ["anton@aoto.se", "marc@aoto.se"];
 
 /** @type {any} */
 let sb = null;
@@ -57,7 +63,6 @@ const filters = {
   turnoverMin: null,
   turnoverMax: null,
   showExcluded: false,
-  onlyFrozen: false,
   q: "",
 };
 
@@ -161,7 +166,7 @@ async function loadAll() {
     ),
     selectAll(
       "prospect_list",
-      "org_nr, frozen_rank, owner_id, status, next_action, next_action_date, note, excluded, excluded_reason, updated_at"
+      "org_nr, owner_id, status, next_action, next_action_date, note, excluded, excluded_reason, updated_at"
     ),
     selectAll("prospect_exclusions", "id, org_nr, name_pattern, kind, note"),
     selectAll("profiles", "id, email, first_name, last_name, role"),
@@ -171,7 +176,7 @@ async function loadAll() {
   dealers = dealerRows;
   listByOrg = new Map(listRows.map((r) => [r.org_nr, r]));
   exclusions = exclusionRows;
-  profiles = profileRows;
+  profiles = profileRows.filter((p) => OWNER_EMAILS.includes((p.email || "").toLowerCase()));
   syncMeta = stateRow?.data?.value || null;
 
   await loadMarketStats(dealers.map((d) => d.org_nr));
@@ -239,9 +244,7 @@ function rebuildIndex() {
 
 function passesFilters(row) {
   if (!filters.showExcluded && row.excluded) return false;
-  if (filters.onlyFrozen && !row.list?.frozen_rank) return false;
-
-  const status = row.list?.status || "ny";
+  const status = row.list?.status || "oklassad";
   if (filters.status !== "alla" && status !== filters.status) return false;
 
   if (filters.owner === "mina" && row.list?.owner_id !== currentUserId) return false;
@@ -286,7 +289,7 @@ function sortValue(row, key) {
     case "finance_company_count":
       return row.dealer.finance_company_count ?? -1;
     case "status":
-      return STATUSES.findIndex((s) => s.key === (row.list?.status || "ny"));
+      return STATUSES.findIndex((s) => s.key === (row.list?.status || "oklassad"));
     case "owner":
       return personName(profiles.find((p) => p.id === row.list?.owner_id)).toLowerCase();
     default:
@@ -318,17 +321,13 @@ function renderAll() {
 
 function renderStats() {
   const active = indexed.filter((r) => !r.excluded);
-  const frozen = active.filter((r) => r.list?.frozen_rank);
-  const worked = active.filter((r) => r.list && r.list.status && r.list.status !== "ny");
-  const booked = active.filter((r) =>
-    ["bokat_besok", "besokt", "onboardad"].includes(r.list?.status)
-  );
+  const byClass = (key) => active.filter((r) => (r.list?.status || "oklassad") === key).length;
 
   $("#prospectStats").innerHTML = [
     { label: "I listan", value: active.length },
-    { label: "Frysta", value: frozen.length },
-    { label: "Påbörjade", value: worked.length },
-    { label: "Bokade+", value: booked.length },
+    { label: "A-handlare", value: byClass("a") },
+    { label: "B-handlare", value: byClass("b") },
+    { label: "C-handlare", value: byClass("c") },
   ]
     .map(
       (s) =>
@@ -341,7 +340,7 @@ function renderStatusFilter() {
   const counts = new Map();
   for (const row of indexed) {
     if (row.excluded) continue;
-    const status = row.list?.status || "ny";
+    const status = row.list?.status || "oklassad";
     counts.set(status, (counts.get(status) || 0) + 1);
   }
   const total = indexed.filter((r) => !r.excluded).length;
@@ -406,7 +405,7 @@ function shortFinance(name) {
 }
 
 function statusPillHtml(status) {
-  const key = status || "ny";
+  const key = status || "oklassad";
   return `<span class="pill status-${escapeAttr(key)}">${escapeHtml(STATUS_LABEL[key] || key)}</span>`;
 }
 
@@ -425,7 +424,7 @@ function renderTable() {
   $("#prospectRows").innerHTML = rows
     .map((row) => {
       const d = row.dealer;
-      const rank = row.list?.frozen_rank || row.rank;
+      const rank = row.rank;
       const city = row.stats?.city || "";
       return `
         <tr data-org="${escapeAttr(d.org_nr)}"${row.excluded ? ' class="row-excluded"' : ""}>
@@ -535,13 +534,13 @@ function openDealer(orgNr) {
     }
 
     <section class="p-sec">
-      <h4>Arbetslista</h4>
+      <h4>Klassning och ansvar</h4>
       <div class="field">
-        <label for="pStatus">Status</label>
+        <label for="pStatus">Klass</label>
         <select id="pStatus">
           ${STATUSES.map(
             (st) =>
-              `<option value="${st.key}"${(list.status || "ny") === st.key ? " selected" : ""}>${escapeHtml(st.label)}</option>`
+              `<option value="${st.key}"${(list.status || "oklassad") === st.key ? " selected" : ""}>${escapeHtml(st.label)}</option>`
           ).join("")}
         </select>
       </div>
@@ -665,47 +664,6 @@ async function toggleExcluded() {
   }
 }
 
-/** Låser nuvarande topp-N så att listan slutar röra sig mellan synkar. */
-async function freezeTop() {
-  const ranked = indexed
-    .filter((r) => !r.excluded)
-    .sort((a, b) => b.dealer.deals_total - a.dealer.deals_total)
-    .slice(0, FREEZE_SIZE);
-
-  if (!ranked.length) {
-    toast("Ingen data att frysa", { error: true });
-    return;
-  }
-
-  const now = new Date().toISOString();
-  const payload = ranked.map((row, i) => {
-    const existing = listByOrg.get(row.dealer.org_nr) || {};
-    return {
-      ...existing,
-      org_nr: row.dealer.org_nr,
-      frozen_rank: i + 1,
-      status: existing.status || "ny",
-      updated_at: now,
-    };
-  });
-
-  const { data, error } = await sb
-    .from("prospect_list")
-    .upsert(payload, { onConflict: "org_nr" })
-    .select();
-
-  if (error) {
-    console.error(error);
-    toast(error.message || "Kunde inte frysa listan", { error: true });
-    return;
-  }
-
-  for (const row of data || []) listByOrg.set(row.org_nr, row);
-  rebuildIndex();
-  renderAll();
-  toast(`Topp ${ranked.length} fryst som arbetslista`);
-}
-
 /**
  * Bygger om aggregatet från rådatan som redan ligger i Supabase.
  * Kostar inget Bilstatistik-uttag, så den går att köra hur ofta som helst.
@@ -728,56 +686,6 @@ async function runRecompute() {
     btn.disabled = false;
     btn.textContent = prevLabel || "Räkna om";
   }
-}
-
-async function runSync() {
-  const btn = $("#syncBtn");
-  const {
-    data: { session },
-  } = await sb.auth.getSession();
-  if (!session) {
-    toast("Du måste vara inloggad", { error: true });
-    return;
-  }
-
-  btn.disabled = true;
-  const prevLabel = btn.textContent;
-  btn.textContent = "Synkar…";
-  setLoading(true);
-
-  try {
-    const res = await fetch("/.netlify/functions/prospect-sync", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + session.access_token,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({}),
-    });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok || body.error) {
-      toast(body.error || "Kunde inte synka Bilstatistik", { error: true });
-      return;
-    }
-    toast(
-      `Synk klar: ${fmtNum(body.transactions)} affärer · ${fmtNum(body.dealers)} återförsäljare · period ${body.period?.first_tx} → ${body.period?.last_tx}`
-    );
-    await loadAll();
-  } catch (err) {
-    console.error(err);
-    toast(err.message || "Kunde inte synka Bilstatistik", { error: true });
-  } finally {
-    setLoading(false);
-    btn.disabled = false;
-    btn.textContent = prevLabel || "Synka Bilstatistik";
-  }
-}
-
-function setLoading(on) {
-  const el = $("#marketLoading");
-  if (!el) return;
-  el.hidden = !on;
-  el.setAttribute("aria-hidden", on ? "false" : "true");
 }
 
 // ── UI-bindning ──────────────────────────────────────────────────────────
@@ -829,11 +737,6 @@ function bindFilters() {
     filters.showExcluded = e.target.checked;
     renderTable();
   });
-  $("#pfOnlyFrozen").addEventListener("change", (e) => {
-    filters.onlyFrozen = e.target.checked;
-    renderTable();
-  });
-
   $("#clearFiltersBtn").onclick = () => {
     Object.assign(filters, {
       status: "alla",
@@ -843,7 +746,6 @@ function bindFilters() {
       turnoverMin: null,
       turnoverMax: null,
       showExcluded: false,
-      onlyFrozen: false,
     });
     $("#minDealsSlider").value = "0";
     $("#minDealsVal").textContent = "0";
@@ -851,7 +753,6 @@ function bindFilters() {
     $("#pfTurnoverMin").value = "";
     $("#pfTurnoverMax").value = "";
     $("#pfShowExcluded").checked = false;
-    $("#pfOnlyFrozen").checked = false;
     renderAll();
   };
 }
@@ -890,9 +791,7 @@ function bindUi() {
     searchTimer = setTimeout(renderTable, SEARCH_DEBOUNCE_MS);
   });
 
-  $("#syncBtn").onclick = runSync;
   $("#recomputeBtn").onclick = runRecompute;
-  $("#freezeBtn").onclick = freezeTop;
   $("#excludeBtn").onclick = toggleExcluded;
   $("#pClose").onclick = closePanel;
   $("#scrim").onclick = closePanel;

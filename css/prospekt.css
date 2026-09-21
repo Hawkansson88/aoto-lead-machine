@@ -97,37 +97,25 @@
   border: 1px solid transparent;
 }
 
-.pill.status-ny {
+.pill.status-oklassad {
   color: var(--st-ny);
   background: rgba(91, 107, 133, 0.1);
   border-color: rgba(91, 107, 133, 0.2);
 }
 
-.pill.status-kontaktad {
-  color: var(--st-kontaktad);
-  background: rgba(207, 138, 18, 0.11);
-  border-color: rgba(207, 138, 18, 0.24);
-}
-
-.pill.status-bokat_besok {
-  color: var(--st-kredit);
-  background: rgba(59, 111, 217, 0.1);
-  border-color: rgba(59, 111, 217, 0.22);
-}
-
-.pill.status-besokt {
-  color: var(--st-mote);
-  background: rgba(15, 157, 111, 0.11);
-  border-color: rgba(15, 157, 111, 0.24);
-}
-
-.pill.status-onboardad {
+.pill.status-a {
   color: #fff;
   background: var(--st-aktiv);
   border-color: var(--st-aktiv);
 }
 
-.pill.status-nej {
+.pill.status-b {
+  color: var(--st-kontaktad);
+  background: rgba(207, 138, 18, 0.12);
+  border-color: rgba(207, 138, 18, 0.26);
+}
+
+.pill.status-c {
   color: var(--st-ej);
   background: rgba(154, 166, 184, 0.12);
   border-color: rgba(154, 166, 184, 0.24);
