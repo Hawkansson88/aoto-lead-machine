@@ -49,6 +49,21 @@
   color: var(--faint);
 }
 
+/* Leasingandel av företagsaffärerna. Låg andel med hög volym är inte
+   nödvändigtvis dåligt — kunderna finns, vanan saknas. */
+
+.cell-sub.share-high {
+  color: var(--sc-high);
+}
+
+.cell-sub.share-mid {
+  color: var(--st-kontaktad);
+}
+
+.cell-sub.share-low {
+  color: var(--faint);
+}
+
 /* Momentum: senaste kvartalet mot föregående */
 
 .mom {

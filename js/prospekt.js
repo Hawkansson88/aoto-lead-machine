@@ -195,7 +195,7 @@ async function loadAll() {
 async function loadMarketStats(orgNrs) {
   statsByOrg = new Map();
   const columns =
-    "org_nr, company_name, address, postcode, city, employees, turnover_tkr, profit_tkr, established_year, lagerantal, lat, lng";
+    "org_nr, company_name, address, postcode, city, employees, turnover_tkr, profit_tkr, established_year, lagerantal, lat, lng, salj_foretag_12m, saljvolym_12m";
   const CHUNK = 200;
   for (let i = 0; i < orgNrs.length; i += CHUNK) {
     const chunk = orgNrs.slice(i, i + CHUNK);
@@ -294,6 +294,8 @@ function sortValue(row, key) {
       return (row.dealer.company_name || "").toLowerCase();
     case "momentum":
       return row.momentum ?? -Infinity;
+    case "b2b":
+      return row.stats?.salj_foretag_12m ?? -1;
     case "finance_company_count":
       return row.dealer.finance_company_count ?? -1;
     case "status":
@@ -446,6 +448,23 @@ function ownerHtml(ownerId) {
   return `<span class="av av-sm has-tip" data-tip="${escapeAttr(personName(profile))}">${escapeHtml(initials(profile))}</span>`;
 }
 
+/**
+ * Företagsaffärer totalt, med leasingandelen under.
+ *
+ * Siffran kommer från beståndsimporten och inte ur leasingdatan, så den
+ * mäter en annan period och saknas för bolag som aldrig kom med där. Låg
+ * andel med hög volym = kunderna finns men leasingvanan saknas.
+ */
+function b2bCellHtml(row) {
+  const b2b = row.stats?.salj_foretag_12m;
+  if (b2b == null || b2b === "") return '<span class="faint">–</span>';
+  const share = b2b > 0 ? Math.round((row.dealer.deals_total / b2b) * 100) : null;
+  const cls = share == null ? "" : share >= 40 ? "share-high" : share >= 15 ? "share-mid" : "share-low";
+  return `<span class="num">${fmtNum(b2b)}</span>${
+    share == null ? "" : `<div class="cell-sub ${cls}">${share} % leasing</div>`
+  }`;
+}
+
 function renderTable() {
   const rows = visibleRows();
   $("#resultCount").textContent = rows.length;
@@ -475,6 +494,7 @@ function renderTable() {
           <td class="right num"><b>${fmtNum(d.deals_total)}</b></td>
           <td class="right num">${fmtNum(d.distinct_customers)}</td>
           <td class="right">${momentumHtml(row.momentum)}</td>
+          <td class="right">${b2bCellHtml(row)}</td>
           <td class="right num">${fmtNum(d.finance_company_count)}</td>
           <td class="fin">${financeHtml(d)}</td>
           <td>${statusPillHtml(row.list?.status)}</td>
@@ -548,6 +568,8 @@ function openDealer(orgNr) {
   const facts = [
     ["Leasingaffärer", fmtNum(d.deals_total)],
     ["Unika slutkunder", fmtNum(d.distinct_customers)],
+    ["Företagsaffärer 12 mån", fmtNum(s?.salj_foretag_12m)],
+    ["Sålda totalt 12 mån", fmtNum(s?.saljvolym_12m)],
     ["Kvartal i år", fmtNum(d.deals_recent_90d)],
     ["Samma kvartal i fjol", fmtNum(d.deals_prev_90d)],
     ["Antal finansbolag", fmtNum(d.finance_company_count)],
