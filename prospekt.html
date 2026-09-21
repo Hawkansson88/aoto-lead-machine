@@ -9,9 +9,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/prospekt.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 </head>
 <body>
 
@@ -106,6 +111,10 @@
             <span class="ic">⌕</span>
             <input id="search" placeholder="Sök namn, ort eller org.nr…" autocomplete="off" />
           </div>
+          <button type="button" class="btn btn-prim has-tip tip-below" id="mapBtn"
+            data-tip="Visa återförsäljarna på karta.&#10;Ange en ort för att se vilka som ligger i närheten, eller från och till för att se vilka som ligger på vägen.">
+            Karta
+          </button>
           <button type="button" class="btn btn-ghost has-tip tip-below" id="recomputeBtn"
             data-tip="Bygger om listan från redan sparad rådata i Supabase.&#10;Kostar inget Bilstatistik-uttag.">
             Räkna om
@@ -179,6 +188,46 @@
     </div>
     <div class="p-body" id="pBody"></div>
   </aside>
+
+  <!-- Karta -->
+  <div class="modal-scrim" id="prospectMapScrim"></div>
+  <div class="map-modal" id="prospectMapModal">
+    <div class="map-head">
+      <div>
+        <h2>Karta</h2>
+        <div class="sub" id="prospectMapSub">–</div>
+      </div>
+      <button class="p-close" id="prospectMapClose">✕</button>
+    </div>
+    <div class="map-route">
+      <label>
+        <span>Från</span>
+        <input id="mapFrom" type="text" placeholder="t.ex. Stockholm" autocomplete="off" />
+      </label>
+      <label>
+        <span>Till</span>
+        <input id="mapTo" type="text" placeholder="t.ex. Östersund" autocomplete="off" />
+      </label>
+      <label>
+        <span>Avstånd</span>
+        <select id="mapRadius">
+          <option value="25">2,5 mil</option>
+          <option value="50" selected>5 mil</option>
+          <option value="100">10 mil</option>
+          <option value="150">15 mil</option>
+        </select>
+      </label>
+      <button type="button" class="btn btn-prim btn-sm" id="mapApplyBtn">Visa</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="mapClearBtn">Rensa</button>
+      <span class="map-legend">
+        <i style="background:#0a7d5a"></i>A
+        <i style="background:#cf8a12"></i>B
+        <i style="background:#9aa6b8"></i>C
+        <i style="background:#5b6b85"></i>Oklassad
+      </span>
+    </div>
+    <div id="prospectMapContainer"></div>
+  </div>
 
   <div class="toast" id="toast"></div>
 

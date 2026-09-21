@@ -279,3 +279,91 @@
   border-radius: 9px;
   padding: 9px 11px;
 }
+
+/* --- Karta --------------------------------------------------------------- */
+
+.map-route {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  flex: none;
+  flex-wrap: wrap;
+}
+
+.map-route label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.map-route label span {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.map-route input,
+.map-route select {
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 8px 11px;
+  width: 170px;
+}
+
+.map-route select {
+  width: 120px;
+}
+
+.map-route input:focus,
+.map-route select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.map-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.map-legend i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-left: 8px;
+  border: 1px solid #fff;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+#prospectMapContainer {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.route-tip {
+  background: #1a73e8;
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  font-size: 11px;
+  padding: 3px 7px;
+  box-shadow: none;
+}
+
+.route-tip::before {
+  border-top-color: #1a73e8;
+}

@@ -13,6 +13,7 @@
 
 import { SUPABASE_URL, SUPABASE_ANON } from "./config.js";
 import { bindFloatingTips } from "./floating-tip.js";
+import { openProspectMap, bindProspectMap, closeProspectMap } from "./prospekt-map.js";
 import { $, toast, formatOrgNr, escapeHtml, escapeAttr } from "./utils.js";
 
 const PAGE_SIZE = 1000;
@@ -194,7 +195,7 @@ async function loadAll() {
 async function loadMarketStats(orgNrs) {
   statsByOrg = new Map();
   const columns =
-    "org_nr, company_name, address, postcode, city, employees, turnover_tkr, profit_tkr, established_year, lagerantal";
+    "org_nr, company_name, address, postcode, city, employees, turnover_tkr, profit_tkr, established_year, lagerantal, lat, lng";
   const CHUNK = 200;
   for (let i = 0; i < orgNrs.length; i += CHUNK) {
     const chunk = orgNrs.slice(i, i + CHUNK);
@@ -829,11 +830,16 @@ function bindUi() {
   });
 
   $("#recomputeBtn").onclick = runRecompute;
+  // Kartan får de filtrerade raderna, så sidopanelens filter gäller där också
+  $("#mapBtn").onclick = () => openProspectMap(visibleRows(), openDealer);
+  bindProspectMap();
   $("#excludeBtn").onclick = toggleExcluded;
   $("#pClose").onclick = closePanel;
   $("#scrim").onclick = closePanel;
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closePanel();
+    if (e.key !== "Escape") return;
+    closePanel();
+    closeProspectMap();
   });
 
   $("#prospectRows").addEventListener("click", (e) => {
