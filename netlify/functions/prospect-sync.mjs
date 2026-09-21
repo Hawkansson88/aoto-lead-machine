@@ -35,6 +35,13 @@ const NON_DEALER_NEGATE = [
 /** RegistrantClassification 1 = juridisk person. */
 const CLASS_FORETAG = 1;
 
+/** Fordonets minimiålder vid affären. 1 = allt utom fabriksnytt. */
+const AGE_FROM_MONTHS = 1;
+/** Bilstatistiks periodalternativ: 1 = år-till-datum. */
+const DATE_RANGE_YTD = 1;
+/** 5 = föregående kalenderår. Används för att fylla på bakåt. */
+export const DATE_RANGE_PREV_YEAR = 5;
+
 function json(statusCode, body) {
   return {
     statusCode,
@@ -98,8 +105,16 @@ function bilstatistikErrorMessage(data, text, status) {
  * Filtret identifierar ÅF:en via föregående BRUKARE, inte föregående ägare:
  * vid lagerfinansiering står finansbolaget som ägare medan ÅF:en är brukare,
  * och det gäller ungefär var tredje affär. PreviousOwner lämnas därför öppen.
+ *
+ * @param {object} [opts]
+ * @param {number} [opts.ageFromMonths] Fordonets minimiålder vid affären.
+ * @param {number} [opts.dateRangeOptionId] 1 = år-till-datum, 5 = föregående
+ *   kalenderår. Rullande 12 månader finns inte som alternativ — det får man
+ *   genom att hämta båda och låta 365-dagarsfönstret i omräkningen skära.
  */
-function buildLeasingSalesRequest() {
+export function buildLeasingSalesRequest(opts = {}) {
+  const ageFromMonths = opts.ageFromMonths ?? AGE_FROM_MONTHS;
+  const dateRangeOptionId = opts.dateRangeOptionId ?? DATE_RANGE_YTD;
   return {
     ReportProfile: {
       ReportTypeId: -4,
@@ -107,11 +122,11 @@ function buildLeasingSalesRequest() {
         // 1 = personbil, 3 = lätt lastbil, 5 = tung lastbil
         VehicleTypes: { Values: [1, 3, 5] },
         Leasing: { ExpirationDateRange: {}, Values: [1] },
-        // Begagnat: bilen minst 12 månader gammal vid affären
+        // Fordonets ålder vid affären, i månader
         Age: {
           PredefinedVehicleAgeOptionId: -98,
           FirstRegistrationDateRange: {},
-          AgeInMonthsRange: { From: 12 },
+          AgeInMonthsRange: { From: ageFromMonths },
         },
         // Ny ägare = leasinggivaren
         Owner: {
@@ -135,7 +150,7 @@ function buildLeasingSalesRequest() {
       },
       TransactionDataset: {
         DateRange: {},
-        DateRangeOptionId: 1,
+        DateRangeOptionId: dateRangeOptionId,
         TransactionTypeGroupId: 3,
       },
     },
@@ -209,7 +224,7 @@ async function fetchReportPage(handleId, offset, count, user, pass) {
 }
 
 /** Hämtar alla rader (paginerar via handle om >1000). */
-async function fetchReportAllRows(requestBody, user, pass) {
+export async function fetchReportAllRows(requestBody, user, pass) {
   const first = await fetchReport(requestBody, user, pass, MAX_REPORT_PAGE);
   const total = Number(pick(first, "TotalRowCount", "totalRowCount")) || 0;
   const rows = [...(pick(first, "Rows", "rows") || [])];
@@ -322,7 +337,7 @@ async function sbWrite(sbUrl, serviceKey, path, method, payload, prefer, label) 
   return res;
 }
 
-async function upsertTransactions(sbUrl, serviceKey, transactions) {
+export async function upsertTransactions(sbUrl, serviceKey, transactions) {
   const now = new Date().toISOString();
   for (let i = 0; i < transactions.length; i += INSERT_BATCH) {
     const batch = transactions

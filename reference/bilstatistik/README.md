@@ -14,9 +14,13 @@ Profilen är implementerad i `netlify/functions/prospect-sync.mjs`
 
 ## Vad rapporten fångar
 
-Begagnade fordon (minst 12 månader gamla) som sålts från en bilhandlare och
-registrerats på leasing med ett **företag** som brukare. Alltså företagsleasing
-till slutkund, inte privatleasing.
+Fordon som sålts från en bilhandlare och registrerats på leasing med ett
+**företag** som brukare. Alltså företagsleasing till slutkund, inte
+privatleasing.
+
+Åldersgränsen styrs av `AgeInMonthsRange.From` och står på **1 månad**, alltså
+allt utom fabriksnytt. Den var 12 månader i de sparade referensfilerna, då
+urvalet var rent begagnat.
 
 ## Fyra parter per rad
 
@@ -63,8 +67,18 @@ tabellen `prospect_exclusions`, som går att redigera utan nytt uttag.
 
 ## Perioden
 
-`DateRangeOptionId: 1` returnerar transaktioner fram till dagens datum, men om
-det är rullande 12 månader eller år-till-datum är obekräftat. Synken förlitar
-sig därför inte på den: `prospect-sync.mjs` fönstrar själv 365 dagar bakåt från
-senaste transaktionen i datan, och sparar det faktiska spannet i
-`app_state.prospect_sync`.
+Uppmätt mot verkliga uttag:
+
+| DateRangeOptionId | Period |
+|---|---|
+| 1 | år-till-datum |
+| 5 | föregående kalenderår |
+
+**Rullande 12 månader finns inte som alternativ.** Lösningen är att hämta båda
+perioderna en gång var och låta 365-dagarsfönstret i
+`recompute_prospect_dealers()` skära ut det rullande året ur den samlade
+rådatan. Överlapp är ofarligt: `UNIQUE (reg_nr, tx_date, dealer_org_nr)`
+rensar det.
+
+Hämtningen körs med `node scripts/prospect-pull.mjs --period ytd` respektive
+`--period forra-aret`. Det faktiska spannet sparas i `app_state.prospect_sync`.
