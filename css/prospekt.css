@@ -1,0 +1,293 @@
+/* AOTO Prospekt — tillägg ovanpå styles.css.
+   Återanvänder app-, sidebar-, panel- och market-table-stilarna därifrån. */
+
+.prospect-check {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 2px;
+  font-size: 13px;
+  color: #c4cee0;
+  cursor: pointer;
+}
+
+.prospect-check input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* --- Tabell -------------------------------------------------------------- */
+
+.prospect-cols td {
+  vertical-align: middle;
+}
+
+.prospect-cols .cell-name {
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.prospect-cols .cell-sub {
+  font-size: 11px;
+  color: var(--faint);
+  margin-top: 2px;
+}
+
+.prospect-cols tr.row-excluded {
+  opacity: 0.45;
+}
+
+.prospect-cols tr.row-excluded .cell-name {
+  text-decoration: line-through;
+  text-decoration-color: var(--faint);
+}
+
+.faint {
+  color: var(--faint);
+}
+
+/* Momentum: senaste kvartalet mot föregående */
+
+.mom {
+  font-family: "IBM Plex Mono";
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.mom-up {
+  color: var(--sc-high);
+}
+
+.mom-down {
+  color: var(--sc-low);
+}
+
+.mom-flat {
+  color: var(--faint);
+}
+
+/* Finansbolagen ÅF:en använder idag */
+
+.fin-cell {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  cursor: default;
+}
+
+.fin-cell b {
+  color: var(--ink);
+  font-family: "IBM Plex Mono";
+  font-size: 11px;
+}
+
+/* Statusetikett */
+
+.pill {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.pill.status-ny {
+  color: var(--st-ny);
+  background: rgba(91, 107, 133, 0.1);
+  border-color: rgba(91, 107, 133, 0.2);
+}
+
+.pill.status-kontaktad {
+  color: var(--st-kontaktad);
+  background: rgba(207, 138, 18, 0.11);
+  border-color: rgba(207, 138, 18, 0.24);
+}
+
+.pill.status-bokat_besok {
+  color: var(--st-kredit);
+  background: rgba(59, 111, 217, 0.1);
+  border-color: rgba(59, 111, 217, 0.22);
+}
+
+.pill.status-besokt {
+  color: var(--st-mote);
+  background: rgba(15, 157, 111, 0.11);
+  border-color: rgba(15, 157, 111, 0.24);
+}
+
+.pill.status-onboardad {
+  color: #fff;
+  background: var(--st-aktiv);
+  border-color: var(--st-aktiv);
+}
+
+.pill.status-nej {
+  color: var(--st-ej);
+  background: rgba(154, 166, 184, 0.12);
+  border-color: rgba(154, 166, 184, 0.24);
+}
+
+.av-sm {
+  width: 26px;
+  height: 26px;
+  font-size: 10.5px;
+  cursor: default;
+}
+
+/* --- Panel --------------------------------------------------------------- */
+
+.p-note {
+  background: rgba(224, 85, 107, 0.08);
+  border: 1px solid rgba(224, 85, 107, 0.25);
+  color: var(--sc-low);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  margin-bottom: 20px;
+}
+
+.p-hint {
+  font-size: 11.5px;
+  color: var(--faint);
+  margin: -4px 0 12px;
+  line-height: 1.45;
+}
+
+.fact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 9px 11px;
+}
+
+.fact span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.fact b {
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
+/* Affärer per månad */
+
+.month-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 78px;
+  padding-top: 4px;
+}
+
+.month-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  cursor: default;
+}
+
+.month-bar span {
+  display: block;
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+}
+
+.month-bar em {
+  font-family: "IBM Plex Mono";
+  font-size: 9.5px;
+  font-style: normal;
+  color: var(--faint);
+}
+
+/* Finansbolag / märken som rankad stapellista */
+
+.count-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.count-row {
+  display: grid;
+  grid-template-columns: 1fr 70px 32px;
+  align-items: center;
+  gap: 10px;
+}
+
+.count-label {
+  font-size: 12px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.count-track span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.count-row b {
+  font-size: 11.5px;
+  color: var(--muted);
+  text-align: right;
+}
+
+.p-sec textarea {
+  width: 100%;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 9px 11px;
+}
+
+.p-sec textarea:focus,
+.p-sec select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.p-sec select {
+  width: 100%;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 9px 11px;
+}

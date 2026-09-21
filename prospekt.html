@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prospekt — AOTO</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/prospekt.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- Auth gate -->
+  <div id="authGate">
+    <div class="auth-card">
+      <div class="brand"><div class="mark">A</div></div>
+      <h2>AOTO Prospekt</h2>
+      <p class="lead">Logga in för att fortsätta</p>
+      <div class="field">
+        <label for="authEmail">E-post</label>
+        <input id="authEmail" type="email" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label for="authPw">Lösenord</label>
+        <input id="authPw" type="password" autocomplete="current-password" />
+      </div>
+      <div class="auth-err" id="authErr"></div>
+      <button class="btn btn-acc" id="authBtn">Logga in</button>
+    </div>
+  </div>
+
+  <div class="app" id="app">
+    <aside class="sidebar">
+      <a href="index.html" class="brand" title="Startsida">
+        <div class="mark">A</div>
+        <div class="wm">AOTO<small>Prospekt · slutkundsleasing</small></div>
+      </a>
+
+      <div class="view-nav" id="viewNav">
+        <a href="index.html" class="view-nav-btn">Sälj</a>
+        <a href="marknadsanalys.html" class="view-nav-btn">Marknadsanalys</a>
+        <a href="prospekt.html" class="view-nav-btn active">Prospekt</a>
+      </div>
+
+      <p class="section-label">Om sidan</p>
+      <p class="market-about">
+        Återförsäljare rankade på antal leasingaffärer till företagskund, från
+        Bilstatistik. Fristående från CRM — inget här påverkar era leads.
+      </p>
+
+      <div class="stat-grid" id="prospectStats"></div>
+
+      <p class="section-label">Status</p>
+      <div class="status-list" id="statusFilter"></div>
+
+      <p class="section-label">Ansvarig</p>
+      <div class="status-list" id="ownerFilter"></div>
+
+      <div class="slider-wrap">
+        <div class="slider-head">
+          <p class="section-label" style="margin:0">Min. affärer</p>
+          <b class="num" id="minDealsVal">0</b>
+        </div>
+        <input type="range" id="minDealsSlider" min="0" max="100" value="0" step="5" />
+      </div>
+
+      <div class="market-filters">
+        <div class="rev-filter">
+          <p class="section-label" style="margin-bottom:8px">Ort eller län</p>
+          <div class="rev-inputs">
+            <input type="text" id="pfCity" placeholder="t.ex. Göteborg" autocomplete="off" />
+          </div>
+        </div>
+        <div class="rev-filter">
+          <p class="section-label" style="margin-bottom:8px">Omsättning (Mkr)</p>
+          <div class="rev-inputs">
+            <input type="number" id="pfTurnoverMin" placeholder="Min" />
+            <span>–</span>
+            <input type="number" id="pfTurnoverMax" placeholder="Max" />
+          </div>
+        </div>
+      </div>
+
+      <label class="prospect-check">
+        <input type="checkbox" id="pfShowExcluded" />
+        <span>Visa uteslutna</span>
+      </label>
+      <label class="prospect-check">
+        <input type="checkbox" id="pfOnlyFrozen" />
+        <span>Bara frysta topp-100</span>
+      </label>
+
+      <button type="button" class="save-filters-btn market-clear-filters-btn" id="clearFiltersBtn">Rensa filter</button>
+
+      <div class="user-foot">
+        <div class="av" id="userAv">–</div>
+        <div class="em" id="userEmail">–</div>
+        <button class="lo" id="logoutBtn">Logga ut</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1>Prospekt</h1>
+          <div class="sub" id="pageSub">
+            <span id="resultCount">0</span> återförsäljare · sorterade efter antal leasingaffärer
+            <span id="dataUpdated" style="color:var(--faint)"> · Data: –</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="search">
+            <span class="ic">⌕</span>
+            <input id="search" placeholder="Sök namn, ort eller org.nr…" autocomplete="off" />
+          </div>
+          <button type="button" class="btn btn-ghost has-tip tip-below" id="freezeBtn"
+            data-tip="Låser nuvarande topp-100 som er arbetslista.&#10;Nya synkar ändrar då inte ordningen ni jobbar efter.">
+            Frys topp 100
+          </button>
+          <button type="button" class="btn btn-prim has-tip tip-below" id="syncBtn"
+            data-tip="Hämtar alla leasingaffärer till företagskund från Bilstatistik och räknar om listan.&#10;&#10;Bilstatistik har en frågegräns per dygn — kör inte i onödan.">
+            Synka Bilstatistik
+          </button>
+          <span class="conn-pill live"><span class="d"></span>Live · Supabase</span>
+        </div>
+      </header>
+
+      <div class="market-table" data-market-table>
+        <div class="market-table-head">
+          <table class="market-cols prospect-cols">
+            <colgroup>
+              <col style="width:5%" /><col style="width:20%" /><col style="width:11%" />
+              <col style="width:8%" /><col style="width:8%" /><col style="width:8%" />
+              <col style="width:8%" /><col style="width:14%" /><col style="width:9%" />
+              <col style="width:9%" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th data-sort="rank">#</th>
+                <th data-sort="company_name">Företag</th>
+                <th>Ort</th>
+                <th data-sort="deals_total" class="right has-tip tip-below"
+                  data-tip="Antal leasingaffärer till företagskund i perioden. Listans huvudmått.">Affärer</th>
+                <th data-sort="distinct_customers" class="right has-tip tip-below"
+                  data-tip="Unika slutkunder. Nära affärssiffran = bred kundbas. Mycket lägre = några få storkunder.">Kunder</th>
+                <th data-sort="momentum" class="right has-tip tip-below"
+                  data-tip="Senaste 90 dagarna mot de 90 dagarna dessförinnan. Grönt = växande leasingförsäljning.">Trend</th>
+                <th data-sort="passthrough_share" class="right has-tip tip-below"
+                  data-tip="Andel affärer där bilen passerade ÅF:en på mindre än en månad — ren förmedling, alltså precis AOTO:s flöde.">Förmedl.</th>
+                <th class="has-tip tip-below"
+                  data-tip="Vilka leasinggivare ÅF:en använder idag. Det är dem ni ska ta affären ifrån.">Finansbolag idag</th>
+                <th data-sort="status">Status</th>
+                <th data-sort="owner">Ansvarig</th>
+              </tr>
+            </thead>
+          </table>
+          <div class="market-table-scrollpad" aria-hidden="true"></div>
+        </div>
+        <div class="table-scroll market-table-body">
+          <table class="market-cols prospect-cols">
+            <colgroup>
+              <col style="width:5%" /><col style="width:20%" /><col style="width:11%" />
+              <col style="width:8%" /><col style="width:8%" /><col style="width:8%" />
+              <col style="width:8%" /><col style="width:14%" /><col style="width:9%" />
+              <col style="width:9%" />
+            </colgroup>
+            <tbody id="prospectRows"></tbody>
+          </table>
+          <div class="empty" id="empty" style="display:none">
+            Ingen data ännu — klicka <b>Synka Bilstatistik</b> för att hämta listan.
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Detaljpanel -->
+  <div class="scrim" id="scrim"></div>
+  <aside class="panel" id="panel">
+    <div class="p-head">
+      <div class="p-head-actions">
+        <button class="btn btn-ghost btn-sm" id="excludeBtn" title="Uteslut ur listan">Uteslut</button>
+        <button class="p-close" id="pClose">✕</button>
+      </div>
+      <div class="p-score">
+        <div class="ring" id="pRing">0</div>
+        <div>
+          <div class="p-name" id="pName">—</div>
+          <div class="p-meta num" id="pMeta">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="p-body" id="pBody"></div>
+  </aside>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="market-loading" id="marketLoading" aria-hidden="true" hidden>
+    <div class="market-loading-bg" aria-hidden="true"></div>
+    <div class="market-loading-card">
+      <div class="market-loading-road" aria-hidden="true">
+        <div class="market-loading-car">
+          <svg width="56" height="28" viewBox="0 0 56 28" fill="none" aria-hidden="true">
+            <path d="M8 18h40l-3.5-8.5A4 4 0 0 0 40.8 7H16.5a4 4 0 0 0-3.7 2.4L8 18z" fill="currentColor" opacity=".95"/>
+            <path d="M8 18h40v3H8z" fill="currentColor"/>
+            <circle cx="16" cy="21.5" r="3.5" fill="#0d1424" stroke="currentColor" stroke-width="2"/>
+            <circle cx="40" cy="21.5" r="3.5" fill="#0d1424" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="market-loading-lane"></div>
+      </div>
+      <p class="market-loading-title">Hämtar leasingaffärer…</p>
+      <p class="market-loading-sub">13 000 rader från Bilstatistik — det tar en stund.</p>
+      <div class="market-loading-bar" aria-hidden="true"><span></span></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/prospekt.js"></script>
+</body>
+</html>

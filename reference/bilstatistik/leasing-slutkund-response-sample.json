@@ -1,0 +1,1618 @@
+{
+  "Columns": [
+    {
+      "Name": "RaekkeNummer",
+      "Captions": [
+        {
+          "Caption": "Nr",
+          "Level": 0
+        }
+      ],
+      "CellIndex": 0,
+      "DataType": 1
+    },
+    {
+      "Name": "RegistrationNumber",
+      "Captions": [
+        {
+          "Caption": "Reg.nr",
+          "Level": 0
+        }
+      ],
+      "CellIndex": 1,
+      "DataType": 0
+    },
+    {
+      "Name": "Date",
+      "Captions": [
+        {
+          "Caption": "Datum",
+          "Level": 0
+        }
+      ],
+      "CellIndex": 2,
+      "DataType": 3
+    },
+    {
+      "Name": "PreviousPrimaryUserDisplayName",
+      "Captions": [
+        {
+          "Caption": "Föregående brukare",
+          "Level": 0
+        }
+      ],
+      "CellIndex": 3,
+      "DataType": 0
+    },
+    {
+      "Name": "PreviousPrimaryUserVisibleCompanyRegistrationNumber",
+      "Captions": [
+        {
+          "Caption": "Föregående brukare - org.nr",
+          "Level": 0
+        }
+      ],
+      "CellIndex": 4,
+      "DataType": 0
+    },
+    {
+      "Name": "MakeName",
+      "Captions": [
+        {
+          "Caption": "Märke",
+          "Level": 0
+        }
+      ],
+      "CellIndex": 5,
+      "DataType": 0
+    },
+    {
+      "Name": "CurrentStateDurationDisplayString",
+      "Captions": [
+        {
+          "Caption": "Innehavstid",
+          "Level": 0
+        }
+      ],
+      "CellIndex": 6,
+      "DataType": 0
+    },
+    {
+      "Name": "PrimaryOwnerDisplayName",
+      "Captions": [
+        {
+          "Caption": "Ägare",
+          "Level": 0
+        }
+      ],
+      "CellIndex": 7,
+      "DataType": 0
+    },
+    {
+      "Name": "PreviousPrimaryOwnerVisibleCompanyRegistrationNumber",
+      "Captions": [
+        {
+          "Caption": "Föregående ägare - org.nr",
+          "Level": 0
+        }
+      ],
+      "CellIndex": 8,
+      "DataType": 0
+    },
+    {
+      "Name": "PrimaryUserDisplayName",
+      "Captions": [
+        {
+          "Caption": "Brukare",
+          "Level": 0
+        }
+      ],
+      "CellIndex": 9,
+      "DataType": 0
+    }
+  ],
+  "Rows": [
+    {
+      "Cells": [
+        1,
+        "POP01D",
+        "2026-09-15T00:00:00",
+        "Liljas Personbilar AB",
+        "5560505082",
+        "Volvo",
+        "1 dag",
+        "Swedbank AB",
+        "5560505082",
+        "Nordlo Södra Norrland AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        2,
+        "LGC20H",
+        "2026-09-15T00:00:00",
+        "FlinksBilar AB",
+        "5569333775",
+        "Volkswagen",
+        "1 dag",
+        "Länsförsäkringar Finans AB",
+        "5591605117",
+        "Björke Fastigheter AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        3,
+        "RAM593",
+        "2026-09-15T00:00:00",
+        "Carla AB",
+        "5592773492",
+        "Tesla",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5594332693",
+        "Capri PRE AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        4,
+        "XEK08X",
+        "2026-09-15T00:00:00",
+        "5S Bil AB",
+        "5590088554",
+        "Volkswagen",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5590088554",
+        "Solpartner AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        5,
+        "NWA19E",
+        "2026-09-15T00:00:00",
+        "FlinksBilar AB",
+        "5569333775",
+        "Volkswagen",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5569333775",
+        "City Säkerhet & Elteknik AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        6,
+        "AUF71E",
+        "2026-09-15T00:00:00",
+        "Berners Person - och Transportbilar AB",
+        "5560266008",
+        "Volkswagen",
+        "1 dag",
+        "Nordea Finans Sverige AB",
+        "5560266008",
+        "Kramfors kommun"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        7,
+        "WUX37R",
+        "2026-09-15T00:00:00",
+        "Tjänstebils Experten i Kungälv AB",
+        "5591062277",
+        "Peugeot",
+        "1 dag",
+        "Nordea Finans Sverige AB",
+        "5591062277",
+        "Sundlund AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        8,
+        "WFR03S",
+        "2026-09-15T00:00:00",
+        "Holmgrens Bil AB",
+        "5563136620",
+        "Ford",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5563136620",
+        "Adapt Byggruppen AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        9,
+        "BFY65W",
+        "2026-09-15T00:00:00",
+        "Riddermark Bil AB",
+        "5567507693",
+        "Peugeot",
+        "1 dag",
+        "Toyota Kreditbank Gmbh Tyskland, Sverige Filial",
+        "5567507693",
+        "Måleri- och golvservice i Tyresö AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        10,
+        "GCD29G",
+        "2026-09-15T00:00:00",
+        "Wowto Sweden AB",
+        "5566441068",
+        "Opel",
+        "1 dag",
+        "Toyota Kreditbank Gmbh Tyskland, Sverige Filial",
+        "5566441068",
+        "Kvadratmeter Roslagen AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        11,
+        "WBM85K",
+        "2026-09-15T00:00:00",
+        "Ayvens Sweden AB",
+        "5565061776",
+        "Polestar",
+        "1 dag",
+        "Nordea Finans Sverige AB",
+        "5565061776",
+        "Nordic Arena Service AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        12,
+        "NFR83M",
+        "2026-09-15T00:00:00",
+        "Noréns Bil AB",
+        "5569470551",
+        "Renault",
+        "1 dag",
+        "Nordea Finans Sverige AB",
+        "5563769123",
+        "Kstructure AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        13,
+        "LHR90S",
+        "2026-09-15T00:00:00",
+        "FlinksBilar AB",
+        "5569333775",
+        "Ford",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5591605117",
+        "100% Golv och Bygg i Sverige AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        14,
+        "ALD14E",
+        "2026-09-15T00:00:00",
+        "Scandium i Lagan Aktiebolag",
+        "5561145201",
+        "Peugeot",
+        "1 dag",
+        "Länsförsäkringar Finans AB",
+        "5561145201",
+        "Kastebergs Gård i Össlöv AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        15,
+        "MFL21Z",
+        "2026-09-15T00:00:00",
+        "Bilia Center Auto AB",
+        "5590823851",
+        "Mercedes-Benz",
+        "1 dag",
+        "Mercedes-Benz Finans Sverige AB",
+        "5590823851",
+        "Abrahams Åkeri AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        16,
+        "EOP505",
+        "2026-09-15T00:00:00",
+        "Noréns Bil AB",
+        "5569470551",
+        "Ford",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5569470551",
+        "Mirdita AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        17,
+        "AES373",
+        "2026-09-15T00:00:00",
+        "Pannula Cars AB",
+        "5595181891",
+        "BMW",
+        "1 dag",
+        "MyMoney Europe AB",
+        "5164111444",
+        "MyMoney Europe AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        18,
+        "BKR554",
+        "2026-09-15T00:00:00",
+        "Holm & Sjö Bil AB",
+        "5595478230",
+        "Mercedes-Benz",
+        "1 dag",
+        "MyMoney Europe AB",
+        "5569298598",
+        "MyMoney Europe AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        19,
+        "ROG15T",
+        "2026-09-15T00:00:00",
+        "Severin Autogroup Handelsbolag",
+        "9697702505",
+        "Volkswagen",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5569333775",
+        "Milab Entreprenad AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        20,
+        "RAU88K",
+        "2026-09-15T00:00:00",
+        "Fordonspartner Gävleborg AB",
+        "5592985161",
+        "Volkswagen",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5164060336",
+        "Bagges Byggkonsult Aktiebolag"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        21,
+        "WWN47T",
+        "2026-09-15T00:00:00",
+        "Hedin Automotive Mölndal AB",
+        "5562813617",
+        "Ford",
+        "1 dag",
+        "Danske Bank A/S, Danmark, Sverige Filial",
+        "5562813617",
+        "B2 Entreprenad i Arboga AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        22,
+        "AGA449",
+        "2026-09-15T00:00:00",
+        "Bildepån i Morgongåva AB",
+        "5567888465",
+        "BMW",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5567888465",
+        "Bröderna Mattssons Åkeri AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        23,
+        "ZAJ806",
+        "2026-09-15T00:00:00",
+        "M-fordon AB",
+        "5569137838",
+        "Volkswagen",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5569137838",
+        "Select i Stockholm AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        24,
+        "KAR04B",
+        "2026-09-15T00:00:00",
+        "ASKLING BIL AB",
+        "5564982311",
+        "Toyota",
+        "1 dag",
+        "Toyota Kreditbank Gmbh Tyskland, Sverige Filial",
+        "5564982311",
+        "AB Super-X"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        25,
+        "SJK27S",
+        "2026-09-15T00:00:00",
+        "M-B Automotive AB",
+        "5595010116",
+        "Mercedes-Benz",
+        "1 dag",
+        "Swedbank AB",
+        "5595010116",
+        "Dalshult Industri & Entreprenad AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        26,
+        "DSF33E",
+        "2026-09-15T00:00:00",
+        "Lindströms Bil Aktiebolag",
+        "5560553561",
+        "Volkswagen",
+        "1 dag",
+        "Toyota Kreditbank Gmbh Tyskland, Sverige Filial",
+        "5560553561",
+        "Incorp Väst AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        27,
+        "LZG340",
+        "2026-09-15T00:00:00",
+        "CityBil Bromma AB",
+        "5563786176",
+        "Volkswagen",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5563786176",
+        "P&1 Consulting AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        28,
+        "NAL497",
+        "2026-09-15T00:00:00",
+        "Svenska Beg Bil AB",
+        "5590780127",
+        "Isuzu",
+        "1 dag",
+        "Danske Bank A/S, Danmark, Sverige Filial",
+        "5590780127",
+        "Åby Gård Aktiebolag"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        29,
+        "YAM101",
+        "2026-09-15T00:00:00",
+        "Truxco AB",
+        "5590025127",
+        "Volkswagen",
+        "1 dag",
+        "MyMoney Europe AB",
+        "5567021679",
+        "AB KLOK Coaching Sverige"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        30,
+        "ZKR026",
+        "2026-09-15T00:00:00",
+        "Dynamic Auto Stockholm AB",
+        "5593189821",
+        "Mercedes-Benz",
+        "1 dag",
+        "Länsförsäkringar Finans AB",
+        "5593189821",
+        "Installationscenter Nordic AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        31,
+        "RAW57E",
+        "2026-09-15T00:00:00",
+        "PLC Invest AB",
+        "5566703608",
+        "Isuzu",
+        "1 dag",
+        "Nordea Finans Sverige AB",
+        "5164140104",
+        "PP Hus & Bygg AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        32,
+        "CTD49L",
+        "2026-09-15T00:00:00",
+        "Din Bil Sverige AB",
+        "5560605791",
+        "Volkswagen",
+        "1 dag",
+        "Svenska Handelsbanken AB",
+        "5560605791",
+        "Riv & Skadegruppen Sverige AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        33,
+        "SCE67E",
+        "2026-09-15T00:00:00",
+        "TRANSPORTBILSCENTER Göteborg AB",
+        "5593060220",
+        "Iveco",
+        "1 dag",
+        "De Lage Landen Finans AB",
+        "5164019811",
+        "Thermo King Sverige AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        34,
+        "PFH17M",
+        "2026-09-15T00:00:00",
+        "DAAL Bil AB",
+        "5591093579",
+        "Volkswagen",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5591093579",
+        "BA Rörservice AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        35,
+        "SGJ11A",
+        "2026-09-15T00:00:00",
+        "Hedin Automotive Helsingborg AB",
+        "5561345710",
+        "Renault",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5164060336",
+        "NeTel AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        36,
+        "JBH37Y",
+        "2026-09-15T00:00:00",
+        "Bilbörsen i Nyköping AB",
+        "5591529259",
+        "Kia",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5591529259",
+        "A&M Naturläkemedel AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        37,
+        "LRA00B",
+        "2026-09-15T00:00:00",
+        "FlinksBilar AB",
+        "5569333775",
+        "Iveco",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5565306585",
+        "Avloppsteknik i Mälardalen AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        38,
+        "MSM49A",
+        "2026-09-15T00:00:00",
+        "Hedin Automotive Mölndal AB",
+        "5562813617",
+        "Volkswagen",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5562813617",
+        "Quist VVS AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        39,
+        "LCA81T",
+        "2026-09-15T00:00:00",
+        "One Car Group AB",
+        "5592599962",
+        "Audi",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5592305709",
+        "Rekommendera Norden AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        40,
+        "WCD28Y",
+        "2026-09-15T00:00:00",
+        "Hedin Automotive Bavaria AB",
+        "5567829287",
+        "Ineos",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5164140104",
+        "Cowley Allservice AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        41,
+        "SPD40G",
+        "2026-09-15T00:00:00",
+        "Autocars i Skövde AB",
+        "5569417396",
+        "Peugeot",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5569417396",
+        "JKonsult AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        42,
+        "OJN318",
+        "2026-09-15T00:00:00",
+        "Riddermark Bil AB",
+        "5567507693",
+        "Volkswagen",
+        "1 dag",
+        "Nordea Finans Sverige AB",
+        "5567507693",
+        "Kronans Bleck & Plåtslageri AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        43,
+        "GCH83G",
+        "2026-09-15T00:00:00",
+        "Börjessons Bil AB",
+        "5561928986",
+        "Volkswagen",
+        "1 dag",
+        "Swedbank AB",
+        "5561928986",
+        "Retail Support Båstad Sweden AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        44,
+        "OUE23L",
+        "2026-09-15T00:00:00",
+        "Jonas Simling Bil AB",
+        "5566297643",
+        "Toyota",
+        "1 dag",
+        "Toyota Kreditbank Gmbh Tyskland, Sverige Filial",
+        "5566297643",
+        "Familjerondellen AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        45,
+        "GCK68A",
+        "2026-09-15T00:00:00",
+        "Hedin Automotive Göteborg AB",
+        "5560613456",
+        "Nissan",
+        "1 dag",
+        "Nordea Finans Sverige AB",
+        "5560613456",
+        "Allblästring entreprenad Sverige AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        46,
+        "NML42E",
+        "2026-09-15T00:00:00",
+        "AMMBIG AB",
+        "5566638416",
+        "Iveco",
+        "1 dag",
+        "Swedbank AB",
+        "5566638416",
+        "Peterssons Ställningsmontage AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        47,
+        "GSB66W",
+        "2026-09-15T00:00:00",
+        "Aftén Bilcenter AB",
+        "5591658512",
+        "Kia",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5591658512",
+        "Swedtrac Sverige AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        48,
+        "DWJ23S",
+        "2026-09-15T00:00:00",
+        "Patrik Svensson Bil Aktiebolag",
+        "5590927025",
+        "Ford",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5590927025",
+        "Bygg365 Entreprenad AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        49,
+        "MXX660",
+        "2026-09-15T00:00:00",
+        "Holm & Sjö Bil AB",
+        "5595478230",
+        "Audi",
+        "1 dag",
+        "MyMoney Europe AB",
+        "5569298598",
+        "MyMoney Europe AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        50,
+        "YXB746",
+        "2026-09-15T00:00:00",
+        "Riddermark Bil AB",
+        "5567507693",
+        "Peugeot",
+        "1 dag",
+        "Nordea Finans Sverige AB",
+        "5567507693",
+        "LW Bygg & Montage AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        51,
+        "RAJ82W",
+        "2026-09-15T00:00:00",
+        "Din Bil Sverige AB",
+        "5560605791",
+        "Audi",
+        "1 dag",
+        "Länsförsäkringar Finans AB",
+        "5560605791",
+        "RAL design AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        52,
+        "LAP27Z",
+        "2026-09-15T00:00:00",
+        "Hedin Automotive Mölndal AB",
+        "5562813617",
+        "Ford",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5564347820",
+        "Nordic Concrete AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        53,
+        "MZD01S",
+        "2026-09-15T00:00:00",
+        "Hedin Automotive Göteborg AB",
+        "5560613456",
+        "Mercedes-Benz",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5560613456",
+        "Do More AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        54,
+        "RRA75H",
+        "2026-09-15T00:00:00",
+        "J Bil AB",
+        "5563439487",
+        "Peugeot",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5563439487",
+        "Skyddsbevakning Sverige AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        55,
+        "CWU23C",
+        "2026-09-15T00:00:00",
+        "2:nd shift AB",
+        "5569812851",
+        "Polestar",
+        "1 dag",
+        "Skandinaviska Enskilda Banken AB",
+        "5592305709",
+        "Drakryggen IT Linköping AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        56,
+        "TPG51N",
+        "2026-09-15T00:00:00",
+        "Bilomatic Bil Aktiebolag",
+        "5561936435",
+        "Citroen",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5561936435",
+        "TR Bygg Handelsbolag"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        57,
+        "WBE77R",
+        "2026-09-15T00:00:00",
+        "Hedin Automotive Mölndal AB",
+        "5562813617",
+        "Ford",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5564347820",
+        "Nordic Concrete AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        58,
+        "ERS61L",
+        "2026-09-15T00:00:00",
+        "Duvner Bil AB",
+        "5594932393",
+        "Volkswagen",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5594932393",
+        "Byggkonsulterna i Stockholm AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        59,
+        "PWA00L",
+        "2026-09-15T00:00:00",
+        "Motorkompaniet Söderhamn AB",
+        "5567997332",
+        "Volkswagen",
+        "1 dag",
+        "Swedbank AB",
+        "5567997332",
+        "Tappers Allservice AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        60,
+        "PXU54J",
+        "2026-09-15T00:00:00",
+        "Åkessons Bil i Götene AB",
+        "5560723735",
+        "Iveco",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5560723735",
+        "Götenehallen Aktiebolag"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        61,
+        "ESA47Z",
+        "2026-09-15T00:00:00",
+        "Värö Bil AB",
+        "5594708843",
+        "Toyota",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5591605117",
+        "Österlen Håltagning AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        62,
+        "HML18H",
+        "2026-09-15T00:00:00",
+        "FlinksBilar AB",
+        "5569333775",
+        "Ford",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5569333775",
+        "Attunda Golv AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        63,
+        "WAZ73L",
+        "2026-09-15T00:00:00",
+        "Riddermark Bil AB",
+        "5567507693",
+        "Mercedes-Benz",
+        "1 dag",
+        "Frink AB",
+        "5567507693",
+        "Pwr On AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        64,
+        "MLE10P",
+        "2026-09-15T00:00:00",
+        "Hedin Automotive Göteborg AB",
+        "5560613456",
+        "Mercedes-Benz",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5560613456",
+        "Brokkr AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        65,
+        "FOB18W",
+        "2026-09-15T00:00:00",
+        "Lindströms Bil Aktiebolag",
+        "5560553561",
+        "Toyota",
+        "1 dag",
+        "Swedbank AB",
+        "5560553561",
+        "WiseCare AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        66,
+        "UEM25F",
+        "2026-09-14T00:00:00",
+        "Länna Bilcenter Aktiebolag",
+        "5564565116",
+        "Volkswagen",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5564565116",
+        "Sjöströms Direkt AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        67,
+        "LJE74U",
+        "2026-09-14T00:00:00",
+        "Expressbil i Västerås AB",
+        "5590382387",
+        "Chevrolet",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5590382387",
+        "Lidens Fastighetsservice AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        68,
+        "HCU47A",
+        "2026-09-14T00:00:00",
+        "WOXTUNE AB",
+        "5564993649",
+        "Mercedes-Benz",
+        "1 dag",
+        "Swedbank AB",
+        "5564993649",
+        "Nordisk Kökspartner AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        69,
+        "SCH06G",
+        "2026-09-14T00:00:00",
+        "Bilsmidigt AB",
+        "5592311053",
+        "Fiat",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5592311053",
+        "Industrilandslaget AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        70,
+        "SDS47A",
+        "2026-09-14T00:00:00",
+        "Premium Performance TMC AB",
+        "5592489743",
+        "Toyota",
+        "1 dag",
+        "Länsförsäkringar Finans AB",
+        "5592305709",
+        "CM Bygg i Spjutstorp AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        71,
+        "MHY336",
+        "2026-09-14T00:00:00",
+        "BilOn Nordic AB",
+        "5594461708",
+        "Volvo",
+        "1 dag",
+        "MyMoney Europe AB",
+        "5594461708",
+        "MyMoney Europe AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        72,
+        "JXU88K",
+        "2026-09-14T00:00:00",
+        "FlinksBilar AB",
+        "5569333775",
+        "Mercedes-Benz",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5569333775",
+        "Styling Vision Sweden AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        73,
+        "SOF55L",
+        "2026-09-14T00:00:00",
+        "J Englund Bil AB",
+        "5568168586",
+        "Volkswagen",
+        "1 dag",
+        "Länsförsäkringar Finans AB",
+        "5568168586",
+        "RN Mek AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        74,
+        "JUH694",
+        "2026-09-14T00:00:00",
+        "Bista Bil AB",
+        "5594326729",
+        "Volkswagen",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5591224604",
+        "Inlandets byggplåt AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        75,
+        "JCH19A",
+        "2026-09-14T00:00:00",
+        "Blipp NewCo AB",
+        "5595891002",
+        "Ford",
+        "1 dag",
+        "Nordea Finans Sverige AB",
+        "5164140104",
+        "A Fog AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        76,
+        "PMR01U",
+        "2026-09-14T00:00:00",
+        "Liljas Personbilar AB",
+        "5560505082",
+        "Volvo",
+        "1 dag",
+        "Nordea Finans Sverige AB",
+        "5560505082",
+        "Westal Aktiebolag"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        77,
+        "LRW00U",
+        "2026-09-14T00:00:00",
+        "Autocars i Skövde AB",
+        "5569417396",
+        "Volkswagen",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5569417396",
+        "Eklinds Schakt & Gräv AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        78,
+        "YXL096",
+        "2026-09-14T00:00:00",
+        "FlinksBilar AB",
+        "5569333775",
+        "Volkswagen",
+        "1 dag",
+        "Autolend AB",
+        "5569333775",
+        "Fishero Seafood AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        79,
+        "LBJ03Y",
+        "2026-09-14T00:00:00",
+        "Handla Bil Sverige AB",
+        "5590794896",
+        "Volkswagen",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5591605117",
+        "Art Work Måleri AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        80,
+        "GGZ87D",
+        "2026-09-14T00:00:00",
+        "Blipp NewCo AB",
+        "5595891002",
+        "Peugeot",
+        "1 dag",
+        "Nordea Finans Sverige AB",
+        "5164140104",
+        "A Fog AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        81,
+        "EDG08Y",
+        "2026-09-14T00:00:00",
+        "Bilia BMU AB",
+        "5560465659",
+        "BMW",
+        "1 dag",
+        "BMW Financial Services Scandinavia AB",
+        "5560465659",
+        "Industri & Terminalanläggningar i Väst AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        82,
+        "SDY67A",
+        "2026-09-14T00:00:00",
+        "Bilia BMU AB",
+        "5560465659",
+        "BMW",
+        "1 dag",
+        "BMW Financial Services Scandinavia AB",
+        "5560465659",
+        "Vanja Tolkservice AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        83,
+        "BFR00D",
+        "2026-09-14T00:00:00",
+        "Circle K Detaljist AB",
+        "5560203282",
+        "Iveco",
+        "1 dag",
+        "Danske Bank A/S, Danmark, Sverige Filial",
+        "5164019811",
+        "Hedin Nordic Truck AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        84,
+        "PLJ15T",
+        "2026-09-14T00:00:00",
+        "Hedin Automotive Mölndal AB",
+        "5562813617",
+        "Ford",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5562813617",
+        "BEJTAGA PARTNERS AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        85,
+        "XCY91M",
+        "2026-09-14T00:00:00",
+        "Riddermark Bil AB",
+        "5567507693",
+        "Iveco",
+        "1 dag",
+        "Frink AB",
+        "5567507693",
+        "SVEA LAGER &LOGISTIK AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        86,
+        "SNC55X",
+        "2026-09-14T00:00:00",
+        "M MALMGREN - BIL AB",
+        "5565075081",
+        "Volkswagen",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5565075081",
+        "MerTeleteknik i Dalarna AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        87,
+        "PMG44D",
+        "2026-09-14T00:00:00",
+        "Blipp NewCo AB",
+        "5595891002",
+        "Mercedes-Benz",
+        "1 dag",
+        "Nordea Finans Sverige AB",
+        "5568701022",
+        "Roger Andersson Byggmontage i Nyhamnsläge AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        88,
+        "LGX92K",
+        "2026-09-14T00:00:00",
+        "Blipp NewCo AB",
+        "5595891002",
+        "Opel",
+        "1 dag",
+        "Nordea Finans Sverige AB",
+        "5567507693",
+        "EL-Specialisten Halmstad AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        89,
+        "YYH917",
+        "2026-09-14T00:00:00",
+        "Per Larssons Bil AB",
+        "5566717889",
+        "Mercedes-Benz",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5566717889",
+        "Byggproduktion Syd AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        90,
+        "WCD47R",
+        "2026-09-14T00:00:00",
+        "Bilinorr, Persson & Co AB",
+        "5565265385",
+        "Toyota",
+        "1 dag",
+        "Swedbank AB",
+        "5565265385",
+        "Elinstallationsbolaget i Skellefteå AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        91,
+        "AYF82P",
+        "2026-09-14T00:00:00",
+        "FlinksBilar AB",
+        "5569333775",
+        "Maxus",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5569333775",
+        "R.L Avlopp AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        92,
+        "MWA69M",
+        "2026-09-14T00:00:00",
+        "Riddermark Bil AB",
+        "5567507693",
+        "Volkswagen",
+        "1 dag",
+        "Nordea Finans Sverige AB",
+        "5567507693",
+        "Solvarbo Entreprenad AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        93,
+        "UZO363",
+        "2026-09-14T00:00:00",
+        "Bilkompaniet Gävleborg AB",
+        "5567359491",
+        "Volkswagen",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5567359491",
+        "Städtjänst Malung-Sälen AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        94,
+        "LTX82J",
+        "2026-09-14T00:00:00",
+        "Hedin Automotive Mölndal AB",
+        "5562813617",
+        "Ford",
+        "1 dag",
+        "Nordic Finance Business Partner AB",
+        "5562813617",
+        "K-Kross&Entreprenad AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        95,
+        "OHF380",
+        "2026-09-14T00:00:00",
+        "Eriksson & Robertsson Bil AB",
+        "5590457684",
+        "Toyota",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5164140104",
+        "AB Aly Skogstjänst"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        96,
+        "ZYC00G",
+        "2026-09-14T00:00:00",
+        "New Car Fyrstad AB",
+        "5592411408",
+        "Peugeot",
+        "1 dag",
+        "Santander Consumer Bank AS Norge, Sverige Filial",
+        "5591114896",
+        "GL Berg och Maskin AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        97,
+        "EKC24R",
+        "2026-09-14T00:00:00",
+        "OptimalCars i Stockholm AB",
+        "5569921751",
+        "Renault",
+        "1 dag",
+        "Länsförsäkringar Finans AB",
+        "5569921751",
+        "Aerius Ventilation AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        98,
+        "CFG12R",
+        "2026-09-14T00:00:00",
+        "Tullinge Bil Sverige AB",
+        "5568970783",
+        "Mercedes-Benz",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5568970783",
+        "SM Företag AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        99,
+        "SDA88A",
+        "2026-09-14T00:00:00",
+        "Örebro Bilcenter Aktiebolag",
+        "5561507012",
+        "Toyota",
+        "1 dag",
+        "Toyota Kreditbank Gmbh Tyskland, Sverige Filial",
+        "5561507012",
+        "Advokatfirman Bohmansson & Co AB"
+      ],
+      "RowType": 0
+    },
+    {
+      "Cells": [
+        100,
+        "OGM135",
+        "2026-09-14T00:00:00",
+        "Hedström Bil Hudiksvall AB",
+        "5561004481",
+        "Volkswagen",
+        "1 dag",
+        "DNB Finans AS, filial Sverige",
+        "5561004481",
+        "ANCA Bygg AB"
+      ],
+      "RowType": 0
+    }
+  ],
+  "TotalRowCount": 12853,
+  "TotalRow": null
+}
