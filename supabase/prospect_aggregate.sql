@@ -53,7 +53,11 @@ BEGIN
     RETURN jsonb_build_object('dealers', 0, 'transactions', 0, 'period', NULL);
   END IF;
 
-  v_window    := v_max_date - 365;
+  -- Innevarande år, inte rullande 12 månader. Leasingandelens nämnare går
+  -- bara att hämta år till datum hos Bilstatistik, och huvudmåttet ska vara
+  -- samma tal som andelens täljare — annars står två olika "leasingaffärer"
+  -- bredvid varandra i listan.
+  v_window    := date_trunc('year', v_max_date)::date;
 
   -- Jämförelsen går mot samma period förra året, inte mot föregående kvartal.
   -- Föregående kvartal blandar ihop tillväxt med säsong: maj–augusti rymmer
@@ -65,8 +69,8 @@ BEGIN
   v_prev_to   := v_recent_to - 365;
   v_prev_fr   := v_recent_fr - 365;
 
-  -- Jämförelsefönstret ligger utanför de 365 dagarna, så räkningen måste läsa
-  -- längre bak än aggregatets fönster.
+  -- Jämförelsefönstret ligger ett år bak, så räkningen måste läsa längre bak
+  -- än aggregatets fönster.
   v_cmp_start := v_prev_fr;
   -- Saknas historik för hela fjolårsfönstret blir jämförelsen missvisande:
   -- ett bolag som fanns då men inte i datan skulle se ut att växa från noll.
@@ -76,8 +80,22 @@ BEGIN
   -- även inuti funktioner. org_nr är primärnyckel, så detta träffar allt.
   DELETE FROM prospect_dealers WHERE org_nr IS NOT NULL;
 
-  WITH win AS (
-    SELECT * FROM prospect_leasing_tx WHERE tx_date >= v_window
+  -- Köpare som inte är slutkunder räknas bort, precis som i andelens täljare
+  -- (scripts/prospect-b2b-counts.mjs). Äldre rader saknar köparens org.nr och
+  -- matchas då på normaliserat namn.
+  WITH tx AS (
+    SELECT t.* FROM prospect_leasing_tx t
+    WHERE NOT EXISTS (
+      SELECT 1 FROM prospect_buyer_exclusions e
+      WHERE CASE
+        WHEN t.end_customer_org_nr IS NOT NULL THEN e.org_nr = t.end_customer_org_nr
+        ELSE btrim(regexp_replace(lower(coalesce(e.company_name, '')), '[^a-z0-9åäö]+', ' ', 'g'))
+           = btrim(regexp_replace(lower(coalesce(t.end_customer, '')), '[^a-z0-9åäö]+', ' ', 'g'))
+      END
+    )
+  ),
+  win AS (
+    SELECT * FROM tx WHERE tx_date >= v_window
   ),
   -- Egen läsning bakåt: fjolårsfönstret ligger utanför win.
   cmp AS (
@@ -89,7 +107,7 @@ BEGIN
       CASE WHEN v_have_prev THEN count(*) FILTER (
         WHERE tx_date > v_prev_fr AND tx_date <= v_prev_to
       )::int END AS deals_prev_90d
-    FROM prospect_leasing_tx
+    FROM tx
     WHERE tx_date >= v_cmp_start
     GROUP BY dealer_org_nr
   ),
@@ -173,7 +191,7 @@ BEGIN
   LEFT JOIN mo ON mo.org_nr = b.org_nr;
 
   GET DIAGNOSTICS v_dealers = ROW_COUNT;
-  SELECT count(*)::int INTO v_tx FROM prospect_leasing_tx WHERE tx_date >= v_window;
+  SELECT COALESCE(sum(deals_total), 0)::int INTO v_tx FROM prospect_dealers;
 
   RETURN jsonb_build_object(
     'dealers', v_dealers,
@@ -182,7 +200,7 @@ BEGIN
       'first_tx', v_min_date,
       'last_tx', v_max_date,
       'window_start', v_window,
-      'window_days', 365,
+      'window_days', v_max_date - v_window,
       'span_days', v_max_date - v_min_date,
       'momentum_recent', jsonb_build_array(v_recent_fr, v_recent_to),
       'momentum_prev', jsonb_build_array(v_prev_fr, v_prev_to),

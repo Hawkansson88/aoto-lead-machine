@@ -9,8 +9,8 @@ fungerar inte över `file://`.
 
 ## Vad listan visar
 
-Återförsäljare rankade på **antal leasingaffärer till företagskund**, hämtade
-från Bilstatistik. Klassas A, B eller C och fördelas mellan Anton och Marc.
+Återförsäljare rankade på **antal leasingaffärer till företagskund hittills i
+år**, hämtade från Bilstatistik. Klassas A, B eller C och fördelas mellan Anton och Marc.
 
 Varje rad i grunddatan är en enskild bil. Säljaren identifieras via
 **föregående brukare**, inte föregående ägare: när en bil ligger på
@@ -56,6 +56,13 @@ Tre gånger under bygget har ett tal sett jämförbart ut utan att vara det:
 3. Samma mellanhänder fanns även i täljaren, vilket gav andelar över 100 %.
 
 Teslas leasingandel gick från 6 % till 86 % när allt var rättat.
+
+4. "Affärer" räknades över rullande 12 månader medan leasingandelen gällde år
+   till datum. Riddermark visade 1 684 affärer men "1 227 av 2 479" — två olika
+   leasingtal bredvid varandra. Nu räknas allt från 1 januari och med samma
+   uteslutna köpare, så Affärer är exakt andelens täljare. Kör om
+   `prospect-b2b-counts.mjs` efter ett nytt leasinguttag, annars hänger
+   andelen efter.
 
 **Därav regeln:** ser ett tal konstigt ut är det oftast ett filterfel, inte ett
 verkligt utfall. Kör `scripts/prospect-dealer-sample.mjs --org <nr>` och se

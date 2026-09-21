@@ -131,7 +131,7 @@ export function buildLeasingSalesRequest(opts = {}) {
     ReportProfile: {
       ReportTypeId: -4,
       Filter: {
-        // 1 = personbil, 3 = lätt lastbil, 5 = tung lastbil
+        // 1 = personbil, 3 = lätt lastbil, 5 = husbil
         VehicleTypes: { Values: [1, 3, 5] },
         ...(leasingOnly ? { Leasing: { ExpirationDateRange: {}, Values: [1] } } : {}),
         // Fordonets ålder vid affären, i månader

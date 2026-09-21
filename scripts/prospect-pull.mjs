@@ -19,9 +19,9 @@
  *   --load <fil>              Hoppa över API:t, läs in från en tidigare --out
  *   --dry                     Hämta och visa, men skriv inget till Supabase
  *
- * Rullande 12 månader finns inte som periodalternativ hos Bilstatistik. Kör
- * båda perioderna en gång var, så täcker rådatan ett helt år och
- * 365-dagarsfönstret i recompute_prospect_dealers() skär ut det rullande året.
+ * Listan visar innevarande år (recompute_prospect_dealers() räknar från
+ * 1 januari), men trenden jämför mot samma period i fjol. Kör därför båda
+ * perioderna en gång var.
  * Överlapp är ofarligt: UNIQUE (reg_nr, tx_date, dealer_org_nr) rensar det.
  *
  * Läser inloggningsuppgifter ur .env i repo-roten.

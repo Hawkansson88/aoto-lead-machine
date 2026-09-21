@@ -181,7 +181,7 @@ async function loadAll() {
       "org_nr, owner_id, status, next_action, next_action_date, note, excluded, excluded_reason, updated_at"
     ),
     selectAll("prospect_exclusions", "id, org_nr, name_pattern, kind, note"),
-    selectAll("prospect_b2b_counts", "org_nr, period, b2b_deals, leasing_deals"),
+    selectAll("prospect_b2b_counts", "org_nr, period, b2b_deals, leasing_deals, updated_at"),
     selectAll("prospect_buyer_exclusions", "org_nr, company_name, sni, note"),
     selectAll("profiles", "id, email, first_name, last_name, role"),
     sb.from("app_state").select("value, updated_at").eq("key", "prospect_sync").maybeSingle(),
@@ -457,13 +457,12 @@ function ownerHtml(ownerId) {
   return `<span class="av av-sm has-tip" data-tip="${escapeAttr(personName(profile))}">${escapeHtml(initials(profile))}</span>`;
 }
 
-/**
- * Företagsaffärer totalt, med leasingandelen under.
- *
- * Siffran kommer från beståndsimporten och inte ur leasingdatan, så den
- * mäter en annan period och saknas för bolag som aldrig kom med där. Låg
- * andel med hög volym = kunderna finns men leasingvanan saknas.
- */
+/** "2026-01-01 → 2026-09-21" — perioden nämnaren hämtades för. */
+function periodLabel(counts) {
+  const to = counts.updated_at?.slice(0, 10);
+  return to ? `${to.slice(0, 4)}-01-01 → ${to}` : "innevarande år";
+}
+
 /**
  * Företagsaffärer till slutkund, med leasingandelen under.
  *
@@ -491,7 +490,7 @@ function b2bCellHtml(row) {
 
   const cls = share >= 60 ? "share-high" : share >= 35 ? "share-mid" : "share-low";
   const reliable = share >= 35;
-  const basis = `${counts.leasing_deals} av ${counts.b2b_deals} företagsaffärer gick på leasing.`;
+  const basis = `${fmtNum(counts.leasing_deals)} av ${fmtNum(counts.b2b_deals)} företagsaffärer hittills i år gick på leasing (${periodLabel(counts)}).`;
   const tip = reliable
     ? `${basis}\n\nSiffran är tillförlitlig. En oupptäckt mellanhand kan bara blåsa upp nämnaren och dra andelen nedåt, aldrig uppåt — så högt kan den inte vara felaktigt uppblåst.`
     : `${basis}\n\nBör dubbelkollas. Antingen leasar de verkligen sällan, eller så säljer de inbyten via en B2B-auktion som räknas som företagskund.\n\nTesla såg ut att ligga på 6 % tills AUTOproff och Handlarbudet plockades bort. Rätt siffra var 86 %.\n\nKontrollera med:\nnode scripts/prospect-dealer-sample.mjs --org ${row.dealer.org_nr}`;
@@ -564,9 +563,15 @@ function renderSubtitle() {
 function renderInfo() {
   const period = syncMeta?.period;
   const withB2b = indexed.filter((r) => b2bByOrg.has(r.dealer.org_nr)).length;
+  const manualDecision = (r) => r.list?.excluded != null;
+  const excludedManually = indexed.filter((r) => r.list?.excluded === true).length;
+  const excludedByPattern = indexed.filter((r) => r.excluded && !manualDecision(r)).length;
+  const patternOverridden = indexed.filter(
+    (r) => r.list?.excluded === false && matchExclusion(r.dealer)
+  ).length;
 
   const filters = [
-    ["Fordon", "Personbil, lätt lastbil och tung lastbil"],
+    ["Fordon", "Personbil, lätt lastbil och husbil"],
     ["Ålder", "Minst 1 månad vid affären — allt utom fabriksnytt"],
     ["Affärstyp", "Bilen registrerad på ett leasingavtal"],
     ["Säljare", "Föregående brukare med bilhandel som bransch"],
@@ -629,6 +634,11 @@ function renderInfo() {
       finansbolag. Ett manuellt beslut på en enskild handlare väger alltid tyngre
       än mönstret.
     </p>
+    <div class="info-grid">
+      <span>Uteslutna via mönster</span><b>${fmtNum(excludedByPattern)}</b>
+      <span>Uteslutna manuellt</span><b>${fmtNum(excludedManually)}</b>
+      <span>Mönster överkört, visas ändå</span><b>${fmtNum(patternOverridden)}</b>
+    </div>
   `;
 }
 
@@ -691,10 +701,9 @@ function openDealer(orgNr) {
   $("#excludeBtn").textContent = row.excluded ? "Ta tillbaka" : "Uteslut";
 
   const facts = [
-    ["Leasingaffärer", fmtNum(d.deals_total)],
+    ["Leasingaffärer i år", fmtNum(d.deals_total)],
     ["Unika slutkunder", fmtNum(d.distinct_customers)],
-    ["Företagsaffärer i perioden", fmtNum(b2bByOrg.get(d.org_nr)?.b2b_deals)],
-    ["Varav leasing", fmtNum(b2bByOrg.get(d.org_nr)?.leasing_deals)],
+    ["Företagsaffärer i år", fmtNum(b2bByOrg.get(d.org_nr)?.b2b_deals)],
     ["Kvartal i år", fmtNum(d.deals_recent_90d)],
     ["Samma kvartal i fjol", fmtNum(d.deals_prev_90d)],
     ["Antal finansbolag", fmtNum(d.finance_company_count)],
