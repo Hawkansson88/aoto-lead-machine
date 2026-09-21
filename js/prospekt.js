@@ -126,14 +126,19 @@ function matchExclusion(dealer) {
 }
 
 /**
- * Momentum från de två jämförelsefönstren i prospect_dealers: dag 30–120
- * bakåt mot dag 120–210. Marginalen på 30 dagar finns för att registreringar
- * släpar i Bilstatistik — utan den ser i stort sett alla ÅF ut att tappa.
- * null när underlaget är för tunt för att säga något.
+ * Momentum: dag 30–120 bakåt mot exakt samma dagar ett år tidigare.
+ *
+ * Årsjämförelsen finns för att kvartal mot kvartal mäter säsong snarare än
+ * tillväxt, och marginalen på 30 dagar för att registreringar släpar i
+ * Bilstatistik. null när jämförelsen inte bär: saknad historik, eller för få
+ * affärer för att skillnaden ska betyda något.
  */
 function momentum(dealer) {
+  // null, inte 0 — databasen lämnar fältet tomt när rådatan inte når ett år
+  // bakåt, och det är inte samma sak som noll affärer.
+  if (dealer.deals_prev_90d == null) return null;
   const recent = Number(dealer.deals_recent_90d) || 0;
-  const prev = Number(dealer.deals_prev_90d) || 0;
+  const prev = Number(dealer.deals_prev_90d);
   if (recent + prev < 4) return null;
   if (prev === 0) return recent > 0 ? 1 : null;
   return (recent - prev) / prev;
@@ -542,8 +547,8 @@ function openDealer(orgNr) {
   const facts = [
     ["Leasingaffärer", fmtNum(d.deals_total)],
     ["Unika slutkunder", fmtNum(d.distinct_customers)],
-    ["Senaste 90 dagar", fmtNum(d.deals_recent_90d)],
-    ["Föregående 90 dagar", fmtNum(d.deals_prev_90d)],
+    ["Kvartal i år", fmtNum(d.deals_recent_90d)],
+    ["Samma kvartal i fjol", fmtNum(d.deals_prev_90d)],
     ["Antal finansbolag", fmtNum(d.finance_company_count)],
     ["Lagerfinansierat", fmtPct(d.floorplan_share)],
     ["Omsättning (Mkr)", fmtTkrAsMkr(s?.turnover_tkr)],
