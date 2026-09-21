@@ -134,8 +134,32 @@ const probe = await fetchReport(
 );
 console.log(`Kontroll: perioden omfattar ${pick(probe, "TotalRowCount", "totalRowCount")} affärer totalt i landet\n`);
 
-const tx = await getAll("prospect_leasing_tx?select=dealer_org_nr,tx_date");
+const tx = await getAll(
+  "prospect_leasing_tx?select=dealer_org_nr,tx_date,end_customer,end_customer_org_nr"
+);
 const leasingByOrg = new Map();
+
+// Täljaren måste utesluta samma köpare som nämnaren. Mellanhänderna dyker upp
+// även i leasingaffärer — Handlarbudet står för 12 av Teslas — och räknas de
+// bara i täljaren blir andelen över 100 %.
+//
+// Äldre rader saknar end_customer_org_nr, som började hämtas först efteråt.
+// För dem får namnet duga.
+const excludedBuyers = await getAll("prospect_buyer_exclusions?select=org_nr,company_name").catch(
+  () => []
+);
+const excludedOrgNrs = new Set(excludedBuyers.map((b) => b.org_nr));
+const normalize = (s) =>
+  String(s || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9åäö]+/g, " ")
+    .trim();
+const excludedNames = new Set(excludedBuyers.map((b) => normalize(b.company_name)));
+
+function isExcludedBuyer(t) {
+  if (t.end_customer_org_nr) return excludedOrgNrs.has(t.end_customer_org_nr);
+  return excludedNames.has(normalize(t.end_customer));
+}
 
 // Periodgränser läses ur datan: ytd = innevarande år, forra-aret = fjolåret
 const now = new Date();
@@ -145,11 +169,17 @@ const [from, to] =
     ? [`${year}-01-01`, now.toISOString().slice(0, 10)]
     : [`${year - 1}-01-01`, `${year - 1}-12-31`];
 
+let skippedBuyers = 0;
 for (const t of tx) {
   if (t.tx_date < from || t.tx_date > to) continue;
+  if (isExcludedBuyer(t)) {
+    skippedBuyers++;
+    continue;
+  }
   leasingByOrg.set(t.dealer_org_nr, (leasingByOrg.get(t.dealer_org_nr) || 0) + 1);
 }
-console.log(`Täljare räknad ur prospect_leasing_tx för ${from} → ${to}\n`);
+console.log(`Täljare räknad ur prospect_leasing_tx för ${from} → ${to}`);
+console.log(`Uteslutna mellanhandsaffärer i täljaren: ${skippedBuyers}\n`);
 
 // ── Hämta nämnaren, en handlare i taget ─────────────────────────────────
 
