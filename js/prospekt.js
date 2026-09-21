@@ -43,6 +43,8 @@ let listByOrg = new Map();
 let statsByOrg = new Map();
 /** @type {Array<Record<string, any>>} */
 let exclusions = [];
+/** Företagsaffärer per ÅF — nämnaren till leasingandelen. */
+let b2bByOrg = new Map();
 /** @type {Array<Record<string, any>>} */
 let profiles = [];
 let syncMeta = null;
@@ -165,7 +167,7 @@ async function selectAll(table, columns, order) {
 }
 
 async function loadAll() {
-  const [dealerRows, listRows, exclusionRows, profileRows, stateRow] = await Promise.all([
+  const [dealerRows, listRows, exclusionRows, b2bRows, profileRows, stateRow] = await Promise.all([
     selectAll(
       "prospect_dealers",
       "org_nr, company_name, deals_total, distinct_customers, deals_recent_90d, deals_prev_90d, floorplan_share, finance_company_count, first_tx, last_tx, finance_companies, makes, months, updated_at",
@@ -176,6 +178,7 @@ async function loadAll() {
       "org_nr, owner_id, status, next_action, next_action_date, note, excluded, excluded_reason, updated_at"
     ),
     selectAll("prospect_exclusions", "id, org_nr, name_pattern, kind, note"),
+    selectAll("prospect_b2b_counts", "org_nr, period, b2b_deals, leasing_deals"),
     selectAll("profiles", "id, email, first_name, last_name, role"),
     sb.from("app_state").select("value, updated_at").eq("key", "prospect_sync").maybeSingle(),
   ]);
@@ -183,6 +186,7 @@ async function loadAll() {
   dealers = dealerRows;
   listByOrg = new Map(listRows.map((r) => [r.org_nr, r]));
   exclusions = exclusionRows;
+  b2bByOrg = new Map(b2bRows.map((r) => [r.org_nr, r]));
   profiles = profileRows.filter((p) => OWNER_EMAILS.includes((p.email || "").toLowerCase()));
   syncMeta = stateRow?.data?.value || null;
 
@@ -195,7 +199,7 @@ async function loadAll() {
 async function loadMarketStats(orgNrs) {
   statsByOrg = new Map();
   const columns =
-    "org_nr, company_name, address, postcode, city, employees, turnover_tkr, profit_tkr, established_year, lagerantal, lat, lng, salj_foretag_12m, saljvolym_12m";
+    "org_nr, company_name, address, postcode, city, employees, turnover_tkr, profit_tkr, established_year, lagerantal, lat, lng";
   const CHUNK = 200;
   for (let i = 0; i < orgNrs.length; i += CHUNK) {
     const chunk = orgNrs.slice(i, i + CHUNK);
@@ -295,7 +299,7 @@ function sortValue(row, key) {
     case "momentum":
       return row.momentum ?? -Infinity;
     case "b2b":
-      return row.stats?.salj_foretag_12m ?? -1;
+      return b2bByOrg.get(row.dealer.org_nr)?.b2b_deals ?? -1;
     case "finance_company_count":
       return row.dealer.finance_company_count ?? -1;
     case "status":
@@ -455,13 +459,20 @@ function ownerHtml(ownerId) {
  * mäter en annan period och saknas för bolag som aldrig kom med där. Låg
  * andel med hög volym = kunderna finns men leasingvanan saknas.
  */
-// Oanvänd medan kolumnen är dold — behålls för när nämnaren är rättad.
+/**
+ * Företagsaffärer till slutkund, med leasingandelen under.
+ *
+ * Både täljare och nämnare kommer ur prospect_b2b_counts och avser samma
+ * period. Beståndsimportens salj_foretag_12m används medvetet inte: den
+ * räknade partihandel mellan bilfirmor och var uppblåst olika mycket för
+ * olika handlare, alltså inte jämförbar.
+ */
 function b2bCellHtml(row) {
-  const b2b = row.stats?.salj_foretag_12m;
-  if (b2b == null || b2b === "") return '<span class="faint">–</span>';
-  const share = b2b > 0 ? Math.round((row.dealer.deals_total / b2b) * 100) : null;
-  const cls = share == null ? "" : share >= 40 ? "share-high" : share >= 15 ? "share-mid" : "share-low";
-  return `<span class="num">${fmtNum(b2b)}</span>${
+  const counts = b2bByOrg.get(row.dealer.org_nr);
+  if (!counts || counts.b2b_deals == null) return '<span class="faint">–</span>';
+  const share = counts.b2b_deals > 0 ? Math.round((counts.leasing_deals / counts.b2b_deals) * 100) : null;
+  const cls = share == null ? "" : share >= 60 ? "share-high" : share >= 35 ? "share-mid" : "share-low";
+  return `<span class="num">${fmtNum(counts.b2b_deals)}</span>${
     share == null ? "" : `<div class="cell-sub ${cls}">${share} % leasing</div>`
   }`;
 }
@@ -495,6 +506,7 @@ function renderTable() {
           <td class="right num"><b>${fmtNum(d.deals_total)}</b></td>
           <td class="right num">${fmtNum(d.distinct_customers)}</td>
           <td class="right">${momentumHtml(row.momentum)}</td>
+          <td class="right">${b2bCellHtml(row)}</td>
           <td class="right num">${fmtNum(d.finance_company_count)}</td>
           <td class="fin">${financeHtml(d)}</td>
           <td>${statusPillHtml(row.list?.status)}</td>
@@ -568,8 +580,8 @@ function openDealer(orgNr) {
   const facts = [
     ["Leasingaffärer", fmtNum(d.deals_total)],
     ["Unika slutkunder", fmtNum(d.distinct_customers)],
-    ["Företagsaffärer 12 mån", fmtNum(s?.salj_foretag_12m)],
-    ["Sålda totalt 12 mån", fmtNum(s?.saljvolym_12m)],
+    ["Företagsaffärer i perioden", fmtNum(b2bByOrg.get(d.org_nr)?.b2b_deals)],
+    ["Varav leasing", fmtNum(b2bByOrg.get(d.org_nr)?.leasing_deals)],
     ["Kvartal i år", fmtNum(d.deals_recent_90d)],
     ["Samma kvartal i fjol", fmtNum(d.deals_prev_90d)],
     ["Antal finansbolag", fmtNum(d.finance_company_count)],
