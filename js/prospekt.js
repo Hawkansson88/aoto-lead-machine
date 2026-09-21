@@ -62,7 +62,8 @@ const filters = {
   city: "",
   turnoverMin: null,
   turnoverMax: null,
-  showExcluded: false,
+  /** "aktiva" = dölj uteslutna, "uteslutna" = bara dem, "alla" = båda */
+  excludedMode: "aktiva",
   q: "",
 };
 
@@ -243,7 +244,8 @@ function rebuildIndex() {
 }
 
 function passesFilters(row) {
-  if (!filters.showExcluded && row.excluded) return false;
+  if (filters.excludedMode === "aktiva" && row.excluded) return false;
+  if (filters.excludedMode === "uteslutna" && !row.excluded) return false;
   const status = row.list?.status || "oklassad";
   if (filters.status !== "alla" && status !== filters.status) return false;
 
@@ -315,6 +317,7 @@ function renderAll() {
   renderStats();
   renderStatusFilter();
   renderOwnerFilter();
+  renderExcludedFilter();
   renderTable();
   renderSubtitle();
 }
@@ -376,6 +379,27 @@ function renderOwnerFilter() {
     .join("");
 }
 
+/** Aktiva / uteslutna / alla. Uteslutna blandas inte in i arbetslistan. */
+function renderExcludedFilter() {
+  const excluded = indexed.filter((r) => r.excluded).length;
+  const active = indexed.length - excluded;
+
+  const items = [
+    { key: "aktiva", label: "Dölj uteslutna", count: active },
+    { key: "uteslutna", label: "Visa endast uteslutna", count: excluded },
+    { key: "alla", label: "Visa alla", count: indexed.length },
+  ];
+
+  $("#excludedFilter").innerHTML = items
+    .map(
+      (item) =>
+        `<div class="status-item${filters.excludedMode === item.key ? " active" : ""}" data-excluded="${escapeAttr(item.key)}">
+           <span>${escapeHtml(item.label)}</span><b class="cnt">${item.count}</b>
+         </div>`
+    )
+    .join("");
+}
+
 function momentumHtml(value) {
   if (value == null) return '<span class="faint">–</span>';
   const pct = Math.round(value * 100);
@@ -422,13 +446,19 @@ function renderTable() {
   $("#empty").style.display = rows.length ? "none" : "block";
 
   $("#prospectRows").innerHTML = rows
-    .map((row) => {
+    .map((row, i) => {
       const d = row.dealer;
-      const rank = row.rank;
+      // Uteslutna saknar placering i arbetslistan — numrera dem löpande så
+      // kolumnen inte blir en rad med streck i den renodlade vyn.
+      const rank = row.rank ?? i + 1;
       const city = row.stats?.city || "";
       return `
-        <tr data-org="${escapeAttr(d.org_nr)}"${row.excluded ? ' class="row-excluded"' : ""}>
-          <td class="num">${rank ?? "–"}</td>
+        <tr data-org="${escapeAttr(d.org_nr)}"${
+          // Dämpa bara när uteslutna ligger blandade med de aktiva — i den
+          // renodlade listan vore allt överstruket, och den ska gå att jobba i.
+          row.excluded && filters.excludedMode === "alla" ? ' class="row-excluded"' : ""
+        }>
+          <td class="num">${rank}</td>
           <td>
             <div class="cell-name">${escapeHtml(d.company_name || "—")}</div>
             <div class="cell-sub num">${escapeHtml(formatOrgNr(d.org_nr))}${
@@ -733,8 +763,11 @@ function bindFilters() {
     renderTable();
   });
 
-  $("#pfShowExcluded").addEventListener("change", (e) => {
-    filters.showExcluded = e.target.checked;
+  $("#excludedFilter").addEventListener("click", (e) => {
+    const item = e.target.closest("[data-excluded]");
+    if (!item) return;
+    filters.excludedMode = item.dataset.excluded;
+    renderExcludedFilter();
     renderTable();
   });
   $("#clearFiltersBtn").onclick = () => {
@@ -745,14 +778,13 @@ function bindFilters() {
       city: "",
       turnoverMin: null,
       turnoverMax: null,
-      showExcluded: false,
+      excludedMode: "aktiva",
     });
     $("#minDealsSlider").value = "0";
     $("#minDealsVal").textContent = "0";
     $("#pfCity").value = "";
     $("#pfTurnoverMin").value = "";
     $("#pfTurnoverMax").value = "";
-    $("#pfShowExcluded").checked = false;
     renderAll();
   };
 }
