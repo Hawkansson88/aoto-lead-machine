@@ -82,3 +82,43 @@ rensar det.
 
 Hämtningen körs med `node scripts/prospect-pull.mjs --period ytd` respektive
 `--period forra-aret`. Det faktiska spannet sparas i `app_state.prospect_sync`.
+
+## Radkvot, inte frågekvot
+
+Bilstatistik kvoterar **ReportRows** — antalet returnerade rader — inte antalet
+frågor. Felet lyder `ReportRows quota exeeded limits. Retry after 604800
+seconds`, alltså en vecka.
+
+Det gör formen på uttaget viktigare än antalet. Behövs bara ett *antal* per
+bolag räcker `count=1` med org.nr i filtret: svaret bär ändå `TotalRowCount`.
+1 212 handlare kostar då 1 212 rader i stället för ~150 000.
+
+`scripts/prospect-probe.mjs` hämtar några rader och visar vad ett fullt uttag
+skulle kosta, innan man spenderar det.
+
+## Nyttiga utdatakolumner
+
+| Id | Kolumn |
+|---|---|
+| 4 | `PrimaryUserDisplayName` — slutkundens namn |
+| 34 | `PrimaryUserCompanyRegistrationNumber` — slutkundens org.nr |
+| 35 | `PrimaryUserTrade` — slutkundens SNI, t.ex. "47920 Förmedling avseende specialiserad detaljhandel" |
+| 37 | `PrimaryOwnerDisplayName` — leasinggivaren |
+| 38 | `PrimaryOwnerCompanyRegistrationNumber` |
+| 39 | `PrimaryOwnerTrade` |
+| 154/155 | Föregående ägare: namn / org.nr |
+| 156/157 | Föregående brukare: namn / org.nr |
+
+## Mellanhänder i nämnaren
+
+Handlare gör sig av med inbyten via B2B-auktioner. De plattformarna är inte
+registrerade som bilhandel — AUTOproff och Handlarbudet har SNI 47920 — och
+slipper därför igenom branschfiltret.
+
+Tesla (TM Sweden) hade 1 054 "företagsaffärer" år till datum. Filtrerar man
+bort AUTOproff återstår 306.
+
+`CompanyTrades` kräver Bilstatistiks egna numeriska id och accepterar inte SNI
+(`TradeName` utan `Values` avvisas). Lösningen är `CompanyIdentifiers` med
+`Negate` på Owner och User — verifierat att fungera. Listan underhålls i
+`prospect_buyer_exclusions`.

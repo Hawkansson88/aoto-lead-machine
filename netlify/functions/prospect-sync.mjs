@@ -114,6 +114,10 @@ function bilstatistikErrorMessage(data, text, status) {
  * @param {string[]} [opts.dealerOrgNrs] Begränsa till dessa säljande ÅF.
  *   Med count=1 blir svarets TotalRowCount bolagets hela antal affärer till
  *   priset av en enda rad ur kvoten — se scripts/prospect-b2b-counts.mjs.
+ * @param {string[]} [opts.excludeBuyerOrgNrs] Köpare som inte är slutkunder —
+ *   B2B-auktioner och trading-bolag. De är inte registrerade som bilhandel och
+ *   slipper därför igenom branschfiltret. Negeras på org.nr, vilket är det
+ *   enda som fungerar: TradeName utan numeriska Values avvisas av API:et.
  * @param {boolean} [opts.leasingOnly] false ger alla företagsaffärer till
  *   slutkund, oavsett finansiering. Används som nämnare när leasingandelen
  *   ska räknas: identiskt filter i övrigt, så täljare och nämnare utesluter
@@ -140,11 +144,17 @@ export function buildLeasingSalesRequest(opts = {}) {
         Owner: {
           CompanyTrades: { Negate: true, Values: NON_DEALER_NEGATE },
           RegistrantClassification: { Values: [CLASS_FORETAG] },
+          ...(opts.excludeBuyerOrgNrs?.length
+            ? { CompanyIdentifiers: { Negate: true, Values: opts.excludeBuyerOrgNrs } }
+            : {}),
         },
         // Ny brukare = slutkunden, ska vara ett företag (ej privatleasing)
         User: {
           CompanyTrades: { Negate: true, Values: NON_DEALER_NEGATE },
           RegistrantClassification: { Values: [CLASS_FORETAG] },
+          ...(opts.excludeBuyerOrgNrs?.length
+            ? { CompanyIdentifiers: { Negate: true, Values: opts.excludeBuyerOrgNrs } }
+            : {}),
         },
         // Öppen: är finansbolaget vid lagerfinansierad bil
         PreviousOwner: {
@@ -168,7 +178,9 @@ export function buildLeasingSalesRequest(opts = {}) {
     SortColumnName: "Date",
     SortAscending: false,
     AreaSetId: 18905,
-    OutputColumns: [87, 88, 156, 157, 1, 108, 37, 155, 4],
+    // 34/35 ger köparens org.nr och SNI-bransch. Utan dem går mellanhänder
+    // som AUTOproff inte att skilja från riktiga företagskunder i efterhand.
+    OutputColumns: [87, 88, 156, 157, 1, 108, 37, 155, 4, 34, 35],
   };
 }
 
@@ -345,6 +357,8 @@ export function parseTransactions(report) {
   const idxHolding = col.CurrentStateDurationDisplayString;
   const idxFinance = col.PrimaryOwnerDisplayName;
   const idxCustomer = col.PrimaryUserDisplayName;
+  const idxCustomerOrg = col.PrimaryUserCompanyRegistrationNumber;
+  const idxCustomerTrade = col.PrimaryUserTrade;
 
   if (idxDealerOrg == null) {
     throw new Error(
@@ -378,6 +392,12 @@ export function parseTransactions(report) {
       holding_time: cells[idxHolding] ? String(cells[idxHolding]).trim() : null,
       finance_company: cells[idxFinance] ? String(cells[idxFinance]).trim() : null,
       end_customer: cells[idxCustomer] ? String(cells[idxCustomer]).trim() : null,
+      end_customer_org_nr:
+        idxCustomerOrg != null ? digitsOrg(cells[idxCustomerOrg]) : null,
+      end_customer_trade:
+        idxCustomerTrade != null && cells[idxCustomerTrade]
+          ? String(cells[idxCustomerTrade]).trim()
+          : null,
     });
   }
 

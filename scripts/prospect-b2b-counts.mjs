@@ -96,6 +96,18 @@ async function getAll(path) {
 
 // ── Vilka handlare, och vilken period täljaren ska räknas över ───────────
 
+// Köpare som inte är slutkunder negeras i frågan, annars räknas B2B-auktioner
+// och trading-bolag som företagskunder. Se supabase/prospect_buyer_exclusions.sql
+let excludeBuyerOrgNrs = [];
+try {
+  excludeBuyerOrgNrs = (await getAll("prospect_buyer_exclusions?select=org_nr,company_name")).map(
+    (b) => b.org_nr
+  );
+  console.log(`Uteslutna köpare: ${excludeBuyerOrgNrs.length}`);
+} catch {
+  console.log("Tabellen prospect_buyer_exclusions saknas — kör utan köparfilter");
+}
+
 const dealers = (
   await getAll("prospect_dealers?select=org_nr,company_name,deals_total&order=deals_total.desc")
 )
@@ -115,7 +127,7 @@ if (dry) {
 // Täljaren ur redan sparad rådata. Perioden måste matcha nämnarens, annars
 // blir andelen nonsens — därför hämtas datumspannet ur ett eget uttag först.
 const probe = await fetchReport(
-  buildLeasingSalesRequest({ dateRangeOptionId: period.id, leasingOnly: false }),
+  buildLeasingSalesRequest({ dateRangeOptionId: period.id, leasingOnly: false, excludeBuyerOrgNrs }),
   user,
   pass,
   1
@@ -149,6 +161,7 @@ for (const [i, d] of dealers.entries()) {
     dateRangeOptionId: period.id,
     leasingOnly: false,
     dealerOrgNrs: [d.org_nr],
+    excludeBuyerOrgNrs,
   });
 
   try {
