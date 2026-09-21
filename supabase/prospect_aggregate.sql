@@ -56,7 +56,9 @@ BEGIN
   v_prev_to   := v_max_date - 120;
   v_prev_fr   := v_max_date - 210;
 
-  DELETE FROM prospect_dealers;
+  -- Villkoret är inte valfritt: pg_safeupdate blockerar DELETE utan WHERE,
+  -- även inuti funktioner. org_nr är primärnyckel, så detta träffar allt.
+  DELETE FROM prospect_dealers WHERE org_nr IS NOT NULL;
 
   WITH win AS (
     SELECT * FROM prospect_leasing_tx WHERE tx_date >= v_window
