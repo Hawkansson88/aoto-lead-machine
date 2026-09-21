@@ -119,7 +119,12 @@ function matchExclusion(dealer) {
   return null;
 }
 
-/** Senaste kvartalet mot föregående. null när underlaget är för tunt. */
+/**
+ * Momentum från de två jämförelsefönstren i prospect_dealers: dag 30–120
+ * bakåt mot dag 120–210. Marginalen på 30 dagar finns för att registreringar
+ * släpar i Bilstatistik — utan den ser i stort sett alla ÅF ut att tappa.
+ * null när underlaget är för tunt för att säga något.
+ */
 function momentum(dealer) {
   const recent = Number(dealer.deals_recent_90d) || 0;
   const prev = Number(dealer.deals_prev_90d) || 0;
@@ -151,7 +156,7 @@ async function loadAll() {
   const [dealerRows, listRows, exclusionRows, profileRows, stateRow] = await Promise.all([
     selectAll(
       "prospect_dealers",
-      "org_nr, company_name, deals_total, distinct_customers, deals_recent_90d, deals_prev_90d, floorplan_share, passthrough_share, first_tx, last_tx, finance_companies, makes, months, updated_at",
+      "org_nr, company_name, deals_total, distinct_customers, deals_recent_90d, deals_prev_90d, floorplan_share, finance_company_count, first_tx, last_tx, finance_companies, makes, months, updated_at",
       { column: "deals_total", ascending: false }
     ),
     selectAll(
@@ -278,8 +283,8 @@ function sortValue(row, key) {
       return (row.dealer.company_name || "").toLowerCase();
     case "momentum":
       return row.momentum ?? -Infinity;
-    case "passthrough_share":
-      return row.dealer.passthrough_share ?? -1;
+    case "finance_company_count":
+      return row.dealer.finance_company_count ?? -1;
     case "status":
       return STATUSES.findIndex((s) => s.key === (row.list?.status || "ny"));
     case "owner":
@@ -435,7 +440,7 @@ function renderTable() {
           <td class="right num"><b>${fmtNum(d.deals_total)}</b></td>
           <td class="right num">${fmtNum(d.distinct_customers)}</td>
           <td class="right">${momentumHtml(row.momentum)}</td>
-          <td class="right num">${fmtPct(d.passthrough_share)}</td>
+          <td class="right num">${fmtNum(d.finance_company_count)}</td>
           <td class="fin">${financeHtml(d)}</td>
           <td>${statusPillHtml(row.list?.status)}</td>
           <td>${ownerHtml(row.list?.owner_id)}</td>
@@ -510,7 +515,7 @@ function openDealer(orgNr) {
     ["Unika slutkunder", fmtNum(d.distinct_customers)],
     ["Senaste 90 dagar", fmtNum(d.deals_recent_90d)],
     ["Föregående 90 dagar", fmtNum(d.deals_prev_90d)],
-    ["Förmedlingsandel", fmtPct(d.passthrough_share)],
+    ["Antal finansbolag", fmtNum(d.finance_company_count)],
     ["Lagerfinansierat", fmtPct(d.floorplan_share)],
     ["Omsättning (Mkr)", fmtTkrAsMkr(s?.turnover_tkr)],
     ["Resultat (Mkr)", fmtTkrAsMkr(s?.profit_tkr)],
@@ -597,15 +602,15 @@ function openDealer(orgNr) {
   `;
 
   $("#pSaveBtn").onclick = () => saveListRow(orgNr);
-  $("#panel").classList.add("show");
-  $("#scrim").classList.add("show");
+  $("#panel").classList.add("open");
+  $("#scrim").classList.add("open");
   bindFloatingTips();
 }
 
 function closePanel() {
   openOrgNr = null;
-  $("#panel").classList.remove("show");
-  $("#scrim").classList.remove("show");
+  $("#panel").classList.remove("open");
+  $("#scrim").classList.remove("open");
 }
 
 // ── Skrivning ────────────────────────────────────────────────────────────
@@ -699,6 +704,30 @@ async function freezeTop() {
   rebuildIndex();
   renderAll();
   toast(`Topp ${ranked.length} fryst som arbetslista`);
+}
+
+/**
+ * Bygger om aggregatet från rådatan som redan ligger i Supabase.
+ * Kostar inget Bilstatistik-uttag, så den går att köra hur ofta som helst.
+ */
+async function runRecompute() {
+  const btn = $("#recomputeBtn");
+  btn.disabled = true;
+  const prevLabel = btn.textContent;
+  btn.textContent = "Räknar om…";
+
+  try {
+    const { data, error } = await sb.rpc("recompute_prospect_dealers");
+    if (error) throw error;
+    toast(`Omräknat: ${fmtNum(data?.dealers)} återförsäljare från ${fmtNum(data?.transactions)} affärer`);
+    await loadAll();
+  } catch (err) {
+    console.error(err);
+    toast(err.message || "Kunde inte räkna om listan", { error: true });
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prevLabel || "Räkna om";
+  }
 }
 
 async function runSync() {
@@ -862,6 +891,7 @@ function bindUi() {
   });
 
   $("#syncBtn").onclick = runSync;
+  $("#recomputeBtn").onclick = runRecompute;
   $("#freezeBtn").onclick = freezeTop;
   $("#excludeBtn").onclick = toggleExcluded;
   $("#pClose").onclick = closePanel;

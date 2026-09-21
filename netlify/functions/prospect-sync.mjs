@@ -1,11 +1,14 @@
 /**
  * AOTO — Prospektsynk: leasingaffärer till slutkund per återförsäljare
  *
- * Hämtar Bilstatistik ReportTypeId -4 (en rad per bil), sparar rådata i
- * prospect_leasing_tx och aggregerar till prospect_dealers.
+ * Hämtar Bilstatistik ReportTypeId -4 (en rad per bil) och sparar rådata i
+ * prospect_leasing_tx. Aggregatet byggs sedan av SQL-funktionen
+ * recompute_prospect_dealers() — se supabase/prospect_aggregate.sql.
  *
  * Rådata sparas per transaktion eftersom Bilstatistik har en frågegräns per
- * dygn: när raderna ligger i Supabase kan listan skäras om fritt utan nya uttag.
+ * dygn: när raderna ligger i Supabase kan listan skäras om fritt utan nya
+ * uttag. Nya uttag lägger till rader; UNIQUE (reg_nr, tx_date, dealer_org_nr)
+ * gör att överlappande perioder inte dubbelräknas.
  *
  * Request-profilen är dokumenterad i
  * reference/bilstatistik/leasing-slutkund-request.json
@@ -20,12 +23,6 @@ const BILSTATISTIK_API_URL =
 
 const MAX_REPORT_PAGE = 1000;
 const INSERT_BATCH = 500;
-
-/** Rankingfönster. Bilstatistiks DateRangeOptionId 1 är obekräftad, så vi
- *  fönstrar själva från senaste transaktionen i datan. */
-const WINDOW_DAYS = 365;
-/** Momentum: senaste kvartalet mot kvartalet dessförinnan. */
-const RECENT_DAYS = 90;
 
 /** Bilhandel. 6209/6210 tas med här och rensas lokalt via prospect_exclusions
  *  — ett par finansbolag läcker igenom, men filtret riskerar annars att
@@ -300,139 +297,6 @@ export function parseTransactions(report) {
   return { transactions: out, skipped: skippedNoOrg };
 }
 
-/** "1 dag" / "3 veckor" / "8 månader" / "3 år" → ungefärligt antal dagar. */
-function holdingDays(text) {
-  const s = String(text || "").toLowerCase();
-  const n = Number((s.match(/\d+/) || [])[0]);
-  if (!Number.isFinite(n)) return null;
-  if (s.includes("dag")) return n;
-  if (s.includes("vecka") || s.includes("veckor")) return n * 7;
-  if (s.includes("månad")) return n * 30;
-  if (s.includes("år")) return n * 365;
-  return null;
-}
-
-function daysBetween(fromIso, toIso) {
-  return (Date.parse(toIso) - Date.parse(fromIso)) / 86400000;
-}
-
-function topCounts(map, limit = 12) {
-  return [...map.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([name, count]) => ({ name, count }));
-}
-
-/**
- * Aggregerar transaktioner per ÅF över ett fönster bakåt från senaste
- * transaktionen i datan.
- */
-export function aggregateDealers(transactions) {
-  if (!transactions.length) return { dealers: [], period: null };
-
-  const dates = transactions.map((t) => t.tx_date).sort();
-  const maxDate = dates[dates.length - 1];
-  const windowStart = new Date(Date.parse(maxDate) - WINDOW_DAYS * 86400000)
-    .toISOString()
-    .slice(0, 10);
-  const recentStart = new Date(Date.parse(maxDate) - RECENT_DAYS * 86400000)
-    .toISOString()
-    .slice(0, 10);
-  const prevStart = new Date(Date.parse(maxDate) - 2 * RECENT_DAYS * 86400000)
-    .toISOString()
-    .slice(0, 10);
-
-  /** @type {Map<string, any>} */
-  const byOrg = new Map();
-
-  for (const tx of transactions) {
-    if (tx.tx_date < windowStart) continue;
-
-    let agg = byOrg.get(tx.dealer_org_nr);
-    if (!agg) {
-      agg = {
-        org_nr: tx.dealer_org_nr,
-        company_name: tx.dealer_name,
-        deals_total: 0,
-        customers: new Set(),
-        deals_recent_90d: 0,
-        deals_prev_90d: 0,
-        floorplan: 0,
-        passthrough: 0,
-        holdingKnown: 0,
-        first_tx: tx.tx_date,
-        last_tx: tx.tx_date,
-        finance: new Map(),
-        makes: new Map(),
-        months: new Map(),
-      };
-      byOrg.set(tx.dealer_org_nr, agg);
-    }
-
-    // Senaste namnet vinner — rapporten är sorterad datum fallande
-    if (!agg.company_name && tx.dealer_name) agg.company_name = tx.dealer_name;
-
-    agg.deals_total += 1;
-    if (tx.end_customer) agg.customers.add(tx.end_customer.toLowerCase());
-    if (tx.tx_date < agg.first_tx) agg.first_tx = tx.tx_date;
-    if (tx.tx_date > agg.last_tx) agg.last_tx = tx.tx_date;
-
-    if (tx.tx_date >= recentStart) agg.deals_recent_90d += 1;
-    else if (tx.tx_date >= prevStart) agg.deals_prev_90d += 1;
-
-    // Ägaren var någon annan än ÅF:en → bilen låg på lagerfinansiering
-    if (tx.prev_owner_org_nr && tx.prev_owner_org_nr !== tx.dealer_org_nr) {
-      agg.floorplan += 1;
-    }
-
-    const held = holdingDays(tx.holding_time);
-    if (held != null) {
-      agg.holdingKnown += 1;
-      if (held < 30) agg.passthrough += 1;
-    }
-
-    if (tx.finance_company) {
-      agg.finance.set(tx.finance_company, (agg.finance.get(tx.finance_company) || 0) + 1);
-    }
-    if (tx.make_name) {
-      agg.makes.set(tx.make_name, (agg.makes.get(tx.make_name) || 0) + 1);
-    }
-    const month = tx.tx_date.slice(0, 7);
-    agg.months.set(month, (agg.months.get(month) || 0) + 1);
-  }
-
-  const dealers = [...byOrg.values()].map((a) => ({
-    org_nr: a.org_nr,
-    company_name: a.company_name,
-    deals_total: a.deals_total,
-    distinct_customers: a.customers.size,
-    deals_recent_90d: a.deals_recent_90d,
-    deals_prev_90d: a.deals_prev_90d,
-    floorplan_share: a.deals_total ? Number((a.floorplan / a.deals_total).toFixed(4)) : null,
-    passthrough_share: a.holdingKnown
-      ? Number((a.passthrough / a.holdingKnown).toFixed(4))
-      : null,
-    first_tx: a.first_tx,
-    last_tx: a.last_tx,
-    finance_companies: topCounts(a.finance),
-    makes: topCounts(a.makes),
-    months: Object.fromEntries([...a.months.entries()].sort()),
-  }));
-
-  dealers.sort((a, b) => b.deals_total - a.deals_total);
-
-  return {
-    dealers,
-    period: {
-      first_tx: dates[0],
-      last_tx: maxDate,
-      window_start: windowStart,
-      window_days: WINDOW_DAYS,
-      span_days: Math.round(daysBetween(dates[0], maxDate)),
-    },
-  };
-}
-
 // ── Supabase ─────────────────────────────────────────────────────────────
 
 function sbHeaders(serviceKey, prefer) {
@@ -476,32 +340,26 @@ async function upsertTransactions(sbUrl, serviceKey, transactions) {
   }
 }
 
-async function replaceDealers(sbUrl, serviceKey, dealers) {
-  // Nollställ aggregatet så att ÅF som fallit ur perioden inte ligger kvar
-  // med gamla siffror. prospect_list rörs inte — arbetet ligger kvar.
-  await sbWrite(
+/**
+ * Bygger om prospect_dealers från sparad rådata.
+ *
+ * Aggregeringen ligger i SQL (supabase/prospect_aggregate.sql) och inte här,
+ * så att listan kan räknas om när som helst utan ett nytt Bilstatistik-uttag.
+ * prospect_list rörs inte — ert arbete ligger kvar.
+ *
+ * @returns {Promise<{dealers: number, transactions: number, period: object|null}>}
+ */
+async function recomputeDealers(sbUrl, serviceKey) {
+  const res = await sbWrite(
     sbUrl,
     serviceKey,
-    "prospect_dealers?org_nr=not.is.null",
-    "DELETE",
-    null,
-    "return=minimal",
-    "dealers delete"
+    "rpc/recompute_prospect_dealers",
+    "POST",
+    {},
+    "return=representation",
+    "recompute"
   );
-
-  const now = new Date().toISOString();
-  for (let i = 0; i < dealers.length; i += INSERT_BATCH) {
-    const batch = dealers.slice(i, i + INSERT_BATCH).map((d) => ({ ...d, updated_at: now }));
-    await sbWrite(
-      sbUrl,
-      serviceKey,
-      "prospect_dealers?on_conflict=org_nr",
-      "POST",
-      batch,
-      "resolution=merge-duplicates,return=minimal",
-      "dealers upsert"
-    );
-  }
+  return res.json();
 }
 
 async function saveSyncMeta(sbUrl, serviceKey, meta) {
@@ -567,25 +425,32 @@ export async function handler(event) {
       return json(502, { error: "Bilstatistik returnerade inga leasingaffärer" });
     }
 
-    const { dealers, period } = aggregateDealers(transactions);
+    if (dryRun) {
+      return json(200, {
+        rows_reported: reported,
+        rows_fetched: transactions.length + skipped,
+        transactions: transactions.length,
+        skipped_no_org_nr: skipped,
+        sample: transactions.slice(0, 5),
+        dry_run: true,
+      });
+    }
+
+    await upsertTransactions(SUPABASE_URL, serviceKey, transactions);
+    const agg = await recomputeDealers(SUPABASE_URL, serviceKey);
 
     const meta = {
       synced_at: new Date().toISOString(),
       rows_reported: reported,
       rows_fetched: transactions.length + skipped,
-      transactions: transactions.length,
+      transactions: agg?.transactions ?? transactions.length,
+      fetched_this_run: transactions.length,
       skipped_no_org_nr: skipped,
-      dealers: dealers.length,
-      period,
-      dry_run: dryRun,
+      dealers: agg?.dealers ?? 0,
+      period: agg?.period ?? null,
+      dry_run: false,
     };
 
-    if (dryRun) {
-      return json(200, { ...meta, top: dealers.slice(0, 20) });
-    }
-
-    await upsertTransactions(SUPABASE_URL, serviceKey, transactions);
-    await replaceDealers(SUPABASE_URL, serviceKey, dealers);
     await saveSyncMeta(SUPABASE_URL, serviceKey, meta);
 
     return json(200, meta);
